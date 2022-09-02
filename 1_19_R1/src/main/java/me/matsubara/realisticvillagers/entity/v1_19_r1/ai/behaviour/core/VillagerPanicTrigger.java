@@ -81,7 +81,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             LivingEntity direct = brain.getMemory(MemoryModuleType.NEAREST_HOSTILE).get();
 
             if (direct instanceof ServerPlayer player && villager instanceof VillagerNPC npc) {
-                if (!shouldAttackPlayer(npc, player)) return null;
+                if (ignorePlayer(npc, player)) return null;
             }
 
             return direct;
@@ -132,10 +132,10 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         return entity.getBrain().hasMemoryValue(MemoryModuleType.HURT_BY);
     }
 
-    public static boolean shouldAttackPlayer(VillagerNPC npc, Player player) {
-        return isWearingMonsterHead(player)
-                && Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
-                && getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
+    public static boolean ignorePlayer(VillagerNPC npc, Player player) {
+        return !isWearingMonsterHead(player)
+                || !Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
+                || !getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
                 .map(entityType -> npc.getTargetEntities().contains(entityType)).orElse(false);
     }
 

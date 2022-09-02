@@ -2,7 +2,6 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.util.EntityHead;
@@ -64,7 +63,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         if (canStillUse(level, villager, time)) {
             handleNormalReaction(brain);
         } else if (!shouldPanic(villager) && (isHurt(villager) || hasHostile(villager))) {
-            handleFightReaction(brain, target, TargetReason.DEFEND);
+            handleFightReaction(brain, target);
         }
     }
 
@@ -81,7 +80,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             LivingEntity direct = brain.getMemory(MemoryModuleType.NEAREST_HOSTILE).get();
 
             if (direct instanceof ServerPlayer player && villager instanceof VillagerNPC npc) {
-                if (!shouldAttackPlayer(npc, player)) return null;
+                if (ignorePlayer(npc, player)) return null;
             }
 
             return direct;
@@ -104,10 +103,9 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         brain.setActiveActivityIfPossible(Activity.PANIC);
     }
 
-    public static void handleFightReaction(Brain<Villager> brain, LivingEntity target, TargetReason targetReason) {
+    private void handleFightReaction(Brain<Villager> brain, LivingEntity target) {
         if (!brain.isActive(Activity.FIGHT)) stopWhatWasDoing(brain);
         brain.setMemory(MemoryModuleType.ATTACK_TARGET, target);
-        brain.setMemory(VillagerNPC.TARGET_REASON, targetReason);
         brain.setDefaultActivity(Activity.FIGHT);
         brain.setActiveActivityIfPossible(Activity.FIGHT);
     }
@@ -132,10 +130,10 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         return entity.getBrain().hasMemoryValue(MemoryModuleType.HURT_BY);
     }
 
-    public static boolean shouldAttackPlayer(VillagerNPC npc, Player player) {
-        return isWearingMonsterHead(player)
-                && Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
-                && getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
+    public static boolean ignorePlayer(VillagerNPC npc, Player player) {
+        return !isWearingMonsterHead(player)
+                || !Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
+                || !getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
                 .map(entityType -> npc.getTargetEntities().contains(entityType)).orElse(false);
     }
 

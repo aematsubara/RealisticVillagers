@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
-import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.Brain;
@@ -9,17 +8,13 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.entity.schedule.Activity;
 
-public class ReactTo extends Behavior<Villager> {
+public class ReactToBell extends Behavior<Villager> {
 
-    private final MemoryModuleType<Long> memory;
-
-    public ReactTo(MemoryModuleType<Long> memory) {
-        super(ImmutableMap.of(memory, MemoryStatus.VALUE_PRESENT));
-        this.memory = memory;
+    public ReactToBell() {
+        super(ImmutableMap.of(MemoryModuleType.HEARD_BELL_TIME, MemoryStatus.VALUE_PRESENT));
     }
 
     @Override
@@ -28,14 +23,6 @@ public class ReactTo extends Behavior<Villager> {
         Brain<Villager> brain = villager.getBrain();
 
         Raid raid = ((ServerLevel) villager.level).getRaidAt(villager.blockPosition());
-
-        if (memory.equals(VillagerNPC.HEARD_HORN_TIME) && npc.canAttack()) {
-            // If HEARD_HORN_TIME is present, is the same for PLAYER_HORN.
-            @SuppressWarnings("OptionalGetWithoutIsPresent") Player playerHorn = brain.getMemory(VillagerNPC.PLAYER_HORN).get();
-            VillagerPanicTrigger.handleFightReaction(brain, playerHorn, TargetReason.HORN);
-            brain.eraseMemory(memory);
-            return;
-        }
 
         // Villagers will hide for 15 seconds and then stop (if not in raid && cann't attack).
         if (raid == null && !npc.canAttack()) {

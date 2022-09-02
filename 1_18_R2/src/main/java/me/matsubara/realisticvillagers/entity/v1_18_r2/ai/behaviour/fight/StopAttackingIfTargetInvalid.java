@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.fight;
 
 import com.google.common.collect.ImmutableMap;
-import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Messages;
 import net.minecraft.server.level.ServerLevel;
@@ -61,10 +60,6 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
                 || isCurrentTargetOffline(villager)) {
             clearAttackTarget(villager);
         } else if (isCurrentTargetFarAway(villager)) {
-            // If target reason is horn, we don't check the distance.
-            Optional<TargetReason> targetReason = brain.getMemory(VillagerNPC.TARGET_REASON);
-            if (targetReason.isPresent() && targetReason.get() == TargetReason.HORN) return;
-
             if (villager instanceof VillagerNPC npc && target instanceof ServerPlayer player) {
                 npc.getPlugin().getMessages().send(npc, player.getBukkitEntity(), Messages.Message.RAN_AWAY);
             }
@@ -109,7 +104,6 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         onTargetErased.accept(villager);
 
         villager.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-        villager.getBrain().eraseMemory(VillagerNPC.TARGET_REASON);
         villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
 

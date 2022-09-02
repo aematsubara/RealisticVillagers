@@ -105,7 +105,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     private String villagerName;
-    private boolean equipped;
     private String sex;
     private UUID partner;
     private boolean isPartnerVillager;
@@ -285,7 +284,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         villagerTag.put("Inventory", inventory.createTag());
         villagerTag.putString("Name", villagerName);
-        villagerTag.putBoolean("IsEquipped", equipped);
         villagerTag.putString("Sex", sex);
         if (partner != null) villagerTag.putUUID("Partner", partner);
         villagerTag.putBoolean("IsPartnerVillager", isPartnerVillager);
@@ -326,7 +324,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void loadData(CompoundTag villagerTag) {
         inventory.fromTag(villagerTag.getList("Inventory", 10));
         villagerName = villagerTag.getString("Name");
-        equipped = villagerTag.getBoolean("IsEquipped");
         sex = villagerTag.getString("Sex");
         if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
         if (villagerName.isEmpty()) setVillagerName(plugin.getRandomNameBySex(sex));
@@ -346,6 +343,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (!tag.contains("BedHome")) return;
 
         CompoundTag bedHomeTag = (CompoundTag) tag.get("BedHome");
+        if (bedHomeTag == null) return;
+
         World world = Bukkit.getServer().getWorld(bedHomeTag.getUUID("BedHomeWorld"));
         if (world == null) return;
 
@@ -377,6 +376,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         collection.clear();
 
         ListTag list = (ListTag) tag.get(name);
+        if (list == null) return;
+
         for (Tag content : list) {
             T value = mapper.apply(content);
             if (value != null) collection.add(value);

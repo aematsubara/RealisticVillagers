@@ -13,7 +13,6 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.InteractType;
-import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.VillagerNPCGoalPackages;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.sensing.VillagerHostilesSensor;
@@ -106,7 +105,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     private String villagerName;
-    private boolean equipped;
     private String sex;
     private UUID partner;
     private boolean isPartnerVillager;
@@ -138,9 +136,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public final static MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
     public final static MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
     public final static MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
-    public final static MemoryModuleType<Long> HEARD_HORN_TIME = NMSConverter.registerMemoryType("heard_horn_time");
-    public final static MemoryModuleType<Player> PLAYER_HORN = NMSConverter.registerMemoryType("player_horn");
-    public final static MemoryModuleType<TargetReason> TARGET_REASON = NMSConverter.registerMemoryType("target_reason");
 
     public final static Activity STAY = NMSConverter.registerActivity("stay");
 
@@ -177,9 +172,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             HAS_HEALED_GOLEM_RECENTLY,
             CELEBRATE_VICTORY,
             STAY_PLACE,
-            HEARD_HORN_TIME,
-            PLAYER_HORN,
-            TARGET_REASON,
             MemoryModuleType.ATTACK_TARGET,
             MemoryModuleType.ATTACK_COOLING_DOWN);
 
@@ -285,7 +277,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         villagerTag.put("Inventory", inventory.createTag());
         villagerTag.putString("Name", villagerName);
-        villagerTag.putBoolean("IsEquipped", equipped);
         villagerTag.putString("Sex", sex);
         if (partner != null) villagerTag.putUUID("Partner", partner);
         villagerTag.putBoolean("IsPartnerVillager", isPartnerVillager);
@@ -326,7 +317,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void loadData(CompoundTag villagerTag) {
         inventory.fromTag(villagerTag.getList("Inventory", 10));
         villagerName = villagerTag.getString("Name");
-        equipped = villagerTag.getBoolean("IsEquipped");
         sex = villagerTag.getString("Sex");
         if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
         if (villagerName.isEmpty()) setVillagerName(plugin.getRandomNameBySex(sex));
@@ -346,6 +336,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (!tag.contains("BedHome")) return;
 
         CompoundTag bedHomeTag = (CompoundTag) tag.get("BedHome");
+        if (bedHomeTag == null) return;
+
         World world = Bukkit.getServer().getWorld(bedHomeTag.getUUID("BedHomeWorld"));
         if (world == null) return;
 
@@ -377,6 +369,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         collection.clear();
 
         ListTag list = (ListTag) tag.get(name);
+        if (list == null) return;
+
         for (Tag content : list) {
             T value = mapper.apply(content);
             if (value != null) collection.add(value);
@@ -1324,8 +1318,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void reactToSeekHorn(org.bukkit.entity.Player player) {
-        getBrain().setMemory(HEARD_HORN_TIME, level.getGameTime());
-        getBrain().setMemory(PLAYER_HORN, ((CraftPlayer) player).getHandle());
+
     }
 
     @Override

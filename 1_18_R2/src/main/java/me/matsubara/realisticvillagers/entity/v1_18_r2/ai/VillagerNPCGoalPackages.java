@@ -11,6 +11,7 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.ShowTradesTo
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.GoToPotentialJobSite;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.GoToWantedItem;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.LookAtTargetSink;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.ReactToBell;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.SetRaidStatus;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.core.*;
@@ -18,7 +19,6 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.fight.MeleeA
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.fight.SetWalkTargetFromAttackTargetIfTargetOutOfReach;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.fight.StopAttackingIfTargetInvalid;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.fight.*;
-import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.hide.SetHiddenState;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.idle.InteractWithBreed;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.idle.VillagerMakeLove;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.meet.SocializeAtBell;
@@ -56,8 +56,7 @@ public class VillagerNPCGoalPackages {
                 Pair.of(0, new LookAtTargetSink(45, 90)),
                 Pair.of(0, new VillagerPanicTrigger()),
                 Pair.of(0, new WakeUp()),
-                Pair.of(0, new ReactTo(MemoryModuleType.HEARD_BELL_TIME)),
-                Pair.of(0, new ReactTo(VillagerNPC.HEARD_HORN_TIME)),
+                Pair.of(0, new ReactToBell()),
                 Pair.of(0, new SetRaidStatus()),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.JOB_SITE)),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.POTENTIAL_JOB_SITE)),
@@ -183,8 +182,7 @@ public class VillagerNPCGoalPackages {
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getHidePackage() {
         return ImmutableList.of(
-                Pair.of(0, new SetHiddenState(15, 3, MemoryModuleType.HEARD_BELL_TIME)),
-                Pair.of(0, new SetHiddenState(15, 3, VillagerNPC.HEARD_HORN_TIME)),
+                Pair.of(0, new SetHiddenState(15, 3)),
                 Pair.of(1, new LocateHidingPlace(32, Villager.SPEED_MODIFIER * 1.25f, 2)),
                 getMinimalLookBehavior());
     }

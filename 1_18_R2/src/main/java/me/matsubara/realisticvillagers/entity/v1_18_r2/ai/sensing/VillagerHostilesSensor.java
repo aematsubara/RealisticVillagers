@@ -64,7 +64,7 @@ public class VillagerHostilesSensor extends NearestVisibleLivingEntitySensor {
 
         if (!isTarget(current, closest) && SPECIAL_ENTITIES.contains(closest.getType())) {
             if (closest instanceof ServerPlayer player) {
-                if (!VillagerPanicTrigger.shouldAttackPlayer(npc, player)) return false;
+                if (VillagerPanicTrigger.ignorePlayer(npc, player)) return false;
                 if (!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(player)) return false;
             }
 

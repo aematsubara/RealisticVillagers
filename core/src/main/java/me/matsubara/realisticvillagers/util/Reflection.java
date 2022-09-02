@@ -13,6 +13,7 @@ import java.security.PrivilegedAction;
 
 public final class Reflection {
 
+    private final static Unsafe UNSAFE = getUnsafe();
     private final static MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
     public static MethodHandle getFieldGetter(Class<?> clazz, String name) {
@@ -68,9 +69,8 @@ public final class Reflection {
             if (isFinalModifierPresent) {
                 AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
                     try {
-                        Unsafe unsafe = getUnsafe();
-                        long offset = unsafe.objectFieldOffset(field);
-                        setFieldUsingUnsafe(object, field.getType(), offset, newValue, unsafe);
+                        long offset = UNSAFE.objectFieldOffset(field);
+                        setFieldUsingUnsafe(object, field.getType(), offset, newValue);
                         return null;
                     } catch (Throwable throwable) {
                         throw new RuntimeException(throwable);
@@ -88,31 +88,35 @@ public final class Reflection {
         }
     }
 
-    private static Unsafe getUnsafe() throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-        Field field = Unsafe.class.getDeclaredField("theUnsafe");
-        field.setAccessible(true);
-        return (Unsafe) field.get(null);
+    private static Unsafe getUnsafe() {
+        try {
+            Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            return (Unsafe) field.get(null);
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            throw new RuntimeException(exception);
+        }
     }
 
-    private static void setFieldUsingUnsafe(Object base, Class<?> type, long offset, Object newValue, Unsafe unsafe) {
+    private static void setFieldUsingUnsafe(Object base, Class<?> type, long offset, Object newValue) {
         if (type == Integer.TYPE) {
-            unsafe.putInt(base, offset, ((Integer) newValue));
+            UNSAFE.putInt(base, offset, ((Integer) newValue));
         } else if (type == Short.TYPE) {
-            unsafe.putShort(base, offset, ((Short) newValue));
+            UNSAFE.putShort(base, offset, ((Short) newValue));
         } else if (type == Long.TYPE) {
-            unsafe.putLong(base, offset, ((Long) newValue));
+            UNSAFE.putLong(base, offset, ((Long) newValue));
         } else if (type == Byte.TYPE) {
-            unsafe.putByte(base, offset, ((Byte) newValue));
+            UNSAFE.putByte(base, offset, ((Byte) newValue));
         } else if (type == Boolean.TYPE) {
-            unsafe.putBoolean(base, offset, ((Boolean) newValue));
+            UNSAFE.putBoolean(base, offset, ((Boolean) newValue));
         } else if (type == Float.TYPE) {
-            unsafe.putFloat(base, offset, ((Float) newValue));
+            UNSAFE.putFloat(base, offset, ((Float) newValue));
         } else if (type == Double.TYPE) {
-            unsafe.putDouble(base, offset, ((Double) newValue));
+            UNSAFE.putDouble(base, offset, ((Double) newValue));
         } else if (type == Character.TYPE) {
-            unsafe.putChar(base, offset, ((Character) newValue));
+            UNSAFE.putChar(base, offset, ((Character) newValue));
         } else {
-            unsafe.putObject(base, offset, newValue);
+            UNSAFE.putObject(base, offset, newValue);
         }
     }
 }
