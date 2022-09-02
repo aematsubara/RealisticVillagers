@@ -1,0 +1,477 @@
+# NOTE: Some options will take effect after the entities are unloaded and loaded back to the world.
+# It is recommended to restart the server for the changes to take effect (don't be lazy :P).
+
+# If a player has a monster head equipped, the villager will attack him.
+# Heads: DRAGON_HEAD / WITHER_SKELETON_SKULL / ZOMBIE_HEAD / SKELETON_SKULL / CREEPER_HEAD
+attack-player-wearing-monster-skull: true
+
+# If a player plays the goat horn "seek" (same sound as in raids), the villager will attack him (1.19+).
+attack-player-playing-goat-horn-seek: true
+
+# The distance at which villagers can hear the goat horn (1.19+).
+goat-horn-seek-range: 32
+
+# If the villager must defend a family member (only if the villager has a weapon).
+villager-defend-family-member: true
+
+# If the villager must defend the hero of the village (only if the villager has a weapon).
+villager-defend-hero-of-the-village: true
+
+# Whether arrows should be required to use a bow/crossbow.
+require-arrows-for-projectile-weapon: true
+
+# If true, arrows shot by villagers will pass through other villagers.
+arrows-pass-through-other-villagers: false
+
+# The waiting time between melee attacks (in ticks).
+melee-attack-cooldown: 10
+
+# Whether villagers can fix iron golems if they have iron ingot(s) in hand.
+villager-fix-iron-golem-with-iron: true
+
+# The waiting time to fix a golem again (in ticks). Use 0 or lower to set no limit.
+villager-fix-iron-golem-cooldown: 600
+
+# Whether villagers can spawn iron golems when needed.
+# NOTE: True by default, but should be considered since villagers can defend themselves.
+villager-spawn-iron-golem: true
+
+# If a player hits a villager (accidentally or not) during a raid, the villager will defend himself.
+# If false, the reputation towards the player will not be reduced.
+villager-attack-player-during-raid: false
+
+# Reputation required to marry a villager.
+reputation-required-to-marry: 75
+
+# Reputation required to procreate with a villager.
+reputation-required-to-procreate: 110
+
+# The reputation that will be lost after divorce.
+divorce-reputation-loss: 150
+
+# The reputation that will be lost after divorce with divorce papers (given by clerics).
+divorce-reputation-loss-papers: 10
+
+# Who can modify the target entities of a villager.
+# Options: EVERYONE / FAMILY
+who-can-modify-villager-combat: FAMILY
+
+# Variables:
+# %sex% - the sex of the newborn baby.
+input-gui:
+  combat-search:
+    title: "Search..."
+    text: "Search..."
+  baby:
+    title: "I'ts a %sex%!"
+    text: "Name..."
+
+# This only applies to villagers who have not yet spawned.
+# If the villager has no weapon in hand, he will flee from danger.
+# NOTE: Only monsters are supported at the moment (ENDER_DRAGON & WITHER included).
+# Monsters: https://minecraft.fandom.com/wiki/Mob#Hostile_mobs
+default-target-entities:
+  - DROWNED
+  - EVOKER
+  - HUSK
+  - ILLUSIONER
+  - PILLAGER
+  - RAVAGER
+  - VEX
+  - VINDICATOR
+  - ZOGLIN
+  - ZOMBIE
+  - ZOMBIE_VILLAGER
+  - WARDEN
+
+# The distance at which villagers detect hostile entities (double is used for villagers with weapons).
+hostile-detection-range: 15.0
+
+# If you want the villager to become a zombie when killed by one.
+# When healed, the villager will have all his data.
+zombie-infection: true
+
+# Whether villagers should be turned into witches by being struck by lightning.
+witch-convertion: true
+
+# The maximum amount of health of a villager.
+villager-max-health: 20
+
+# Whether to teleport the villager to the player he's following if the distance between them is greater than X (defined below).
+teleport-when-following-if-far-away: true
+
+# If the distance between the two is greater than the given value, the villager will be teleported.
+teleport-when-following-distance: 16
+
+# The time (in ticks) that the villager waits for a gift (or a bed) from a player.
+time-to-expect: 100
+
+# Whether villagers should drop the contents of the inventory upon death (not recommended).
+drop-whole-inventory: false
+
+# The time it will take for a baby to grow (in milliseconds).
+baby-grow-cooldown: 1200000
+
+# The time a villager must wait before being able to procreate again (in milliseconds).
+procreation-cooldown: 1200000
+
+# On Halloween, there's a chance that a villager will wear a pumpkin / carved pumpkin.
+chance-of-wearing-halloween-mask: 0.25
+
+# If the player's reputation is less than X, the villager will be automatically divorced.
+divorce-if-reputation-is-less-than: 0
+
+# Size of the inventory of a villager.
+# Maximum size allowed: 36.
+villager-inventory-size: 27
+
+# If false, sounds will be replaced to the ones from player (if possible).
+use-villager-sounds: false
+
+# Amount of reputation when giving a wedding ring.
+wedding-ring-reputation: 20
+
+# Amount of reputation when having a baby.
+baby-reputation: 20
+
+# If jokes are always funny to the partner.
+partner-joke-always-success: false
+
+# Chance of success when interacting with a villager.
+chance-of-chat-interaction-success: 0.65
+
+# Amount of reputation for an interaction (successful or not).
+# Minimum value: 2.
+chat-interact-reputation: 2
+
+# The waiting time between each interaction (in seconds).
+# NOTE: @greet & @proud-of are always success, so consider putting a reasonable amount of cooldown.
+interact-cooldown:
+  chat: 2
+  greet: 60
+  story: 2
+  joke: 2
+  flirt: 2
+  proud-of: 60
+  insult: 2
+  divorce-papers: 900
+
+# Whether to display the title in the villager's chat messages.
+# For example: James the Armorer / Juliet the Weaponsmith / etc.
+show-title-in-villager-chat-message: true
+
+# The article in the title name of the villager.
+villager-title-article: "the"
+
+# The format of the chat when a villager speaks.
+villager-message-format: "%name%: %message%"
+
+# Texts that are used in some variables.
+variable-text:
+  none: "None"
+  unknown: "Unknown"
+  villager: "Villager"
+  player: "Player"
+  no-childrens: "No childrens"
+  kid: "Kid"
+  adult: "Adult"
+  boy: "boy"
+  girl: "girl"
+  sex:
+    male: "Male"
+    female: "Female"
+  type:
+    desert: "Desert"
+    jungle: "Jungle"
+    plains: "Plains"
+    savanna: "Savanna"
+    snow: "Snow"
+    swamp: "Swamp"
+    taiga: "Taiga"
+  profession:
+    none: "None"
+    armorer: "Armorer"
+    butcher: "Butcher"
+    cartographer: "Cartographer"
+    cleric: "Cleric"
+    farmer: "Farmer"
+    fisherman: "Fisherman"
+    fletcher: "Fletcher"
+    leatherworker: "Leatherworker"
+    librarian: "Librarian"
+    mason: "Mason"
+    nitwit: "Nitwit"
+    shepherd: "Shepherd"
+    toolsmith: "Toolsmith"
+    weaponsmith: "Weaponsmith"
+  activity:
+    play: "Play"
+    work: "Work"
+    core: "Core"
+    meet: "Meet"
+    rest: "Rest"
+    idle: "Idle"
+    panic: "Panic"
+    pre_raid: "Pre-Raid"
+    raid: "Raid"
+    hide: "Hide"
+    fight: "Fight"
+    stay: "Stay"
+  entity:
+    zombie: "Zombie"
+    skeleton: "Skeleton"
+    creeper: "Creeper"
+    witch: "Witch"
+    spider: "Spider"
+    zombie_villager: "Zombie Villager"
+    enderman: "Enderman"
+    slime: "Slime"
+    cave_spider: "Cave Spider"
+    silverfish: "Silverfish"
+    stray: "Stray"
+    husk: "Husk"
+    phantom: "Phantom"
+    drowned: "Drowned"
+    vindicator: "Vindicator"
+    vex: "Vex"
+    illusioner: "Illusioner"
+    evoker: "Evoker"
+    ravager: "Ravager"
+    guardian: "Guardian"
+    elder_guardian: "Elder Guardian"
+    blaze: "Blaze"
+    ghast: "Ghast"
+    magma_cube: "Magma Cube"
+    wither_skeleton: "Wither Skeleton"
+    hoglin: "Hoglin"
+    zoglin: "Zoglin"
+    piglin: "Piglin"
+    piglin_brute: "Piglin Brute"
+    zombified_piglin: "Zombified Piglin"
+    endermite: "Endermite"
+    shulker: "Shulker"
+    wither: "Wither"
+    ender_dragon: "Ender Dragon"
+    warden: "Warden"
+
+# Here you can modify the available GUIs.
+# The format of the items is similar to that of essentialsX.
+#
+# <REQUIRED> | (OPTIONAL)
+# (AMOUNT) <MATERIAL> (name:*) (lore:*) (rgb:) (owner:) (flag:) (url:) (pattern:{})
+# *:
+# - To add space between words, use "_". Example: name:My_custom_name
+# - To add a new line (lore), use "|". Example: lore:First_line|Second_line|Third_line
+# @owner: the name of the player, used with PLAYER_HEAD. Example: owner:Notch
+# @rgb: armor color, used for leather armor. Example: rgb:5|125|30
+# @flag: flags to add to the item, separated with "|". Example: flag:HIDE_ATTRIBUTES|HIDE_ENCHANTS
+# @url: the url of the skin texture, used with PLAYER_HEAD. Example: url:5726d9d0632e40bda5bcf65839ba2cc98a87bd619c53adf00310d6fc71f042b5
+# @pattern: banner patterns, separated by "|", with the following format: {dye-color:pattern-type}. Example: pattern:5:bl|6:tl
+#
+# USEFUL LINKS:
+#
+# Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
+# Flags: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/ItemFlag.html
+# Colors: https://www.digminecraft.com/lists/pattern_color_list_pc.php
+# Patterns: https://www.digminecraft.com/lists/pattern_list_pc.php
+#
+# Title variables:
+#
+# %villager-name% - name of the villager.
+# %reputation% - player reputation with this villager (only for @main).
+# %page% - current page (only for @combat).
+# %max-page% - amount of pages (only for @combat).
+#
+# Item variables:
+#
+# *** The ones listed below are only applicable for @main.information (in its lore). ***
+# %villager-name% - name of the villager.
+# %sex% - sex of the villager (MALE/FEMALE).
+# %age-stage% - age stage of the villager (KID/DULT).
+# %health% - current health of the villager.
+# %max-health% - maximum amount of health of the villager.
+# %type% - biome of the villager.
+# %profession% - profession of the villager.
+# %level% - level of the villager.
+# %activity% - the activity that this villager is performing (if any).
+# %partner% - partner of this villager.
+# %father% - father of this villager.
+# %mother% - mother of this villager.
+# %childrens% - childrens of this villager.
+#
+# *** The ones listed below are only applicable for @combat.entity. ***
+# %entity-type% - the entity type (name).
+gui:
+  main:
+    title: "%villager-name% (rep. %reputation%)"
+    items:
+      chat: PAPER name:&aChat lore:&7Click_to_chat_with_this_villager.
+      greet: PAPER name:&aGreet lore:&7Click_to_greet_this_villager.
+      story: PAPER name:&aStory lore:&7Click_to_tell_a_story_to_this_villager.
+      joke: PAPER name:&aJoke lore:&7Click_to_tell_a_joke_to_this_villager.
+      flirt: PAPER name:&aFlirt lore:&7Click_to_flirt_with_this_villager.
+      proud-of: PAPER name:&aBe_proud_of lore:&7Click_to_be_proud_of_this_villager
+      insult: PAPER name:&aInsult lore:&7Click_to_insult_this_dumb_villager.
+      follow-me: SADDLE name:&aFollow_me lore:&7Click_to_ask_this_villager_to_follow_you.
+      stay-here: LEAD name:&aStay_here lore:&7Click_to_ask_this_villager_to_stay_here.
+      inspect-inventory: CHEST name:&aInspect_inventory lore:&7Click_to_see_the_inventory_of_this_villager.
+      gift: PLAYER_HEAD name:&aGift lore:&7Click_to_give_a_gift_to_this_villager url:5726d9d0632e40bda5bcf65839ba2cc98a87bd619c53adf00310d6fc71f042b5
+      procreate: EGG name:&aProcreate lore:&7Click_to_start_procreating.
+      set-home: RED_BED name:&aSet_home lore:&7Give_this_villager_a_bed.
+      divorce: WRITABLE_BOOK name:&cDivorce lore:&7Divorce_this_villager.
+      combat: STONE_SWORD name:&cCombat lore:&7Click_to_manage_combat_of_this_villager. flag:HIDE_ATTRIBUTES
+      divorce-papers: FILLED_MAP name:&aDivorce_papers lore:&7Ask_for_divorce_papers.
+      information: KNOWLEDGE_BOOK name:&aVillager_information lore:&7Name:_&e%villager-name%|&7Sex:_&e%sex%|&7Age_stage:_&e%age-stage%|&7Health:_&e%health%&7/&e%max-health%|&7Type:_&e%type%|&7Profession:_&e%profession%_(lvl._%level%)|&7Activity_(non-core):_&e%activity%|&7Partner:_&e%partner%|&7Father:_&e%father%|&7Mother:_&e%mother%|&7Childrens:_&e%childrens%
+      trade: EMERALD name:&aTrade lore:&7Click_to_start_trading_with_this_villager.
+      no-trades: BARRIER name:&cEmpty_trades lore:&7This_villager_has_nothing_to_trade.
+  equipment:
+    title: "%villager-name%'s inventory"
+    items:
+      close: BARRIER name:&cClose lore:&7Click_to_close_this_inventory.
+  combat:
+    title: "Targets (%page%/%max-page%)"
+    items:
+      enabled: LIME_DYE name:&aEnabled
+      disabled: GRAY_DYE name:&cDisabled
+      entity: PLAYER_HEAD name:&a%entity-type%
+      previous: PLAYER_HEAD name:&aPrevious lore:&7Click_to_go_to_the_previous_page. url:bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+      search: COMPASS name:&9Search lore:&7Click_to_search_for_a_specific_entity.
+      clear-search: COMPASS name:&cClear
+      close: BARRIER name:&cClose lore:&7Click_to_close_this_inventory.
+      next: PLAYER_HEAD name:&aNext lore:&7Click_to_go_to_the_next_page. url:19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+
+# Here you can modify the items of the babies.
+# Variables:
+# %villager-name% - the name of the newborn baby (display-name).
+# If you are using a texture-pack, you can assign the item a @model-data so that the package will recognize it.
+baby:
+  boy:
+    material: PAPER
+    model-data: 120
+    display-name: "&b%villager-name%"
+    lore:
+      - "&7Right click to spawn this little boy!"
+  girl:
+    material: PAPER
+    model-data: 121
+    display-name: "&d%villager-name%"
+    lore:
+      - "&7Right click to spawn this little girl!"
+
+# Wedding ring crafting recipe.
+# * material: the material of the item.
+# * model-data: the custom model data id, used for custom resource packs.
+# * display_name & lore: self-explanatory.
+# * crafting.shaped: whether the item recipe is shaped (like WORKBENCH) or not (like FLINT_AND_STEEL).
+# * crafting.ingredients: the ingredients that'll be used for the recipe. Format: MATERIAL_NAME, KEY (used for shape, see below).
+# * crafting.shape: the shape that'll be used on the crafting table, using the KEY specified (only 3 lines required, spaces are used as AIR).
+#
+# In this example, the required ingredients are 7 of GOLD_INGOT and 1 of DIAMOND.
+# You can use spaces to represent AIR (nothing).
+# ingredients:
+#   - DIAMOND, D
+#   - GOLD_INGOT, G
+# shape:
+#   - "GDG"
+#   - "G G"
+#   - "GGG"
+wedding-ring:
+  material: GOLD_INGOT
+  model-data: 122
+  display-name: "&aWedding ring"
+  lore:
+    - "&7Give it to the love of your life."
+  crafting:
+    shaped: true
+    ingredients:
+      - DIAMOND, D
+      - GOLD_INGOT, G
+    shape:
+      - GDG
+      - G G
+      - GGG
+
+# The reputation that the player will receive when giving a bad gift.
+bad-gift-reputation: 5
+
+# The list of accepted items for each gift level.
+# For a list of tags, visit https://minecraft.fandom.com/wiki/Tag#List_of_tags
+# Minimum reputation value: 2.
+#
+# This plugin offers the following extra tags:
+# * LEATHER_ARMOR_PIECES, IRON_ARMOR_PIECES, CHAINMAIL_ARMOR_PIECES, GOLDEN_ARMOR_PIECES, DIAMOND_ARMOR_PIECES, NETHERITE_ARMOR_PIECES, ARMOR_PIECES
+# * WOODEN_TOOLS, STONE_TOOLS, IRON_TOOLS, GOLDEN_TOOLS, DIAMOND_TOOLS, NETHERITE_TOOLS
+# * TOOLS, EDIBLES, RECORDS, POTIONS
+#
+# For a list of materials, visit https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
+gift:
+  good:
+    reputation: 1
+    items:
+      - GOLDEN_APPLE
+      - $EDIBLES
+      - $FLOWERS
+      - $RECORDS
+      - $LEATHER_ARMOR_PIECES
+      - $CHAINMAIL_ARMOR_PIECES
+      - $GOLDEN_ARMOR_PIECES
+      - $WOODEN_TOOLS
+      - $STONE_TOOLS
+      - $GOLDEN_TOOLS
+      - AMETHYST_SHARD
+      - ARROW
+  better:
+    reputation: 3
+    items:
+      - $POTIONS
+      - $IRON_ARMOR_PIECES
+      - $IRON_TOOLS
+      - SHIELD
+      - ENDER_PEARL
+      - BOW
+      - CROSSBOW
+  best:
+    reputation: 5
+    items:
+      - $BEACON_PAYMENT_ITEMS
+      - $DIAMOND_ARMOR_PIECES
+      - $NETHERITE_ARMOR_PIECES
+      - $DIAMOND_TOOLS
+      - $NETHERITE_TOOLS
+      - ENCHANTED_GOLDEN_APPLE
+
+# Chance to spawn with a weapon.
+chance-of-wearing-weapon: 0.45
+
+# Random weapon given when spawning.
+random-weapon:
+  - STONE_SWORD
+  - BOW
+  - STONE_AXE
+
+# Minimum amount of arrows to give to the villager if he spawns with bow or crossbow.
+min-amount-of-arrows: 16
+
+# Maximum amount of arrows to give to the villager if he spawns with bow or crossbow.
+max-amount-of-arrows: 48
+
+# Chance to equip each piece of armor.
+chance-of-wearing-each-armour-item: 0.1
+
+# Material per armor item.
+armor-items:
+  head: leather_helmet
+  chest: leather_chestplate
+  legs: leather_leggings
+  feet: leather_boots
+
+# Chance to spawn with a shield in the secondary hand.
+# NOTE: Only works if the villager has a weapon equipped in the main hand.
+chance-of-wearing-shield: 0.4
+
+# The amount of damage caused by a villager (melee attack).
+attack-damage: 3.0
+
+# The power of a ranged weapon (bow/crossbow).
+# NOTE: Don't change if you don't know what you're doing.
+range-weapon-power: 1.6

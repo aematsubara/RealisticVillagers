@@ -1,0 +1,18 @@
+name: RealisticVillagers
+version: ${project.parent.version}
+author: Matsubara
+main: me.matsubara.realisticvillagers.RealisticVillagers
+api-version: 1.14
+load: STARTUP
+description: ${project.description}
+depend:
+  - ProtocolLib
+
+commands:
+  realisticvillagers:
+    description: main command.
+    usage: /<command>
+    aliases:
+      - rv
+      - rvillagers
+      - realvillagers

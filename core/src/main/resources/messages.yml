@@ -1,0 +1,533 @@
+reaction:
+  on-hit:
+    - "That hurt!"
+    - "Ouch! Why did you hit me?!"
+    - "That hurts, stop it!"
+    - "That really hurt!"
+    - "Hey! What do you think you're doing?!"
+    - "*Oof*! That better have been an accident!"
+  ran-away:
+    - "That's right, you'd better run!"
+    - "Come back and fight like a man!"
+    - "if I see you again, I'll beat you up!"
+    - "I knew you were afraid of me!"
+    - "Why are you running? Get back here so I can hit you!"
+    - "I'm going to hit you if I ever see you again!"
+
+marry:
+  success:
+    - "Yes! I'll marry you! I love you!"
+    - "Of course I'll marry you!"
+    - "About time... just kidding! I love you!"
+    - "Is... is this real? I mean, this moment, not the ring. But the ring is real, right?"
+    - "It's a dream come true! I'll love you forever!"
+    - "We're finally married! Now what?"
+    - "I'm happy to be married to you!"
+    - "I can't wait to start our life together!"
+  fail:
+    married-to-giver:
+      - "It's a pretty ring, but I'm already married to you, silly."
+      - "We are already married. Did you forget?"
+    married-to-other:
+      - "I'm sorry, no... I'm already married."
+      - "Oh, I thought you knew... I'm already married to someone."
+      - "What?! I'm already marrie d!"
+      - "I'm already married to someone."
+      - "I'm happily married, I don't want another partner."
+      - "I don't want that, I'm already married."
+      - "I'm married to someone already, I can't take that ring."
+      - "Oh, thanks but I think I'm okay. I'm already married to someone."
+    player-married:
+      - "Uh... I see that ring on your finger. You're already married!"
+      - "Just what are you trying to do? You're already married!"
+      - "What? Really? I think you're married to someone else, aren't you?"
+      - "I'm appalled! You already have a partner!"
+    low-reputation:
+      - "What? No! I don't like you!"
+      - "Oh, pretty ring! Oh wait... it's for me? Um... no."
+      - "Is that for me? Sorry, I just don't know you enough."
+      - "I'm flattered, but I don't really know you."
+  end:
+    - "I've had it. You don't treat me well enough. I'm leaving you!"
+    - "I'm leaving. Forever! Don't look for me."
+    - "I'm sorry, I thought we could work things out, but it's not working for me. Goodbye."
+    - "This is goodbye. Don't try to follow me."
+
+set-home:
+  expecting:
+    - "So, where am I going to sleep tonight?"
+  success:
+    - "Okay, this will be my new home point."
+    - "I understand, I'll be sleeping here at night."
+    - "I really like this place!"
+    - "This is like a dream home!"
+    - "This is cool I guess."
+  fail:
+    - "This doesn't look like a safe home point for me."
+    - "I can't have my home point here."
+    - "I'll need a bed if you want me to sleep here!"
+
+divorce:
+  normal:
+    - "I hate you!"
+    - "Fine, get out of here!"
+  papers:
+    - "Okay..."
+    - "I guess... it's okay."
+
+cleric-divorce-papers:
+  - "Here you go, bring these papers to your partner to confirm the divorce."
+  - "Good luck!"
+
+interact-fail:
+  fighting-or-raid: "&cYou can't interact with this villager right now."
+  procreating: "&cThis villager is procreating!"
+  expecting-gift-from-you: "&cThis villager is expecting a gift from you!"
+  expecting-gift-from-someone: "&cThis villager is expecting a gift from someone!"
+  expecting-bed-from-you: "&cThis villager is expecting a bed from you!"
+  expecting-bed-from-someone: "&cThis villager is expecting a bed from someone!"
+  interacting: "&cThis villager is already interacting with another player."
+  trading: "&cThis villager is trading with another player."
+  other-expecting-gift: "&cAnother villager is expecting a gift from you!"
+  other-expecting-bed: "&cAnother villager is expecting a bed from you!"
+  in-cooldown: "&cYou can't interact that fast!"
+
+reload: "&6The plugin has been reloaded!"
+wrong-command: "&cTry with /rvillagers reload."
+
+follow-me:
+  start:
+    - "I'll follow you!"
+  stop:
+    - "Ok, goodbye!"
+
+stay-here:
+  start:
+    - "I'll stay here!"
+  stop:
+    - "Ok, I'll go!"
+
+procreate:
+  fail:
+    has-baby:
+      - "We already have a baby... you didn't lose it did you?!"
+      - "... you lost baby Joby didn't you? Wait... was his name Joby?"
+    low-reputation:
+      - "Spend more time with me! I'm not ready for a child."
+      - "Hmm... not just yet. I think we need to spend more time together first."
+  # %time% - the waiting time to have another baby (@cooldown).
+  cooldown: "&cYou must wait %time% to have another baby."
+
+# %time% - how long it will take for the baby to grow (@baby-grow).
+baby-grow: "&aThis baby will grow up in %time%!"
+can-not-spawn-baby: "&cThe spawn place is obstructed, there must be at least 2 free blocks!"
+# %time% - The maximum time the villager will wait for a gift/bed (@throw-gift & @select-bed).
+throw-gift: "&aYou have %time% seconds to throw the gift to the villager."
+select-bed: "&aYou have %time% seconds to give the villager a bed."
+
+bed-occupied: "&cThis bed is occupied!"
+bed-established: "&aBed established!"
+
+gift:
+  expecting:
+    - "Wow, a gift for me?"
+    - "What are you going to give me?"
+    - "A gift? but it's not christmas yet! *Laughs*"
+  expecting-fail:
+    - "So why did you call me?"
+    - "I thought you said you were going to give me something?"
+  adult:
+    success:
+      good:
+        - "How considerate! Thank you."
+        - "Thanks!"
+        - "How thoughtful!"
+        - "Oh, I love these!"
+        - "A gift? For me? How nice!"
+      better:
+        - "Hey, this is pretty cool!"
+        - "Thanks, friend!"
+        - "You're such a good friend!"
+        - "Oh wow, I actually needed one of these!"
+        - "This is a pretty good gift!"
+      best:
+        - "I... I don't know what to say. Thank you so much!"
+        - "How did you... nevermind, this is amazing!"
+        - "Oh wow, I've always wanted one of these!"
+        - "This is fantastic! I'll put it to good use."
+        - "Thank you so much. I'll remember this forever."
+    fail:
+      - "This isn't a good gift..."
+      - "What made you think that I would like this?"
+      - "No thanks."
+      - "I don't want that, why would I?"
+      - "Why are you giving me that?"
+      - "Is this supposed to be a gift? No thanks."
+  child:
+    success:
+      good:
+        - "Is it... is it all mine?"
+        - "Is this really for me?"
+        - "This is cool!"
+      better:
+        - "Awesome! I'm going to show this to all my friends."
+        - "You found it! I lost this a few minutes ago."
+        - "My friend stole one of these from me. Did you beat him up for me?"
+      best:
+        - "You give the best presents!"
+        - "Finally! My friend will stop bragging now."
+        - "Wow! Where did you get this thing?"
+        - "My Dad has one of these. Now I have one too!"
+    fail:
+      - "Ew, I don't like this!"
+      - "Yuck! I don't want this."
+      - "Why did you bring me this? It's dumb!"
+      - "I don't even know what this is!"
+  child-offspring:
+    success:
+      good:
+        - "Oh, cool! Thank you!"
+        - "Is it my birthday? This is awesome!"
+        - "This is much better than the last gift I got!"
+        - "Woo hoo! It's mine, all mine!"
+        - "Can I... can I eat it?"
+      better:
+        - "For me? For free?!"
+        - "Ooh! Shiny!"
+        - "I really like this one, can I have another?"
+        - "All of my friends will be jealous now!"
+        - "This is so cool! I've wanted one of these forever!"
+      best:
+        - "This must have cost a fortune!"
+        - "I knew you would get me one of these. I just knew it!"
+        - "Yay! I have the best parents in the world!"
+        - "This is so amazing! I can't believe this is all mine!"
+        - "Thank you so much! You're the best ever!"
+    fail:
+      - "This... is a really bad gift."
+      - "Ew, I've gotten so much better before!"
+      - "Didn't you give me this like, last year?"
+      - "I could get this easily, no thanks."
+  partner:
+    success:
+      good:
+        - "You're so sweet."
+        - "Aw! You're too good to me."
+        - "This is unexpected, thank you, dear!"
+        - "Aw, how sweet of you."
+        - "Thanks, hun!"
+      better:
+        - "Oh wow, this is actually really nice!"
+        - "I love it! Thank you!"
+        - "This is amazing, dear!"
+        - "You got this for me? How sweet!"
+        - "Oh, thank you!"
+      best:
+        - "Oh, I love you!"
+        - "You are *way* too good to me!"
+        - "This must have been extremely expensive! Thank you!"
+        - "I... can't believe you'd get me something so thoughtful!"
+    fail:
+      - "Oh honey... this is just terrible."
+      - "Um, is this supposed to be a gift for me?"
+      - "Throw away your own junk! Oh, this was a gift? sorry."
+      - "I thought you knew me better than that. I hate these."
+
+chat:
+  adult:
+    success:
+      - "Good talk!"
+      - "Sounds cool!"
+      - "Nice."
+      - "That happens to the best of us."
+      - "Man, cookies and milk does sound delicious right now."
+      - "Yes, I suppose the weather is nice today."
+      - "I'm doing just fine! Hit my toe when I woke up, though."
+      - "An apple a day keeps the zombies away!"
+      - "My dream is to build my own village, but I'm so lazy."
+      - "My friend told me that they found a chest full of diamonds yesterday!"
+    fail:
+      - "What..."
+      - "Ummm, what?"
+      - "That's great... I guess."
+      - "Well, I'll see you around."
+      - "Did you seriously just say that?"
+      - "I don't believe it exploded on its own."
+      - "You know, you're not that cool."
+      - "Show off."
+      - "You should be thrown in a dungeon!"
+  child:
+    success:
+      - "I heard stories about you! Are you a hero?"
+      - "Hi. I was going to go try and climb to the roof."
+      - "Do you wanna go burn stuff with me?"
+      - "I'm going to be a hunter like you and kill many things!"
+      - "Hi! What are you doing today? I'm going swimmin'!"
+    fail:
+      - "If you don't give me cookies I'll hold my breath."
+      - "My parents said not to talk to you, that you're bad."
+      - "*Laughs* You look smelly!"
+      - "Oh yeah? Well I'm gonna egg your house!"
+      - "Lalala, I'm not listening! Lalala."
+  child-offspring:
+    success:
+      - "Oh, I was just going to go explorin' later."
+      - "Can we go camping? Please?!"
+      - "Hi, can you make me a cake?"
+      - "Can I have my own room away from our house? That would be cool!"
+      - "Let's move into a cave! That sounds so fun!"
+    fail:
+      - "I don't think I'd like that very much."
+      - "Is that why I've heard so much about \"divorce\"? What does that mean?"
+      - "I want a new daddy."
+      - "I don't want a baby sister."
+  partner:
+    success:
+      - "I cleaned the entire house. How was your day?"
+      - "Honey, let's go camping sometime. Doesn't that sound like fun?"
+      - "So today I saw a spider. It was huge so I ran away."
+      - "We should build a new house together!"
+      - "I almost walked into a lava pit the other day. That wouldn't have been good!"
+    fail:
+      - "I know we're not the poorest family, but..."
+      - "I love being around you but I need some space."
+      - "Sometimes I wish I had my own \"cave\" to escape from you and everyone."
+      - "Go away, I'm not in the mood."
+      - "Where have you been? Are you seeing someone behind my back?"
+
+joke:
+  adult:
+    success:
+      - "That's funny!"
+      - "LOL"
+      - "*Laughs*"
+      - "Your the best at telling jokes!"
+      - "That's the best joke I've ever heard!"
+      - "That was so... *Laughs*"
+      - "Good one!"
+      - "*Laughs* That's hilarious!"
+      - "That's funny! Did you hear the one about the cows?"
+      - "Unfortunate for the sheep to lose its wool, but funny!"
+      - "That's the best I have ever heard!"
+    fail:
+      - "You're not funny!"
+      - "That's disgusting!"
+      - "I don't get it."
+      - "That's not something to joke about!"
+      - "Is that the best you can come up with?"
+      - "That didn't even make sense."
+      - "Was that meant to be a joke?"
+      - "Don't speak about my pig like that!"
+      - "Ha. Ha. Not funny."
+      - "Ah, you're not the funniest in town."
+      - "That's low."
+      - "Why would that be funny? Do everyone a favour and stick to your day job."
+      - "You shouldn't joke about that."
+  child:
+    success:
+      - "You're funnier than daddy!"
+      - "Tell me another one!"
+      - "You're the funniest person alive!"
+      - "I'm tellin' my momma that one! *Laughs*"
+      - "It should eat a leaf!"
+    fail:
+      - "I don't get it."
+      - "You're not funny. Really."
+      - "You need to stop..."
+      - "But, who's apple?"
+      - "Don't be mean!"
+  child-offspring:
+    success:
+      - "*Laughs* Tell that one again!"
+      - "I've got to tell my friend that one!"
+      - "How did the creeper explode?!"
+      - "*Laughs* Why is there no longer 3 of them?"
+      - "*Laughs* ... *Laughs*... *Laughs*"
+    fail:
+      - "I thought you were funny, though..."
+      - "I like knock knock jokes better."
+      - "I don't get it, that was dumb."
+      - "*Yawn* My friend's dad is cooler and funnier than you."
+      - "I'd rather have cake."
+  partner:
+    success:
+      - "*Laughs* I married you for your humor!"
+      - "You should throw an egg at him next time!"
+      - "Then the wolf fell in love with the sheep."
+      - "That never gets old!"
+      - "Here's one for you... How many chickens does a creeper blow up?"
+    fail:
+      - "Lame..."
+      - "Sweetheart, you're not funny."
+      - "Ha...Ha...Ha... Not funny."
+      - "You need to erase that from your mind."
+      - "Okay..."
+
+story:
+  adult:
+    success:
+      - "Really? I can't believe that all happened!"
+      - "I wish I was brave enough to take on a creeper."
+      - "That was a really good story! Is it original?"
+      - "All of that happened yesterday? No way!"
+      - "I was near there yesterday, I can't believe I didn't hear this already."
+      - "That's interesting!"
+      - "That's the best story I've heard!"
+      - "Wow, that must of been fun!"
+      - "What adventures you've had!"
+      - "You did all that with a stick?"
+      - "Incredible!"
+      - "That sound dangerous!"
+      - "Can I come with you next time?"
+    fail:
+      - "*Ahem* That's my mother you're talking about."
+      - "This is why the village talks about you."
+      - "I don't get it..."
+      - "You're terrible! Creepers have feelings too!"
+      - "How could you kill a poor sheep?!"
+      - "That's lame!"
+      - "You're boring me!"
+      - "Stop making things up."
+      - "Ummm, what?"
+      - "Sorry, wasn't listening."
+      - "I know you never did that!"
+  child:
+    success:
+      - "Wow! You're a beast!"
+      - "I want to be just like you when I grow up. Shh, don't tell dad."
+      - "Can you adopt me?! You're awesome!"
+      - "I went fishing and almost drowned."
+      - "Does this mean I can take whatever I want? I mean, \"borrow?\""
+    fail:
+      - "You're a meanie!"
+      - "I'm telling my mom what you said about her..."
+      - "I believe you're speaking about my grandpa..."
+      - "How could you kill a poor chicken?"
+  child-offspring:
+    success:
+      - "What!? You really did that?! But... what happened to your friend?"
+      - "I want to explore a cave, too! Let's go!"
+      - "One day I'll kill more creepers than you!"
+      - "Oh, oh, oh! Can we climb a tree, too?!"
+      - "Did the lava hurt?"
+    fail:
+      - "I don't want to hear about grandma."
+      - "You always say that. I just want a pet."
+      - "You're just fibbing. I don't belive that."
+      - "You said you didn't eat the cake and cookies..."
+      - "Someone said you were a bad person, and I believe them!"
+  partner:
+    success:
+      - "Let's not tell our children that one..."
+      - "You were so rebellious! I love it!"
+      - "Did you ever tell your parents about losing their rings?"
+      - "It was that moment when I fell in love with you!"
+      - "Wow, you're the best hunter ever!"
+    fail:
+      - "Talk to me when you kill something other than a harmless cow."
+      - "Don't do something that reckless!"
+      - "You have a family to think about!"
+      - "... If you liked them why didn't you marry them, instead?"
+      - "Why did you wear the pink fluffy underwear? Whose were they?"
+
+flirt:
+  adult:
+    success:
+      - "You're sooo brave!"
+      - "Oh, you! Stop being so cute!"
+      - "*Blushes* Do you mean it?"
+      - "Oh, my..."
+      - "That was so adorable! You had me at \"hello\"!"
+      - "*Blushes*"
+      - "*Giggles*"
+      - "You really thing so? *Blushes*"
+      - "We should go out sometime."
+      - "You're sweet."
+    fail:
+      - "If you mean that, then prove it."
+      - "Aw.... Wait, you told the baker the same thing!"
+      - "Not in a million years."
+      - "Pathetic much?"
+      - "A zombie has a better chance than you."
+      - "That was bad."
+      - "Sorry, not interested."
+      - "Stay away from me."
+      - "Ewww."
+      - "Nice try."
+  partner:
+    success:
+      - "*Blushes* Well, how about we do something like that, then!"
+      - "Aw, you said that when we first met."
+      - "Baby, you're so cute!"
+      - "You bet I am!"
+      - "*Winks* You still got it!"
+    fail:
+      - "*Sighs*"
+      - "This one is getting old... like you."
+      - "We're married, we don't have to do this anymore."
+      - "Talk to the tree, it cares more."
+      - "Yeah, yeah... What was it you were saying?"
+
+greet:
+  adult:
+    - "Well, hello there!"
+    - "Hey! How are you today?"
+    - "Hey, good to see you!"
+    - "What's going on with you today?"
+    - "How are you today?"
+    - "Hi!"
+    - "How are you?"
+    - "Nice to see you!"
+    - "Good day!"
+    - "Nice to see you again!"
+    - "What's up?"
+    - "How are you?"
+  child:
+    - "Hi, who are you?"
+    - "Hi, what's your name?"
+    - "Eek! You look scary!"
+  child-offspring:
+    - "Hey there!"
+    - "Hey, what's going on?"
+    - "What are you doing?"
+    - "Where are you going?"
+  partner:
+    - "Hi honey, where have you been?"
+    - "Hello dear, how is your day going?"
+    - "Oh! You look tired."
+    - "Hey! You look hungry. Would you like me to cook something?"
+    - "You're back! I missed you."
+
+insult:
+  adult:
+    - "Wh-what?"
+    - "Why would you say that?"
+    - "Screw you!"
+    - "I'm not a mirror."
+    - "Who are you talking to?"
+  child:
+    - "You shouldn't swear!"
+    - "I'm going to tell my parents to beat you!"
+    - "Bunghole!"
+    - "*Cries*"
+  child-offspring:
+    - "I'm going to tell mommy!"
+    - "Why would you say that to me?"
+    - "Stop it!"
+    - "I... am... adopted?!"
+  partner:
+    - "Sweetie?!"
+    - "Hey! You shouldn't say that to me!"
+    - "You're being the asshole right now!"
+    - "You are the one who decided to marry me!"
+
+proud-of:
+  child:
+    - "Thank you, stranger!"
+    - "*Smiles*"
+    - "Glad to hear it!"
+  child-offspring:
+    - "Thank you, daddy!"
+    - "*Smiles*"
+    - "Oh, thank you!"
+    - "Are you?"
