@@ -661,16 +661,13 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public void onReputationEventFrom(ReputationEventType type, Entity entity) {
         boolean raidCheck = Config.VILLAGER_ATTACK_PLAYER_DURING_RAID.asBool() || !isInsideRaid();
-        if (type == ReputationEventType.ZOMBIE_VILLAGER_CURED) {
-            getGossips().add(entity.getUUID(), GossipType.MAJOR_POSITIVE, 20);
-            getGossips().add(entity.getUUID(), GossipType.MINOR_POSITIVE, 25);
-        } else if (type == ReputationEventType.TRADE) {
-            getGossips().add(entity.getUUID(), GossipType.TRADING, 2);
-        } else if (type == ReputationEventType.VILLAGER_HURT && EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity) && raidCheck) {
-            if (getLastDamageSource() instanceof EntityDamageSource entitySource && entitySource.isThorns()) return;
-            getGossips().add(entity.getUUID(), GossipType.MINOR_NEGATIVE, 25);
-        } else if (type == ReputationEventType.VILLAGER_KILLED || type == ReputationEventType.GOLEM_KILLED) {
-            getGossips().add(entity.getUUID(), GossipType.MAJOR_NEGATIVE, 25);
+        boolean thornsCheck = !(getLastDamageSource() instanceof EntityDamageSource source) || !source.isThorns();
+
+        if (type != ReputationEventType.VILLAGER_HURT
+                || (EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)
+                && raidCheck
+                && thornsCheck)) {
+            super.onReputationEventFrom(type, entity);
         }
 
         if (!isPartner(entity.getUUID()) || !(entity instanceof ServerPlayer player)) return;
