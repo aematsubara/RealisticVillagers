@@ -71,9 +71,9 @@ divorce:
   normal:
     - "I hate you!"
     - "Fine, get out of here!"
+    - "That's the worst thing you could've done!"
   papers:
     - "Okay..."
-    - "I guess... it's okay."
 
 cleric-divorce-papers:
   - "Here you go, bring these papers to your partner to confirm the divorce."
@@ -111,10 +111,10 @@ procreate:
   fail:
     has-baby:
       - "We already have a baby... you didn't lose it did you?!"
-      - "... you lost baby Joby didn't you? Wait... was his name Joby?"
     low-reputation:
       - "Spend more time with me! I'm not ready for a child."
       - "Hmm... not just yet. I think we need to spend more time together first."
+      - "I think we should take things slowly."
   # %time% - the waiting time to have another baby (@cooldown).
   cooldown: "&cYou must wait %time% to have another baby."
 
@@ -135,7 +135,7 @@ gift:
     - "A gift? but it's not christmas yet! *Laughs*"
   expecting-fail:
     - "So why did you call me?"
-    - "I thought you said you were going to give me something?"
+    - "You said you were going to give me something?"
   adult:
     success:
       good:
@@ -156,6 +156,7 @@ gift:
         - "Oh wow, I've always wanted one of these!"
         - "This is fantastic! I'll put it to good use."
         - "Thank you so much. I'll remember this forever."
+        - "*Poggers*"
     fail:
       - "This isn't a good gift..."
       - "What made you think that I would like this?"
@@ -163,6 +164,7 @@ gift:
       - "I don't want that, why would I?"
       - "Why are you giving me that?"
       - "Is this supposed to be a gift? No thanks."
+      - "I'm not a trash can."
   child:
     success:
       good:
@@ -271,14 +273,12 @@ chat:
       - "Lalala, I'm not listening! Lalala."
   child-offspring:
     success:
-      - "Oh, I was just going to go explorin' later."
       - "Can we go camping? Please?!"
       - "Hi, can you make me a cake?"
       - "Can I have my own room away from our house? That would be cool!"
       - "Let's move into a cave! That sounds so fun!"
     fail:
       - "I don't think I'd like that very much."
-      - "Is that why I've heard so much about \"divorce\"? What does that mean?"
       - "I want a new daddy."
       - "I don't want a baby sister."
   partner:
@@ -502,13 +502,11 @@ insult:
   adult:
     - "Wh-what?"
     - "Why would you say that?"
-    - "Screw you!"
     - "I'm not a mirror."
     - "Who are you talking to?"
   child:
     - "You shouldn't swear!"
     - "I'm going to tell my parents to beat you!"
-    - "Bunghole!"
     - "*Cries*"
   child-offspring:
     - "I'm going to tell mommy!"
@@ -518,7 +516,6 @@ insult:
   partner:
     - "Sweetie?!"
     - "Hey! You shouldn't say that to me!"
-    - "You're being the asshole right now!"
     - "You are the one who decided to marry me!"
 
 proud-of:
