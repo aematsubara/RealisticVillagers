@@ -201,6 +201,11 @@ public final class RealisticVillagers extends JavaPlugin {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!command.getName().equalsIgnoreCase("realisticvillagers")) return true;
 
+        if (!sender.hasPermission("realisticvillagers.reload")) {
+            sender.sendMessage(messages.getRandomMessage(Messages.Message.NO_PERMISSION));
+            return true;
+        }
+
         if (args.length != 1 || !args[0].equalsIgnoreCase("reload")) {
             sender.sendMessage(messages.getRandomMessage(Messages.Message.WRONG_COMMAND));
             return true;

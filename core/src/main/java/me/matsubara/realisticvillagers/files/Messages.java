@@ -148,6 +148,7 @@ public final class Messages {
         THROW_GIFT("throw-gift"),
         SELECT_BED("select-bed"),
         RELOAD("reload"),
+        NO_PERMISSION("no-permission"),
         WRONG_COMMAND("wrong-command"),
         FOLLOW_ME_START("follow-me.start"),
         FOLLOW_ME_STOP("follow-me.stop"),

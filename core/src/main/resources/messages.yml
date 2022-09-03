@@ -93,6 +93,7 @@ interact-fail:
   in-cooldown: "&cYou can't interact that fast!"
 
 reload: "&6The plugin has been reloaded!"
+no-permission: "&cYou don't have permission to execute this command!"
 wrong-command: "&cTry with /rvillagers reload."
 
 follow-me:
