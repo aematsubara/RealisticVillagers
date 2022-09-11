@@ -53,7 +53,7 @@ divorce-reputation-loss: 150
 divorce-reputation-loss-papers: 10
 
 # Who can modify the target entities of a villager.
-# Options: EVERYONE / FAMILY
+# Options: EVERYONE / FAMILY / NONE
 who-can-modify-villager-combat: FAMILY
 
 # Variables:

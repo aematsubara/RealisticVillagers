@@ -276,10 +276,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        saveData(tag);
+        savePluginData(tag);
     }
 
-    public void saveData(CompoundTag tag) {
+    public void savePluginData(CompoundTag tag) {
         CompoundTag villagerTag = new CompoundTag();
 
         villagerTag.put("Inventory", inventory.createTag());
@@ -318,10 +318,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         super.readAdditionalSaveData(tag);
 
         Tag base = tag.get("VillagerNPCValues");
-        loadData(base != null ? (CompoundTag) base : new CompoundTag());
+        loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
     }
 
-    public void loadData(CompoundTag villagerTag) {
+    public void loadPluginData(CompoundTag villagerTag) {
         inventory.fromTag(villagerTag.getList("Inventory", 10));
         villagerName = villagerTag.getString("Name");
         sex = villagerTag.getString("Sex");

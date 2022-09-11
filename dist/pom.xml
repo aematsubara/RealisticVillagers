@@ -12,11 +12,6 @@
         <version>1.0.0</version>
     </parent>
 
-    <properties>
-        <java.version>1.8</java.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <build>
         <directory>../target</directory>
         <finalName>${project.parent.name}-${project.version}</finalName>
@@ -74,16 +69,19 @@
     </repositories>
 
     <dependencies>
+        <!-- core -->
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- 1_18_R2 -->
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-1_18_R2</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- 1_19_R1 -->
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-1_19_R1</artifactId>

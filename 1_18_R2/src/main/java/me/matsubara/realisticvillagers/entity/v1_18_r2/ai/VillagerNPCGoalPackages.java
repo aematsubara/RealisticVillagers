@@ -180,13 +180,6 @@ public class VillagerNPCGoalPackages {
                 Pair.of(99, new ResetRaidStatus()));
     }
 
-    public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getHidePackage() {
-        return ImmutableList.of(
-                Pair.of(0, new SetHiddenState(15, 3)),
-                Pair.of(1, new LocateHidingPlace(32, Villager.SPEED_MODIFIER * 1.25f, 2)),
-                getMinimalLookBehavior());
-    }
-
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getFightPackage() {
         return ImmutableList.of(
                 Pair.of(0, new MeleeAttack()),

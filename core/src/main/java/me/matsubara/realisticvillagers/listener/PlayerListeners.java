@@ -4,7 +4,6 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
-import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -16,7 +15,6 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -36,13 +34,6 @@ public final class PlayerListeners implements Listener {
 
     public PlayerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (!(event.getInventory().getHolder() instanceof InteractGUI gui)) return;
-
-        if (gui.shouldStopInteracting()) gui.getNPC().stopInteracting();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

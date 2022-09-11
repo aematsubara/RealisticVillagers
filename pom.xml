@@ -9,6 +9,11 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
 
+    <properties>
+        <java.version>16</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
     <name>RealisticVillagers</name>
     <description>Forget about those boring villagers and replace them with interactive humans!</description>
 

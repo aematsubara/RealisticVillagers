@@ -88,7 +88,7 @@ public class NMSConverter implements INMSConverter {
     public String getNPCTag(org.bukkit.entity.LivingEntity entity) {
         if (entity instanceof Villager villager) {
             CompoundTag tag = new CompoundTag();
-            ((VillagerNPC) getNPC(villager)).saveData(tag);
+            ((VillagerNPC) getNPC(villager)).savePluginData(tag);
             return tag.get("VillagerNPCValues").toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
@@ -113,7 +113,7 @@ public class NMSConverter implements INMSConverter {
                 VillagerType.byBiome(level.getBiome(((CraftBlock) location.getBlock()).getPosition())));
         baby.finalizeSpawn(level, level.getCurrentDifficultyAt(baby.blockPosition()), MobSpawnType.BREEDING, null, null);
 
-        baby.loadData(new CompoundTag());
+        baby.loadPluginData(new CompoundTag());
         baby.setVillagerName(name);
         baby.setSex(sex);
 
@@ -142,7 +142,7 @@ public class NMSConverter implements INMSConverter {
     public void loadDataFromTag(Villager villager, String tag) {
         try {
             CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseTag(tag);
-            ((VillagerNPC) getNPC(villager)).loadData(villagerTag);
+            ((VillagerNPC) getNPC(villager)).loadPluginData(villagerTag);
         } catch (CommandSyntaxException exception) {
             exception.printStackTrace();
         }
