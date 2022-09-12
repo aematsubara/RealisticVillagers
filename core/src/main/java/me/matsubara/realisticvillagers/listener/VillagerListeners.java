@@ -96,12 +96,10 @@ public final class VillagerListeners implements Listener {
         if (!(event.getEntity() instanceof Villager villager)) return;
 
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            Inventory open = player.getOpenInventory().getTopInventory();
-            if (!(open.getHolder() instanceof MainGUI main)) continue;
+            Inventory openInventory = player.getOpenInventory().getTopInventory();
+            if (!(openInventory.getHolder() instanceof MainGUI main)) continue;
 
-            if (main.getNPC().bukkit().equals(villager)) {
-                player.closeInventory();
-            }
+            if (main.getNPC().bukkit().equals(villager)) player.closeInventory();
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;
@@ -113,13 +111,12 @@ public final class VillagerListeners implements Listener {
 
         EntityEquipment equipment = villager.getEquipment();
         if (equipment != null) {
-            drops.add(equipment.getItemInMainHand());
-            drops.add(equipment.getItemInOffHand());
+            addToDrops(drops, equipment.getItemInMainHand(), equipment.getItemInOffHand());
             addToDrops(drops, equipment.getArmorContents());
         }
     }
 
-    private void addToDrops(List<ItemStack> drops, ItemStack[] contents) {
+    private void addToDrops(List<ItemStack> drops, ItemStack... contents) {
         for (ItemStack item : contents) {
             if (item != null) drops.add(item);
         }
@@ -141,13 +138,13 @@ public final class VillagerListeners implements Listener {
         if (!type.isAir() && type != Material.COMPOSTER) return;
 
         // Play swing hand animation when removing crop or using composter.
-        if (event.getEntity() instanceof Villager villager) {
-            villager.swingMainHand();
-        }
+        if (event.getEntity() instanceof Villager villager) villager.swingMainHand();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (Config.DISABLE_INTERACTIONS.asBool()) return;
+
         if (!(event.getRightClicked() instanceof Villager villager)) return;
 
         if (event.getHand() != EquipmentSlot.HAND) {

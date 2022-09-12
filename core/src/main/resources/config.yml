@@ -1,6 +1,16 @@
 # NOTE: Some options will take effect after the entities are unloaded and loaded back to the world.
 # It is recommended to restart the server for the changes to take effect (don't be lazy :P).
 
+# If you only want villagers to look like players, spawn with weapons and attack, you can disable all interactions.
+disable-interactions: false
+
+# The maximum amount of gossip a villager shares with another villager.
+# NOTE: It's recommended to set a value between 2 and 5 if interactions (@disable-interactions) are enabled.
+max-gossip-topics: 10
+
+# These are set based on the player's reputation and if the player is the hero of the village.
+disable-special-prices: false
+
 # If a player has a monster head equipped, the villager will attack him.
 # Heads: DRAGON_HEAD / WITHER_SKELETON_SKULL / ZOMBIE_HEAD / SKELETON_SKULL / CREEPER_HEAD
 attack-player-wearing-monster-skull: true
@@ -399,9 +409,23 @@ bad-gift-reputation: 5
 # Minimum reputation value: 2.
 #
 # This plugin offers the following extra tags:
-# * LEATHER_ARMOR_PIECES, IRON_ARMOR_PIECES, CHAINMAIL_ARMOR_PIECES, GOLDEN_ARMOR_PIECES, DIAMOND_ARMOR_PIECES, NETHERITE_ARMOR_PIECES, ARMOR_PIECES
-# * WOODEN_TOOLS, STONE_TOOLS, IRON_TOOLS, GOLDEN_TOOLS, DIAMOND_TOOLS, NETHERITE_TOOLS
-# * TOOLS, EDIBLES, RECORDS, POTIONS
+# * LEATHER_ARMOR_PIECES,
+# * IRON_ARMOR_PIECES
+# * CHAINMAIL_ARMOR_PIECES
+# * GOLDEN_ARMOR_PIECES
+# * DIAMOND_ARMOR_PIECES
+# * NETHERITE_ARMOR_PIECES
+# * ARMOR_PIECES (includes all of the above)
+# * WOODEN_TOOLS
+# * STONE_TOOLS
+# * IRON_TOOLS
+# * GOLDEN_TOOLS
+# * DIAMOND_TOOLS
+# * NETHERITE_TOOLS
+# * TOOLS (includes all of the above)
+# * EDIBLES
+# * RECORDS
+# * POTIONS
 #
 # For a list of materials, visit https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 gift:

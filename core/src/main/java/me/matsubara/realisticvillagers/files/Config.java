@@ -5,6 +5,9 @@ import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public enum Config {
+    DISABLE_INTERACTIONS("disable-interactions"),
+    MAX_GOSSIP_TOPICS("max-gossip-topics"),
+    DISABLE_SPECIAL_PRICES("disable-special-prices"),
     ATTACK_PLAYER_WEARING_MONSTER_SKULL("attack-player-wearing-monster-skull"),
     ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK("attack-player-playing-goat-horn-seek"),
     GOAT_HORN_SEEK_RANGE("goat-horn-seek-range"),

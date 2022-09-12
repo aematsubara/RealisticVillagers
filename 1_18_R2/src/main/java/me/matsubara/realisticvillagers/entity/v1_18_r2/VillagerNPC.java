@@ -827,6 +827,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @SuppressWarnings("WhileLoopReplaceableByForEach")
     private void updateSpecialPrices(Player player) {
+        if (Config.DISABLE_SPECIAL_PRICES.asBool()) return;
+
         int reputation = getPlayerReputation(player);
         if (reputation != 0) {
             Iterator<MerchantOffer> offers = getOffers().iterator();
@@ -1094,8 +1096,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if ((time >= lastGossipTime && time < lastGossipTime + 1200L)) return;
         if ((time >= npc.getLastGossipTime() && time < npc.getLastGossipTime() + 1200L)) return;
 
-        // Reduced amount of gossips from 10 to 5, otherwise villager reputation with a player will rise too fast.
-        getGossips().transferFrom(with.getGossips(), random, 5);
+        getGossips().transferFrom(with.getGossips(), random, Config.MAX_GOSSIP_TOPICS.asInt());
         lastGossipTime = time;
         npc.setLastGossipTime(time);
         spawnGolemIfNeeded(level, time, 5);
