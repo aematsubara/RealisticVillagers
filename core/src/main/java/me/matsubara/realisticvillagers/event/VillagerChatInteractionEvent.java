@@ -2,14 +2,12 @@ package me.matsubara.realisticvillagers.event;
 
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 @SuppressWarnings("unused")
-public class VillagerChatInteractionEvent extends Event {
+public class VillagerChatInteractionEvent extends VillagerEvent {
 
-    private final IVillagerNPC npc;
     private final Player player;
     private final ChatType type;
     private boolean success;
@@ -17,14 +15,10 @@ public class VillagerChatInteractionEvent extends Event {
     private static final HandlerList handlers = new HandlerList();
 
     public VillagerChatInteractionEvent(IVillagerNPC npc, Player player, ChatType type, boolean success) {
-        this.npc = npc;
+        super(npc);
         this.player = player;
         this.type = type;
         this.success = success;
-    }
-
-    public IVillagerNPC getNPC() {
-        return npc;
     }
 
     public Player getPlayer() {
@@ -86,6 +80,7 @@ public class VillagerChatInteractionEvent extends Event {
             return this == BE_PROUD_OF;
         }
 
+        @SuppressWarnings("BooleanMethodIsAlwaysInverted")
         public boolean isInsult() {
             return this == INSULT;
         }

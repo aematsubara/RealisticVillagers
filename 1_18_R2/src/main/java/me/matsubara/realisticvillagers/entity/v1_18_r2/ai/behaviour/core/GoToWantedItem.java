@@ -26,11 +26,13 @@ public class GoToWantedItem extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+        if (!(villager instanceof VillagerNPC npc)) return false;
         ItemEntity closest = getClosestLovedItem(villager);
 
-        boolean forcePickup = villager instanceof VillagerNPC npc && npc.isExpectingGiftFrom(closest.getThrower());
-        return closest.closerThan(villager, maxDistToWalk)
-                && (forcePickup || !villager.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET));
+        // If item is a gift or has been fished by this villager, go to the item regardless of distance and cooldown.
+        if (npc.fished(closest.getItem()) || npc.isExpectingGiftFrom(closest.getThrower())) return true;
+
+        return closest.closerThan(villager, maxDistToWalk) && !villager.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET);
     }
 
     @Override

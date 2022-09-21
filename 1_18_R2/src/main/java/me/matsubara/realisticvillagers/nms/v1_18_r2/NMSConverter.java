@@ -89,7 +89,7 @@ public class NMSConverter implements INMSConverter {
         if (entity instanceof Villager villager) {
             CompoundTag tag = new CompoundTag();
             ((VillagerNPC) getNPC(villager)).savePluginData(tag);
-            return tag.get("VillagerNPCValues").toString();
+            return tag.get(plugin.getValuesKey().toString()).toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
             return container.get(plugin.getZombieTransformKey(), PersistentDataType.STRING);

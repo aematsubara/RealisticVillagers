@@ -91,6 +91,9 @@ public enum Config {
     BABY_TITLE("input-gui.baby.title"),
     BABY_TEXT("input-gui.baby.text"),
 
+    FISHING_ROD_CHANCE("fishing-rod-chance"),
+    FISHING_COOLDOWN("fishing-cooldown"),
+
     USE_VILLAGER_SOUNDS("use-villager-sounds"),
     VILLAGER_MESSAGE_FORMAT("villager-message-format");
 

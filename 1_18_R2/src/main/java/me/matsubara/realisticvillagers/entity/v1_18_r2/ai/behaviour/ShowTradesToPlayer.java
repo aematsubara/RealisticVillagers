@@ -36,7 +36,6 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
     public ShowTradesToPlayer(int minDuration, int maxDuration) {
         super(ImmutableMap.of(
                         MemoryModuleType.INTERACTION_TARGET, MemoryStatus.VALUE_PRESENT,
-                        // The villager can't be fighting.
                         MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT),
                 minDuration,
                 maxDuration);
@@ -54,7 +53,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
                 && !villager.isBaby()
                 && villager.distanceToSqr(target) <= 17.0d
                 // Don't show trades if villager is doing something.
-                && (!(villager instanceof VillagerNPC npc) || npc.isDoingNothing());
+                && (!(villager instanceof VillagerNPC npc) || (npc.isDoingNothing() && !npc.isFishing()));
     }
 
     @Override
@@ -66,6 +65,8 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) npc.setShowingTrades(true);
+
         super.start(level, villager, time);
         lookAtTarget(villager);
         cycleCounter = 0;
@@ -95,6 +96,8 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
 
     @Override
     public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) npc.setShowingTrades(false);
+
         super.stop(level, villager, time);
         villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
         clearHeldItem(villager);

@@ -16,10 +16,13 @@ import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.VillagerNPCGoalPackages;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.sensing.VillagerHostilesSensor;
+import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
+import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.NMSConverter;
+import me.matsubara.realisticvillagers.nms.v1_18_r2.VillagerFoodData;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -38,6 +41,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
@@ -72,11 +76,14 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -85,10 +92,10 @@ import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftVillager;
 import org.bukkit.craftbukkit.v1_18_R2.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.entity.EntityTransformEvent;
+import org.bukkit.entity.FishHook;
+import org.bukkit.event.entity.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -129,13 +136,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private DamageSource lastDamageSource;
+    private DummyFishingHook fishing;
+    private boolean isEating;
+    private boolean showingTrades;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
+    private final VillagerFoodData foodData = new VillagerFoodData(this);
 
     public final static MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
     public final static MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
     public final static MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
+    public final static MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
 
     public final static Activity STAY = NMSConverter.registerActivity("stay");
 
@@ -172,6 +184,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             HAS_HEALED_GOLEM_RECENTLY,
             CELEBRATE_VICTORY,
             STAY_PLACE,
+            HAS_FISHED_RECENTLY,
             MemoryModuleType.ATTACK_TARGET,
             MemoryModuleType.ATTACK_COOLING_DOWN);
 
@@ -269,12 +282,26 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        savePluginData(tag);
+
+        CompoundTag bukkit = getOrCreateBukkitTag(tag);
+        savePluginData(bukkit);
+
+        tag.put("BukkitValues", bukkit);
+
+        // Remove previous data associated from THIS plugin only in the container.
+        PersistentDataContainer container = getBukkitEntity().getPersistentDataContainer();
+        for (NamespacedKey key : container.getKeys()) {
+            if (key.getNamespace().equalsIgnoreCase(plugin.getValuesKey().getNamespace())) {
+                container.remove(key);
+            }
+        }
+
+        // Save data in craft entity to prevent data-loss.
+        getBukkitEntity().readBukkitValues(tag);
     }
 
     public void savePluginData(CompoundTag tag) {
         CompoundTag villagerTag = new CompoundTag();
-
         villagerTag.put("Inventory", inventory.createTag());
         villagerTag.putString("Name", villagerName);
         villagerTag.putString("Sex", sex);
@@ -287,15 +314,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         villagerTag.putBoolean("IsFatherVillager", isFatherVillager);
         saveCollection(childrens, NbtUtils::createUUID, "Childrens", villagerTag);
         saveCollection(targetEntities, type -> StringTag.valueOf(type.toShortString()), "TargetEntities", villagerTag);
-
         if (bedHome != null && bedHomeWorld != null) {
             CompoundTag bedHomeTag = new CompoundTag();
             bedHomeTag.putUUID("BedHomeWorld", bedHomeWorld);
             bedHomeTag.put("BedHomePos", newDoubleList(bedHome.getX(), bedHome.getY(), bedHome.getZ()));
             villagerTag.put("BedHome", bedHomeTag);
         }
-
-        tag.put("VillagerNPCValues", villagerTag);
+        foodData.addAdditionalSaveData(villagerTag);
+        tag.put(plugin.getValuesKey().toString(), villagerTag);
     }
 
     private <T> void saveCollection(Collection<T> collection, Function<T, Tag> mapper, String name, CompoundTag tag) {
@@ -310,7 +336,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
 
-        Tag base = tag.get("VillagerNPCValues");
+        CompoundTag bukkit = getOrCreateBukkitTag(tag);
+
+        Tag base = bukkit.get(plugin.getValuesKey().toString());
         loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
     }
 
@@ -330,6 +358,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         fillCollection(childrens, NbtUtils::loadUUID, "Childrens", villagerTag);
         fillCollection(targetEntities, input -> EntityType.byString(input.getAsString()).orElse(null), "TargetEntities", villagerTag);
         loadBedHomePosition(villagerTag);
+        foodData.readAdditionalSaveData(villagerTag);
     }
 
     private void loadBedHomePosition(CompoundTag tag) {
@@ -375,6 +404,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             T value = mapper.apply(content);
             if (value != null) collection.add(value);
         }
+    }
+
+    private CompoundTag getOrCreateBukkitTag(CompoundTag base) {
+        return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
     }
 
     @Override
@@ -431,6 +464,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    @Override
     public boolean canAttack() {
         return isHoldingWeapon();
     }
@@ -719,9 +753,29 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public ItemStack eat(Level world, ItemStack itemstack) {
-        world.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5f, random.nextFloat() * 0.1f + 0.9f);
-        return super.eat(world, itemstack);
+    public ItemStack eat(Level level, ItemStack item) {
+        foodData.eat(item.getItem(), item);
+        level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5f, random.nextFloat() * 0.1f + 0.9f);
+        return super.eat(level, item);
+    }
+
+    public boolean canEat(boolean flag) {
+        return flag || foodData.needsFood();
+    }
+
+    public boolean isHurt() {
+        return getHealth() > 0.0f && getHealth() < getMaxHealth();
+    }
+
+    public void causeFoodExhaustion(float exhaustion) {
+        causeFoodExhaustion(exhaustion, VillagerExhaustionEvent.ExhaustionReason.UNKNOWN);
+    }
+
+    public void causeFoodExhaustion(float exhaustion, VillagerExhaustionEvent.ExhaustionReason reason) {
+        if (!level.isClientSide) {
+            VillagerExhaustionEvent event = new VillagerExhaustionEvent(this, reason, exhaustion);
+            if (!event.isCancelled()) foodData.addExhaustion(event.getExhaustion());
+        }
     }
 
     @Override
@@ -819,6 +873,53 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         this.isPartnerVillager = isPartnerVillager;
     }
 
+    @Override
+    public int getFoodLevel() {
+        return foodData.getFoodLevel();
+    }
+
+    @Override
+    public boolean isFishing() {
+        return fishing != null;
+    }
+
+    @Override
+    public void toggleFishing() {
+        if (fishing != null) {
+            int damage = fishing.retrieve(getMainHandItem());
+            getMainHandItem().hurtAndBreak(damage, this, (npc) -> npc.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+
+            level.playSound(null,
+                    positionAsBlock(),
+                    SoundEvents.FISHING_BOBBER_RETRIEVE,
+                    SoundSource.NEUTRAL,
+                    0.5f, 0.4f / (random.nextFloat() * 0.4f + 0.8f));
+            gameEvent(GameEvent.FISHING_ROD_REEL_IN);
+            return;
+        }
+        int luck = EnchantmentHelper.getFishingLuckBonus(getMainHandItem());
+        int lureSpeed = EnchantmentHelper.getFishingSpeedBonus(getMainHandItem());
+
+        DummyFishingHook hook = new DummyFishingHook(this, level, luck, lureSpeed);
+
+        VillagerFishEvent fishEvent = new VillagerFishEvent(this, null, (FishHook) hook.getBukkitEntity(), VillagerFishEvent.State.FISHING);
+        Bukkit.getPluginManager().callEvent(fishEvent);
+        if (fishEvent.isCancelled()) {
+            fishing = null;
+            return;
+        }
+
+        level.playSound(
+                null,
+                positionAsBlock(),
+                SoundEvents.FISHING_BOBBER_THROW,
+                SoundSource.NEUTRAL,
+                0.5f, 0.4f / (random.nextFloat() * 0.4f + 0.8f));
+        level.addFreshEntity(hook);
+
+        gameEvent(GameEvent.FISHING_ROD_CAST);
+    }
+
     public void startTrading(Player player) {
         updateSpecialPrices(player);
         setTradingPlayer(player);
@@ -897,9 +998,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (!container.canAddItem(stack)) return;
 
         ItemStack fakeRemaining = new SimpleContainer(container).addItem(stack);
-        if (CraftEventFactory.callEntityPickupItemEvent(this, entity, fakeRemaining.getCount(), false).isCancelled()) {
-            return;
-        }
+
+        EntityPickupItemEvent event = CraftEventFactory.callEntityPickupItemEvent(this, entity, fakeRemaining.getCount(), false);
+        if (event.isCancelled()) return;
+
+        stack = CraftItemStack.asNMSCopy(event.getItem().getItemStack());
 
         onItemPickup(entity);
         take(entity, stack.getCount() - fakeRemaining.getCount());
@@ -917,7 +1020,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean isDoingNothing() {
-        return !isFighting() && !isExpecting() && !isInteracting() && !isTrading() && procreatingWith == null;
+        return !isFighting() && !isExpecting() && !isInteracting() && !isTrading() && procreatingWith == null && !isEating;
     }
 
     private void handleRemaining(ItemStack original, ItemStack remaining, ItemEntity itemEntity) {
@@ -949,8 +1052,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         UUID thrower = getThrower(stack);
         if (isExpectingGiftFrom(thrower)) return true;
+        if (fished(stack)) return true;
 
         return super.wantsToPickUp(stack) && thrower == null;
+    }
+
+    public boolean fished(ItemStack item) {
+        ItemMeta meta = CraftItemStack.asBukkitCopy(item).getItemMeta();
+        if (meta != null) {
+            String uuidString = meta.getPersistentDataContainer().get(plugin.getFishedKey(), PersistentDataType.STRING);
+            if (uuidString != null) return UUID.fromString(uuidString).equals(getUUID());
+        }
+        return false;
     }
 
     private UUID getThrower(ItemStack stack) {
@@ -1121,9 +1234,27 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public void aiStep() {
+        super.aiStep();
+
+        if (level.getDifficulty() != Difficulty.PEACEFUL || !level.getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION)) {
+            return;
+        }
+
+        if (getHealth() < getMaxHealth() && tickCount % 20 == 0) {
+            heal(1.0f, EntityRegainHealthEvent.RegainReason.REGEN);
+        }
+
+        if (foodData.needsFood() && tickCount % 10 == 0) {
+            foodData.setFoodLevel(foodData.getFoodLevel() + 1);
+        }
+    }
+
+    @Override
     public void tick() {
         super.tick();
         cooldowns.tick();
+        foodData.tick();
 
         if (!collides && !isSleeping()) collides = true;
 
@@ -1350,7 +1481,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void spawnParticle(Particle particle) {
+    public void spawnEntityEventParticle(Particle particle) {
         getBukkitEntity().getWorld().spawnParticle(
                 particle,
                 getRandomX(1.05d),

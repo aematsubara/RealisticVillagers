@@ -7,6 +7,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.util.Vector;
 
 import java.lang.invoke.MethodHandle;
 import java.util.Base64;
@@ -80,5 +81,26 @@ public final class PluginUtils {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    public static Vector offsetVector(Vector vector, float yawDegrees, float pitchDegrees) {
+        double yaw = Math.toRadians(-yawDegrees), pitch = Math.toRadians(-pitchDegrees);
+
+        double cosYaw = Math.cos(yaw), cosPitch = Math.cos(pitch);
+        double sinYaw = Math.sin(yaw), sinPitch = Math.sin(pitch);
+
+        double initialX, initialY, initialZ, x, y, z;
+
+        initialX = vector.getX();
+        initialY = vector.getY();
+        x = initialX * cosPitch - initialY * sinPitch;
+        y = initialX * sinPitch + initialY * cosPitch;
+
+        initialZ = vector.getZ();
+        initialX = x;
+        z = initialZ * cosYaw - initialX * sinYaw;
+        x = initialZ * sinYaw + initialX * cosYaw;
+
+        return new Vector(x, y, z);
     }
 }

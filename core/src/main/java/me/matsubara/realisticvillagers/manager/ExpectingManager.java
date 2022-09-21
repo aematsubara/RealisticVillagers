@@ -2,9 +2,11 @@ package me.matsubara.realisticvillagers.manager;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
 import me.matsubara.realisticvillagers.files.Messages;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.Bed;
@@ -39,6 +41,24 @@ public final class ExpectingManager implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
+    public void onVillagerFish(VillagerFishEvent event) {
+        if (event.getState() != VillagerFishEvent.State.CAUGHT_FISH) return;
+
+        Entity caught = event.getCaught();
+        if (!(caught instanceof Item item)) return;
+
+        ItemMeta meta = item.getItemStack().getItemMeta();
+        if (meta != null) {
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            container.set(
+                    plugin.getFishedKey(),
+                    PersistentDataType.STRING,
+                    event.getNPC().bukkit().getUniqueId().toString());
+        }
+        item.getItemStack().setItemMeta(meta);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
 
@@ -57,7 +77,10 @@ public final class ExpectingManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntityPickupItem(EntityPickupItemEvent event) {
-        UUID thrower = event.getItem().getThrower();
+        Item item = event.getItem();
+        removeMetadata(item, plugin.getFishedKey());
+
+        UUID thrower = item.getThrower();
         if (thrower == null) return;
 
         IVillagerNPC npc = get(thrower);
@@ -68,7 +91,7 @@ public final class ExpectingManager implements Listener {
 
         if (npc.bukkit().getUniqueId().equals(pickerUUID)) {
             remove(thrower);
-            removeMetadata(event.getItem());
+            removeMetadata(item, plugin.getGiftKey());
 
             // Stop expecting gift.
             npc.stopExpecting();
@@ -83,7 +106,7 @@ public final class ExpectingManager implements Listener {
             plugin.getServer().getPluginManager().callEvent(new VillagerPickGiftEvent(
                     npc,
                     throwerPlayer,
-                    event.getItem().getItemStack()));
+                    item.getItemStack()));
             return;
         }
 
@@ -91,16 +114,16 @@ public final class ExpectingManager implements Listener {
             event.setCancelled(true);
         } else {
             npc.setGiftDropped(false);
-            removeMetadata(event.getItem());
+            removeMetadata(item, plugin.getGiftKey());
         }
     }
 
-    private void removeMetadata(Item item) {
+    private void removeMetadata(Item item, NamespacedKey key) {
         ItemStack stack = item.getItemStack();
+
         ItemMeta meta = stack.getItemMeta();
-        if (meta != null) {
-            meta.getPersistentDataContainer().remove(plugin.getGiftKey());
-        }
+        if (meta != null) meta.getPersistentDataContainer().remove(key);
+
         stack.setItemMeta(meta);
         item.setItemStack(stack);
     }

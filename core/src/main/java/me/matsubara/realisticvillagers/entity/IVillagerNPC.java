@@ -48,7 +48,7 @@ public interface IVillagerNPC {
 
     boolean canAttack();
 
-    void spawnParticle(Particle particle);
+    void spawnEntityEventParticle(Particle particle);
 
     String getSex();
 
@@ -133,4 +133,10 @@ public interface IVillagerNPC {
     boolean hasPartner();
 
     void setPartner(UUID uuid, boolean isPartnerVillager);
+
+    int getFoodLevel();
+
+    boolean isFishing();
+
+    void toggleFishing();
 }

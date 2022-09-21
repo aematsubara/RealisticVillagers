@@ -28,6 +28,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -56,6 +57,8 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey childNameKey = key("ChildName");
     private final NamespacedKey childSexKey = key("ChildSex");
     private final NamespacedKey zombieTransformKey = key("ZombieTransform");
+    private final NamespacedKey fishedKey = key("Fished");
+    private final NamespacedKey valuesKey = key("VillagerNPCValues");
 
     private VillagerTracker villagerTracker;
     private Shape ring;
@@ -149,16 +152,30 @@ public final class RealisticVillagers extends JavaPlugin {
         return new Shape(this, "wedding_ring", shaped, ingredients, shapeList, builder.build());
     }
 
-    private ItemBuilder getItem(String path) {
+    public ItemBuilder getItem(String path) {
         String name = PluginUtils.translate(getConfig().getString(path + ".display-name"));
         List<String> lore = PluginUtils.translate(getConfig().getStringList(path + ".lore"));
 
-        String materialName = getConfig().getString(path + ".material");
-        Material material = getMaterial(materialName);
+        String url = getConfig().getString(path + ".url");
+
+        String materialPath = path + ".material";
+
+        String materialName = getConfig().getString(materialPath);
+        if (materialName == null) getLogger().info("Invalid material at" + materialPath);
+
+        Material material = materialName != null ? getMaterial(materialName) : Material.STONE;
 
         ItemBuilder builder = new ItemBuilder(material)
                 .setDisplayName(name)
                 .setLore(lore);
+
+        if (material == Material.PLAYER_HEAD && url != null) {
+            builder.setHead(url, true);
+        }
+
+        for (String flag : getConfig().getStringList(path + ".flags")) {
+            builder.addItemFlags(ItemFlag.valueOf(flag.toUpperCase()));
+        }
 
         int modelData = getConfig().getInt(path + ".model-data", Integer.MIN_VALUE);
         if (modelData != Integer.MIN_VALUE) builder.setCustomModelData(modelData);

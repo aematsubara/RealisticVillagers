@@ -24,6 +24,8 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.idle.Village
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.meet.SocializeAtBell;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.rest.SleepInBed;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.stay.ResetStayStatus;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.work.StartFishing;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.ai.behaviour.work.WorkAtBarrel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
@@ -60,6 +62,7 @@ public class VillagerNPCGoalPackages {
                 Pair.of(0, new SetRaidStatus()),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.JOB_SITE)),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.POTENTIAL_JOB_SITE)),
+                Pair.of(0, new Eat()),
                 Pair.of(1, new MoveToTargetSink()),
                 Pair.of(2, new PoiCompetitorScan(profession)),
                 Pair.of(3, new LookAndFollowPlayerSink(Villager.SPEED_MODIFIER)),
@@ -76,7 +79,6 @@ public class VillagerNPCGoalPackages {
                 Pair.of(10, new AcquirePoi(PoiType.MEETING, MemoryModuleType.MEETING_POINT, true, Optional.of((byte) 14))),
                 Pair.of(10, new AssignProfessionFromJobSite()),
                 Pair.of(10, new ResetProfession()),
-                // New.
                 Pair.of(10, new BackToStay()),
                 Pair.of(10, new HealGolem(100, VillagerNPC.SPEED_MODIFIER)));
     }
@@ -85,6 +87,8 @@ public class VillagerNPCGoalPackages {
         Behavior<Villager> behavior;
         if (profession == VillagerProfession.FARMER) {
             behavior = new WorkAtComposter();
+        } else if (profession == VillagerProfession.FISHERMAN) {
+            behavior = new WorkAtBarrel();
         } else {
             behavior = new WorkAtPoi();
         }
@@ -96,7 +100,7 @@ public class VillagerNPCGoalPackages {
                         Pair.of(new StrollAroundPoi(MemoryModuleType.JOB_SITE, STROLL_SPEED_MODIFIER, 4), 2),
                         Pair.of(new StrollToPoi(MemoryModuleType.JOB_SITE, STROLL_SPEED_MODIFIER, 1, 10), 5),
                         Pair.of(new StrollToPoiList(MemoryModuleType.SECONDARY_JOB_SITE, Villager.SPEED_MODIFIER, 1, 6, MemoryModuleType.JOB_SITE), 5),
-                        Pair.of(new HarvestFarmland(), profession == VillagerProfession.FARMER ? 2 : 5),
+                        Pair.of(new StartFishing(), profession == VillagerProfession.FISHERMAN ? 2 : 5),
                         Pair.of(new UseBonemeal(), profession == VillagerProfession.FARMER ? 4 : 7)))),
                 Pair.of(10, new ShowTradesToPlayer(400, 1600)),
                 Pair.of(10, new SetLookAndInteractPlayer(4)),

@@ -2,7 +2,6 @@ package me.matsubara.realisticvillagers.gui;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.util.ItemStackDeserializer;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -38,8 +37,7 @@ public abstract class InteractGUI implements InventoryHolder {
     }
 
     protected ItemStack getGUIItem(String itemName) {
-        String string = plugin.getConfig().getString("gui." + name + ".items." + itemName, "");
-        return ItemStackDeserializer.deserialize(string);
+        return plugin.getItem("gui." + name + ".items." + itemName).build();
     }
 
     @Override

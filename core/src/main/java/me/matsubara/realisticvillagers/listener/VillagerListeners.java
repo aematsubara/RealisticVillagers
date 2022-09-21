@@ -31,6 +31,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @SuppressWarnings("ClassCanBeRecord")
 public final class VillagerListeners implements Listener {
@@ -60,12 +61,11 @@ public final class VillagerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onProjectileHit(ProjectileHitEvent event) {
-        if (Config.ARROWS_PASS_THROUGH_OTHER_VILLAGERS.asBool()) return;
+        if (!Config.ARROWS_PASS_THROUGH_OTHER_VILLAGERS.asBool()) return;
 
         if (!(event.getEntity().getShooter() instanceof Villager)) return;
         if (!(event.getHitEntity() instanceof Villager)) return;
 
-        // Should not collide between villagers?
         event.setCancelled(true);
     }
 
@@ -74,11 +74,26 @@ public final class VillagerListeners implements Listener {
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
 
+            Villager villager = event.getEntity();
+
             // Remove previous.
-            plugin.getVillagerTracker().removeNPC(event.getEntity().getEntityId());
+            plugin.getVillagerTracker().removeNPC(villager.getEntityId());
 
             // Create with new skin.
-            plugin.getVillagerTracker().spawnNPC(event.getEntity());
+            plugin.getVillagerTracker().spawnNPC(villager);
+
+            // Give fishing rod.
+            if (event.getProfession() == Villager.Profession.FISHERMAN) {
+                EntityEquipment equipment = villager.getEquipment();
+                if (equipment == null) return;
+
+                if (ThreadLocalRandom.current().nextFloat() >= Config.FISHING_ROD_CHANCE.asFloat()) return;
+
+                ItemStack previous = equipment.getItemInMainHand();
+                if (ItemStackUtils.isWeapon(previous)) villager.getInventory().addItem(previous);
+
+                equipment.setItemInMainHand(new ItemStack(Material.FISHING_ROD));
+            }
         });
     }
 
@@ -324,12 +339,15 @@ public final class VillagerListeners implements Listener {
 
     @SuppressWarnings("deprecation")
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+    public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
 
         IVillagerNPC npc = plugin.getConverter().getNPC(villager);
+        if (npc.isFishing()) npc.toggleFishing();
 
-        if (villager.getTarget() == null && event.getDamager() instanceof Player player) {
+        if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;
+
+        if (villager.getTarget() == null && byEntity.getDamager() instanceof Player player) {
             plugin.getMessages().send(npc, player, Messages.Message.ON_HIT);
         }
 

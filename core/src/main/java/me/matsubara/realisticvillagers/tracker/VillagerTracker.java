@@ -163,7 +163,7 @@ public final class VillagerTracker implements Listener {
                     case 42 -> particle = npc.canAttack() ? null : Particle.WATER_SPLASH;
                     default -> particle = null;
                 }
-                if (particle != null) npc.spawnParticle(particle);
+                if (particle != null) npc.spawnEntityEventParticle(particle);
             }
         });
 
@@ -471,6 +471,13 @@ public final class VillagerTracker implements Listener {
         private final RealisticVillagers plugin;
         private final IVillagerNPC villager;
 
+        // Show everything except cape.
+        private final static MetadataModifier.EntityMetadata<Boolean, Byte> SKIN_LAYERS = new MetadataModifier.EntityMetadata<>(
+                10,
+                Byte.class,
+                Arrays.asList(9, 9, 10, 14, 14, 15, 17),
+                input -> (byte) (input ? 126 : 0));
+
         public SpawnHandler(RealisticVillagers plugin, Villager villager) {
             this.plugin = plugin;
             this.villager = plugin.getConverter().getNPC(villager);
@@ -481,7 +488,7 @@ public final class VillagerTracker implements Listener {
             Location location = villager.bukkit().getLocation();
 
             npc.rotation().queueRotate(location.getYaw(), location.getPitch()).send(player);
-            npc.metadata().queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(player);
+            npc.metadata().queue(SKIN_LAYERS, true).send(player);
 
             if (villager.bukkit().isSleeping()) {
                 Location home = villager.bukkit().getMemory(MemoryKey.HOME);

@@ -1,24 +1,18 @@
 package me.matsubara.realisticvillagers.event;
 
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
-public class VillagerRemoveEvent extends Event {
+public class VillagerRemoveEvent extends VillagerEvent {
 
-    private final IVillagerNPC npc;
     private final RemovalReason reason;
 
     private final static HandlerList handlers = new HandlerList();
 
     public VillagerRemoveEvent(IVillagerNPC npc, RemovalReason reason) {
-        this.npc = npc;
+        super(npc);
         this.reason = reason;
-    }
-
-    public IVillagerNPC getNPC() {
-        return npc;
     }
 
     public RemovalReason getReason() {
@@ -35,6 +29,7 @@ public class VillagerRemoveEvent extends Event {
         return handlers;
     }
 
+    @SuppressWarnings("unused")
     public enum RemovalReason {
         KILLED(true, false),
         DISCARDED(true, false),
