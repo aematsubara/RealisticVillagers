@@ -29,8 +29,6 @@
 #
 # Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
 # Flags: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/ItemFlag.html
-# Colors: https://www.digminecraft.com/lists/pattern_color_list_pc.php
-# Patterns: https://www.digminecraft.com/lists/pattern_list_pc.php
 
 # If you only want villagers to look like players, spawn with weapons and attack, you can disable all interactions.
 disable-interactions: false

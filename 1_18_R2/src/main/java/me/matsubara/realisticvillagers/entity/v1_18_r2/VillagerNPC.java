@@ -80,6 +80,7 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.bukkit.Bukkit;
@@ -100,6 +101,8 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
+import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -662,7 +665,24 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             }
         }
 
+        if (getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+            LocalDate now = LocalDate.now();
+            int day = now.get(ChronoField.DAY_OF_MONTH);
+            int month = now.get(ChronoField.MONTH_OF_YEAR);
+            if (month == 10 && day == 31 && random.nextFloat() < Config.CHANCE_OF_WEARING_HALLOWEEN_MASK.asFloat()) {
+                setSlotWithDropChance(
+                        EquipmentSlot.HEAD,
+                        new ItemStack(random.nextFloat() < 0.1f ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN),
+                        0.0f);
+            }
+        }
+
         return super.finalizeSpawn(level, difficulty, spawnType, groupData, tag);
+    }
+
+    public void setSlotWithDropChance(EquipmentSlot slot, ItemStack item, float chance) {
+        setItemSlot(slot, item);
+        setDropChance(slot, chance);
     }
 
     private void enchantItemBySlot(EquipmentSlot slot, float chance) {

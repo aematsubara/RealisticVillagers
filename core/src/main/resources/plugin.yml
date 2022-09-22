@@ -2,7 +2,7 @@ name: RealisticVillagers
 version: ${project.parent.version}
 author: Matsubara
 main: me.matsubara.realisticvillagers.RealisticVillagers
-api-version: 1.14
+api-version: 1.18
 load: STARTUP
 description: ${project.description}
 depend:
