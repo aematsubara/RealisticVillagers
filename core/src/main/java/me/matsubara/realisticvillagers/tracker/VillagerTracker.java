@@ -15,6 +15,7 @@ import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
+import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import me.matsubara.realisticvillagers.util.npc.NPC;
 import me.matsubara.realisticvillagers.util.npc.NPCPool;
@@ -109,6 +110,8 @@ public final class VillagerTracker implements Listener {
                 ENTITY_EFFECT) {
             @Override
             public void onPacketSending(PacketEvent event) {
+                if (Config.DISABLE_SKINS.asBool()) return;
+
                 PacketType type = event.getPacketType();
 
                 Player player = event.getPlayer();
@@ -408,6 +411,8 @@ public final class VillagerTracker implements Listener {
     }
 
     public void spawnNPC(Villager villager) {
+        if (Config.DISABLE_SKINS.asBool()) return;
+
         int entityId = villager.getEntityId();
 
         if (pool.getNpc(entityId).isPresent()) return;

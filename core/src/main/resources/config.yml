@@ -620,3 +620,6 @@ attack-damage: 3.0
 # The power of a ranged weapon (bow/crossbow).
 # NOTE: Don't change if you don't know what you're doing.
 range-weapon-power: 1.6
+
+# Whether to use normal villagers instead of players.
+disable-skins: false

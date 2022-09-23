@@ -95,7 +95,8 @@ public enum Config {
     FISHING_COOLDOWN("fishing-cooldown"),
 
     USE_VILLAGER_SOUNDS("use-villager-sounds"),
-    VILLAGER_MESSAGE_FORMAT("villager-message-format");
+    VILLAGER_MESSAGE_FORMAT("villager-message-format"),
+    DISABLE_SKINS("disable-skins");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

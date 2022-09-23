@@ -2,6 +2,8 @@ package me.matsubara.realisticvillagers;
 
 import com.tchristofferson.configupdater.ConfigUpdater;
 import lombok.Getter;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.listener.PlayerListeners;
@@ -19,15 +21,13 @@ import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Monster;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
@@ -228,12 +229,42 @@ public final class RealisticVillagers extends JavaPlugin {
             return true;
         }
 
+        boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
+
         reloadConfig();
         messages.reloadConfig();
         giftManager.loadGiftCategories();
         initDefaultTargetEntities(defaultTargets);
         sender.sendMessage(messages.getRandomMessage(Messages.Message.RELOAD));
+
+        if (skinsDisabled == Config.DISABLE_SKINS.asBool()) return true;
+
+        if (Config.DISABLE_SKINS.asBool()) {
+            handleVillager(npc -> {
+                villagerTracker.removeNPC(npc.bukkit().getEntityId());
+                npc.sendSpawnPacket();
+            });
+        } else {
+            handleVillager(npc -> {
+                npc.sendDestroyPacket();
+                villagerTracker.spawnNPC(npc.bukkit());
+            });
+        }
+
         return true;
+    }
+
+    private void handleVillager(Consumer<IVillagerNPC> consumer) {
+        for (World world : getServer().getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (!(entity instanceof Villager villager)) continue;
+
+                IVillagerNPC npc = converter.getNPC(villager);
+                if (npc == null) continue;
+
+                consumer.accept(npc);
+            }
+        }
     }
 
     public boolean isMarried(Player player) {

@@ -139,4 +139,8 @@ public interface IVillagerNPC {
     boolean isFishing();
 
     void toggleFishing();
+
+    void sendSpawnPacket();
+
+    void sendDestroyPacket();
 }

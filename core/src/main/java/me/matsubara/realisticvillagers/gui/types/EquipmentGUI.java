@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
@@ -17,6 +18,12 @@ import org.bukkit.inventory.ItemStack;
 @Getter
 public final class EquipmentGUI extends InteractGUI {
 
+    private final ItemStack close;
+    private final ItemStack border;
+    private final ItemStack head;
+
+    private final static ItemStack EMPTY = new ItemStack(Material.AIR);
+    private final static String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
     private final static EquipmentSlot[] ARMOR_SLOTS_ORDER = {
             EquipmentSlot.HEAD,
             EquipmentSlot.CHEST,
@@ -25,12 +32,6 @@ public final class EquipmentGUI extends InteractGUI {
             EquipmentSlot.HAND,
             EquipmentSlot.OFF_HAND};
 
-    private final static ItemStack EMPTY = new ItemStack(Material.AIR);
-
-    private final ItemStack close;
-    private final ItemStack border;
-    private final ItemStack head;
-
     public EquipmentGUI(RealisticVillagers plugin, Player player, IVillagerNPC npc) {
         super("equipment", plugin, npc, npc.bukkit().getInventory().getSize() + 18, null);
         this.close = getGUIItem("close");
@@ -38,8 +39,8 @@ public final class EquipmentGUI extends InteractGUI {
                 .setDisplayName("&7")
                 .build();
 
-        WrappedSignedProperty textures = plugin.getVillagerTracker().getTextures(npc.bukkit());
-        this.head = textures == null ? border.clone() : new ItemBuilder(PluginUtils.createHead(textures.getValue()))
+        WrappedSignedProperty textures = Config.DISABLE_SKINS.asBool() ? null : plugin.getVillagerTracker().getTextures(npc.bukkit());
+        this.head = new ItemBuilder(PluginUtils.createHead(textures == null ? VILLAGER_HEAD_TEXTURE : textures.getValue()))
                 .setDisplayName("&7")
                 .build();
 

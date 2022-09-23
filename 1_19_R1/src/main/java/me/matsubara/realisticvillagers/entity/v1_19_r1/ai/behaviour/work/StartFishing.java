@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.ai.behaviour.work;
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
@@ -35,6 +36,7 @@ public class StartFishing extends Behavior<Villager> {
     @SuppressWarnings("WhileLoopReplaceableByForEach")
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+        if (Config.DISABLE_SKINS.asBool()) return false;
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return false;
         if (!villager.getMainHandItem().is(Items.FISHING_ROD)) return false;
         if (villager.getVillagerData().getProfession() != VillagerProfession.FISHERMAN) return false;

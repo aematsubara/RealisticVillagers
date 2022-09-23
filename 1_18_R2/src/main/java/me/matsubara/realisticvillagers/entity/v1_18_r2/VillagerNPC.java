@@ -29,6 +29,10 @@ import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -119,7 +123,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private UUID partner;
     private boolean isPartnerVillager;
     private long lastProcreation;
-    private int skinTextureId;
+    private int skinTextureId = -1;
     private UUID interactingWith;
     private InteractType interactType;
     private ExpectingType expectingType;
@@ -938,6 +942,23 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         level.addFreshEntity(hook);
 
         gameEvent(GameEvent.FISHING_ROD_CAST);
+    }
+
+    @Override
+    public void sendSpawnPacket() {
+        sendPacket(new ClientboundAddEntityPacket(this));
+        sendPacket(new ClientboundSetEntityDataPacket(getId(), getEntityData(), true));
+    }
+
+    @Override
+    public void sendDestroyPacket() {
+        sendPacket(new ClientboundRemoveEntitiesPacket(getId()));
+    }
+
+    private void sendPacket(Packet<?> packet) {
+        for (ServerPlayer player : ((ServerLevel) level).players()) {
+            player.connection.connection.send(packet);
+        }
     }
 
     public void startTrading(Player player) {

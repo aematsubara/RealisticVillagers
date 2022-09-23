@@ -71,6 +71,8 @@ public final class VillagerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onVillagerCareerChange(VillagerCareerChangeEvent event) {
+        if (Config.DISABLE_SKINS.asBool()) return;
+
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
 

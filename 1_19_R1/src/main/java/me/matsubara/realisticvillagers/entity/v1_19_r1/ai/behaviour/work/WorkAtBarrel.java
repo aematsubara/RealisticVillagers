@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.ai.behaviour.work;
 
 import com.google.common.collect.ImmutableSet;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.WorkAtPoi;
@@ -33,7 +34,9 @@ public class WorkAtBarrel extends WorkAtPoi {
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         // Don't work at station if fishing.
-        return super.checkExtraStartConditions(level, villager) && (!(villager instanceof VillagerNPC npc) || !npc.isFishing());
+        return !Config.DISABLE_SKINS.asBool()
+                && super.checkExtraStartConditions(level, villager)
+                && (!(villager instanceof VillagerNPC npc) || !npc.isFishing());
     }
 
     @Override
