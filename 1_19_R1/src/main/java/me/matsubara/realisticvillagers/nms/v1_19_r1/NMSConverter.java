@@ -73,8 +73,8 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public IVillagerNPC getNPC(Villager villager) {
-        return ((CraftVillager) villager).getHandle() instanceof VillagerNPC npc ? npc : null;
+    public Optional<IVillagerNPC> getNPC(Villager villager) {
+        return Optional.ofNullable(((CraftVillager) villager).getHandle() instanceof VillagerNPC npc ? npc : null);
     }
 
     @Override
@@ -82,7 +82,13 @@ public class NMSConverter implements INMSConverter {
         try {
             // "factory" field.
             Field field = EntityType.VILLAGER.getClass().getDeclaredField("bs");
-            Reflection.setFieldUsingUnsafe(field, EntityType.VILLAGER, (EntityType.EntityFactory<net.minecraft.world.entity.npc.Villager>) VillagerNPC::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.VILLAGER, (EntityType.EntityFactory<Entity>) (type, level) -> {
+                if (plugin.isEnabledIn(level.getWorld())) {
+                    return new VillagerNPC(EntityType.VILLAGER, level);
+                } else {
+                    return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
+                }
+            });
         } catch (ReflectiveOperationException exception) {
             exception.printStackTrace();
         }
@@ -93,7 +99,11 @@ public class NMSConverter implements INMSConverter {
     public String getNPCTag(org.bukkit.entity.LivingEntity entity) {
         if (entity instanceof Villager villager) {
             CompoundTag tag = new CompoundTag();
-            ((VillagerNPC) getNPC(villager)).savePluginData(tag);
+
+            Optional<IVillagerNPC> npc = getNPC(villager);
+            if (npc.isEmpty()) return null;
+
+            ((VillagerNPC) npc.get()).savePluginData(tag);
             return tag.get(plugin.getValuesKey().toString()).toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
@@ -148,7 +158,11 @@ public class NMSConverter implements INMSConverter {
     public void loadDataFromTag(Villager villager, String tag) {
         try {
             CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseTag(tag);
-            ((VillagerNPC) getNPC(villager)).loadPluginData(villagerTag);
+
+            Optional<IVillagerNPC> npc = getNPC(villager);
+            if (npc.isEmpty()) return;
+
+            ((VillagerNPC) npc.get()).loadPluginData(villagerTag);
         } catch (CommandSyntaxException exception) {
             exception.printStackTrace();
         }

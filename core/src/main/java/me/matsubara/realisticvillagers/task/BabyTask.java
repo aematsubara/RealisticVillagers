@@ -21,9 +21,10 @@ public class BabyTask extends BukkitRunnable {
 
     private int count = 0;
 
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
     public BabyTask(RealisticVillagers plugin, Villager villager, Player player) {
         this.plugin = plugin;
-        this.villager = plugin.getConverter().getNPC(villager);
+        this.villager = plugin.getConverter().getNPC(villager).get();
         this.player = player;
     }
 

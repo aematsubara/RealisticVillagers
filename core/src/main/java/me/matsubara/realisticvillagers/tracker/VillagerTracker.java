@@ -32,9 +32,7 @@ import org.bukkit.entity.*;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityTransformEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
@@ -54,11 +52,13 @@ import java.util.function.Predicate;
 
 import static com.comphenix.protocol.PacketType.Play.Server.*;
 
+@SuppressWarnings("OptionalGetWithoutIsPresent")
 public final class VillagerTracker implements Listener {
 
     private final RealisticVillagers plugin;
     private final NPCPool pool;
     private final Map<UUID, String> transformations = new HashMap<>();
+    private final Map<UUID, Integer> portalTransform = new HashMap<>();
     private final @Getter Set<UUID> playerSleepFix = new HashSet<>();
     private final Set<VillagerInfo> villagers = new HashSet<>();
 
@@ -111,6 +111,7 @@ public final class VillagerTracker implements Listener {
             @Override
             public void onPacketSending(PacketEvent event) {
                 if (Config.DISABLE_SKINS.asBool()) return;
+                if (!VillagerTracker.this.plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
                 PacketType type = event.getPacketType();
 
@@ -125,7 +126,7 @@ public final class VillagerTracker implements Listener {
                 }
 
                 if (type == ENTITY_STATUS) {
-                    IVillagerNPC npc = VillagerTracker.this.plugin.getConverter().getNPC((Villager) entity);
+                    IVillagerNPC npc = VillagerTracker.this.plugin.getConverter().getNPC((Villager) entity).get();
                     handleStatus(npc, event.getPacket().getBytes().readSafely(0));
                 }
 
@@ -262,7 +263,9 @@ public final class VillagerTracker implements Listener {
     }
 
     private void handlePartner(Villager villager) {
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager);
+        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
+
+        IVillagerNPC npc = optional.orElse(null);
         if (npc == null) return;
 
         UUID partner = npc.getPartner();
@@ -378,6 +381,26 @@ public final class VillagerTracker implements Listener {
     }
 
     @EventHandler
+    public void onEntityPortal(EntityPortalEvent event) {
+        if (event.getEntity() instanceof Villager villager) {
+            portalTransform.put(villager.getUniqueId(), villager.getEntityId());
+        }
+    }
+
+    @EventHandler
+    public void onEntityPortalEnter(EntityPortalEnterEvent event) {
+        if (!(event.getEntity() instanceof Villager villager)) return;
+
+        int previous = portalTransform.getOrDefault(villager.getUniqueId(), -1);
+        if (previous == -1) return;
+
+        removeNPC(previous);
+
+        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
+        if (npc.isPresent()) spawnNPC(villager);
+    }
+
+    @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         PersistentDataContainer container = event.getPlayer().getPersistentDataContainer();
 
@@ -401,6 +424,10 @@ public final class VillagerTracker implements Listener {
         pool.getNpc(entityId).ifPresent(npc -> pool.removeNPC(npc.getEntityId()));
     }
 
+    public boolean hasNPC(int entityId) {
+        return pool.getNpc(entityId).isPresent();
+    }
+
     private boolean isInvalidEntity(Entity entity) {
         return entity == null || entity.isDead() || !(entity instanceof Villager);
     }
@@ -412,10 +439,11 @@ public final class VillagerTracker implements Listener {
 
     public void spawnNPC(Villager villager) {
         if (Config.DISABLE_SKINS.asBool()) return;
+        if (!plugin.isEnabledIn(villager.getWorld())) return;
 
         int entityId = villager.getEntityId();
 
-        if (pool.getNpc(entityId).isPresent()) return;
+        if (hasNPC(entityId)) return;
 
         WrappedSignedProperty textures = getTextures(villager);
         Preconditions.checkArgument(textures != null, "Invalid textures!");
@@ -435,7 +463,7 @@ public final class VillagerTracker implements Listener {
     }
 
     public WrappedSignedProperty getTextures(Villager villager) {
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager);
+        IVillagerNPC npc = plugin.getConverter().getNPC(villager).get();
 
         File file = new File(plugin.getSkinFolder(), npc.getSex() + ".yml");
         if (!file.exists()) return null;
@@ -485,7 +513,7 @@ public final class VillagerTracker implements Listener {
 
         public SpawnHandler(RealisticVillagers plugin, Villager villager) {
             this.plugin = plugin;
-            this.villager = plugin.getConverter().getNPC(villager);
+            this.villager = plugin.getConverter().getNPC(villager).get();
         }
 
         @Override

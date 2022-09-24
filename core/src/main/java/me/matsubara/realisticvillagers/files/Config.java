@@ -4,6 +4,8 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.List;
+
 public enum Config {
     DISABLE_INTERACTIONS("disable-interactions"),
     MAX_GOSSIP_TOPICS("max-gossip-topics"),
@@ -96,7 +98,9 @@ public enum Config {
 
     USE_VILLAGER_SOUNDS("use-villager-sounds"),
     VILLAGER_MESSAGE_FORMAT("villager-message-format"),
-    DISABLE_SKINS("disable-skins");
+    DISABLE_SKINS("disable-skins"),
+    WORLDS_FILTER_TYPE("worlds-filter.type"),
+    WORLDS_FILTER_WORLDS("worlds-filter.worlds");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
@@ -131,5 +135,9 @@ public enum Config {
 
     public float asFloat() {
         return (float) asDouble();
+    }
+
+    public List<String> asStringList() {
+        return plugin.getConfig().getStringList(path);
     }
 }

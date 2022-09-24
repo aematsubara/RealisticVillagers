@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.listener;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
@@ -38,7 +37,9 @@ public final class PlayerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Villager)) return;
+        if (!(event.getRightClicked() instanceof Villager villager)) return;
+
+        if (!plugin.isEnabledIn(villager.getWorld())) return;
 
         ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
         if (item == null) return;
@@ -48,6 +49,8 @@ public final class PlayerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
         handleBabySpawn(event);
+
+        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
         if (!ReflectionUtils.supports(19)) return;
         if (!Config.ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK.asBool()) return;
@@ -68,8 +71,7 @@ public final class PlayerListeners implements Listener {
         int range = Config.GOAT_HORN_SEEK_RANGE.asInt();
         for (Entity entity : player.getNearbyEntities(range, range, range)) {
             if (!(entity instanceof Villager villager)) continue;
-            IVillagerNPC npc = plugin.getConverter().getNPC(villager);
-            npc.reactToSeekHorn(player);
+            plugin.getConverter().getNPC(villager).ifPresent(npc -> npc.reactToSeekHorn(player));
         }
     }
 
@@ -95,6 +97,8 @@ public final class PlayerListeners implements Listener {
         long elapsedTime = System.currentTimeMillis() - procreation;
 
         event.setCancelled(true);
+
+        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
         int growCooldown = Config.BABY_GROW_COOLDOWN.asInt();
         if (elapsedTime <= growCooldown) {

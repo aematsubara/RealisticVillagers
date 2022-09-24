@@ -77,6 +77,12 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
         boolean canTeleport = Config.TELEPORT_WHEN_FOLLOWING_IF_FAR_AWAY.asBool()
                 && villager.distanceToSqr(player) > (double) teleportDistance * teleportDistance;
 
+        // Player changed world.
+        if (player.level != level && villager instanceof VillagerNPC npc) {
+            npc.stopInteracting();
+            return;
+        }
+
         if (canTeleport) {
             villager.absMoveTo(player.getX(), player.getY(), player.getZ(), player.getYHeadRot(), player.getXRot());
             villager.setYHeadRot(player.getYHeadRot());

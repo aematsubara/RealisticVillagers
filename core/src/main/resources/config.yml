@@ -621,5 +621,20 @@ attack-damage: 3.0
 # NOTE: Don't change if you don't know what you're doing.
 range-weapon-power: 1.6
 
-# Whether to use normal villagers instead of players.
+# Whether to use normal villagers instead of players (NOT RECOMMENDED, READ BELOW).
+# NOTE: If true, keep in mind...
+# * Fishermans will not be able to fish due to minecraft limitations that require a player to hold the fishing rod.
+# * While it's possible for the villager to wear armor and make use of the offhand, these items will not be rendered.
+# * The goal of this plugin is to make the villagers look (as much as possible) like players, but this is optional.
 disable-skins: false
+
+# Here you can choose the worlds in which villagers will appear as players and can be interacted with.
+# If type is BLACKLIST, worlds listed here will be disabled.
+# If type is WHITELIST, only worlds listed here will be enabled.
+# NOTE: A restart is REQUIRED for changes to take effect.
+worlds-filter:
+  type: WHITELIST
+  worlds:
+    - world_name_1
+    - world_name_2
+    - world_name_3

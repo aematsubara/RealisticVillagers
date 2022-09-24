@@ -30,6 +30,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -72,6 +73,7 @@ public final class VillagerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onVillagerCareerChange(VillagerCareerChangeEvent event) {
         if (Config.DISABLE_SKINS.asBool()) return;
+        if (!plugin.isEnabledIn(event.getEntity().getWorld())) return;
 
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
@@ -120,6 +122,7 @@ public final class VillagerListeners implements Listener {
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;
+        if (!plugin.isEnabledIn(villager.getWorld())) return;
 
         List<ItemStack> drops = event.getDrops();
         drops.clear();
@@ -145,6 +148,8 @@ public final class VillagerListeners implements Listener {
         if (event.getBlock().getType() != Material.FARMLAND) return;
         if (((Villager) event.getEntity()).getProfession() != Villager.Profession.FARMER) return;
 
+        if (!plugin.isEnabledIn(event.getEntity().getWorld())) return;
+
         // Prevent farmer villager trampling farmlands.
         event.setCancelled(true);
     }
@@ -161,8 +166,14 @@ public final class VillagerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
         if (Config.DISABLE_INTERACTIONS.asBool()) return;
+        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
         if (!(event.getRightClicked() instanceof Villager villager)) return;
+
+        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
+
+        IVillagerNPC npc = optional.orElse(null);
+        if (npc == null) return;
 
         if (event.getHand() != EquipmentSlot.HAND) {
             event.setCancelled(true);
@@ -173,8 +184,6 @@ public final class VillagerListeners implements Listener {
         event.setCancelled(true);
 
         Player player = event.getPlayer();
-
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager);
 
         // Prevent interacting with villager if it's fighting.
         if (npc.isFighting() || npc.isInsideRaid()) {
@@ -344,7 +353,10 @@ public final class VillagerListeners implements Listener {
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
 
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager);
+        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
+
+        IVillagerNPC npc = optional.orElse(null);
+        if (npc == null) return;
         if (npc.isFishing()) npc.toggleFishing();
 
         if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;

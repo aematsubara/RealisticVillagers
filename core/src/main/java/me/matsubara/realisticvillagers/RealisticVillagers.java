@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers;
 
+import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -37,9 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -69,10 +68,12 @@ public final class RealisticVillagers extends JavaPlugin {
     private InteractCooldownManager cooldownManager;
 
     private Messages messages;
-
     private INMSConverter converter;
-
     private List<String> defaultTargets;
+
+    private List<String> worlds;
+
+    private final static Set<String> FILTER_TYPES = Sets.newHashSet("WHITELIST", "BLACKLIST");
 
     @Override
     public void onLoad() {
@@ -94,6 +95,8 @@ public final class RealisticVillagers extends JavaPlugin {
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+
+        worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
 
         saveSkins("male");
         saveSkins("female");
@@ -240,12 +243,12 @@ public final class RealisticVillagers extends JavaPlugin {
         if (skinsDisabled == Config.DISABLE_SKINS.asBool()) return true;
 
         if (Config.DISABLE_SKINS.asBool()) {
-            handleVillager(npc -> {
+            handleVillagers(npc -> {
                 villagerTracker.removeNPC(npc.bukkit().getEntityId());
                 npc.sendSpawnPacket();
             });
         } else {
-            handleVillager(npc -> {
+            handleVillagers(npc -> {
                 npc.sendDestroyPacket();
                 villagerTracker.spawnNPC(npc.bukkit());
             });
@@ -254,15 +257,15 @@ public final class RealisticVillagers extends JavaPlugin {
         return true;
     }
 
-    private void handleVillager(Consumer<IVillagerNPC> consumer) {
+    private void handleVillagers(Consumer<IVillagerNPC> consumer) {
         for (World world : getServer().getWorlds()) {
             for (Entity entity : world.getEntities()) {
                 if (!(entity instanceof Villager villager)) continue;
 
-                IVillagerNPC npc = converter.getNPC(villager);
-                if (npc == null) continue;
+                Optional<IVillagerNPC> npc = converter.getNPC(villager);
+                if (npc.isEmpty()) continue;
 
-                consumer.accept(npc);
+                consumer.accept(npc.get());
             }
         }
     }
@@ -310,6 +313,14 @@ public final class RealisticVillagers extends JavaPlugin {
 
             }
         }
+    }
+
+    public boolean isEnabledIn(World world) {
+        String type = Config.WORLDS_FILTER_TYPE.asString();
+        if (type == null || !FILTER_TYPES.contains(type.toUpperCase())) return true;
+
+        boolean contains = worlds.contains(world.getName());
+        return type.equalsIgnoreCase("WHITELIST") == contains;
     }
 
     public NamespacedKey key(String name) {

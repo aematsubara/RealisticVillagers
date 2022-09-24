@@ -7,11 +7,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface INMSConverter {
 
-    IVillagerNPC getNPC(Villager villager);
+    Optional<IVillagerNPC> getNPC(Villager villager);
 
     void registerEntity();
 

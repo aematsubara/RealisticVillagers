@@ -939,7 +939,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         DummyFishingHook hook = new DummyFishingHook(this, level, luck, lureSpeed);
 
         VillagerFishEvent fishEvent = new VillagerFishEvent(this, null, (FishHook) hook.getBukkitEntity(), VillagerFishEvent.State.FISHING);
-        Bukkit.getPluginManager().callEvent(fishEvent);
+        plugin.getServer().getPluginManager().callEvent(fishEvent);
         if (fishEvent.isCancelled()) {
             fishing = null;
             return;
