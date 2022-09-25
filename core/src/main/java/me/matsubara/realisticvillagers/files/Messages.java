@@ -1,10 +1,10 @@
 package me.matsubara.realisticvillagers.files;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.data.GiftCategory;
 import me.matsubara.realisticvillagers.data.InteractionTargetType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerChatInteractionEvent;
+import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;

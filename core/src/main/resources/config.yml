@@ -29,6 +29,7 @@
 #
 # Materials: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html
 # Flags: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/inventory/ItemFlag.html
+# Professions: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/entity/Villager.Profession.html
 
 # If you only want villagers to look like players, spawn with weapons and attack, you can disable all interactions.
 disable-interactions: false
@@ -523,6 +524,14 @@ bad-gift-reputation: 5
 # For a list of tags, visit https://minecraft.fandom.com/wiki/Tag#List_of_tags
 # Minimum reputation value: 2.
 #
+# Since 1.1.2 you can specify the profession required for the gift.
+# For example:
+# * Let's say you want ALL villagers to give 2 reputation ('good' category) when giving an ARROW.
+# * To do that, we just add ARROW in the list.
+# * Now, for FLETCHER villagers, you want to give 3 reputation ('better' category).
+# * To do that, simply add the condition with the following format: ?{PROFESSION}:{MATERIAL}
+# * In this case: ?FLETCHER:ARROW
+#
 # This plugin offers the following extra tags:
 # * LEATHER_ARMOR_PIECES,
 # * IRON_ARMOR_PIECES
@@ -545,7 +554,7 @@ bad-gift-reputation: 5
 # For a list of materials, visit https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 gift:
   good:
-    reputation: 1
+    reputation: 2
     items:
       - GOLDEN_APPLE
       - $EDIBLES
@@ -569,6 +578,8 @@ gift:
       - ENDER_PEARL
       - BOW
       - CROSSBOW
+      - ?FLETCHER:ARROW
+      - ?FISHERMAN:FISHING_ROD
   best:
     reputation: 5
     items:
@@ -633,7 +644,7 @@ disable-skins: false
 # If type is WHITELIST, only worlds listed here will be enabled.
 # NOTE: A restart is REQUIRED for changes to take effect.
 worlds-filter:
-  type: WHITELIST
+  type: BLACKLIST
   worlds:
     - world_name_1
     - world_name_2

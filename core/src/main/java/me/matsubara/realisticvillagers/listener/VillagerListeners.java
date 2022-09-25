@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.listener;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.data.GiftCategory;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.InteractionTargetType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -9,6 +8,7 @@ import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import org.bukkit.EntityEffect;
 import org.bukkit.GameEvent;
@@ -275,7 +275,7 @@ public final class VillagerListeners implements Listener {
                 && !plugin.isMarried(player)
                 && !alreadyMarriedWithPlayer;
 
-        GiftCategory category = plugin.getGiftManager().getCategory(gift);
+        GiftCategory category = plugin.getGiftManager().getCategory(npc, gift);
         boolean success = successByRing || (!isRing && category != null) || alreadyMarriedWithPlayer;
 
         int amount;
