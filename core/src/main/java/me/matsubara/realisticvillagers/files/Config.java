@@ -100,7 +100,8 @@ public enum Config {
     VILLAGER_MESSAGE_FORMAT("villager-message-format"),
     DISABLE_SKINS("disable-skins"),
     WORLDS_FILTER_TYPE("worlds-filter.type"),
-    WORLDS_FILTER_WORLDS("worlds-filter.worlds");
+    WORLDS_FILTER_WORLDS("worlds-filter.worlds"),
+    DISABLE_NAMETAGS("disable-nametags");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

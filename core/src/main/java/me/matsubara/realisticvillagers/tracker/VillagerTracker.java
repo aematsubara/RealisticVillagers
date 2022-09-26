@@ -42,6 +42,8 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -64,8 +66,10 @@ public final class VillagerTracker implements Listener {
 
     private File file;
     private FileConfiguration configuration;
+    private boolean teamCleared;
 
     private final static int RENDER_DISTANCE = 32;
+    private final static String NAMETAG_TEAM_NAME = "RVNametag";
     private final static Predicate<Entity> APPLY_FOR_TRANSFORM = entity -> entity instanceof Villager || entity instanceof ZombieVillager;
     private final static Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
             ENTITY_VELOCITY,
@@ -210,7 +214,11 @@ public final class VillagerTracker implements Listener {
     public void add(Villager villager) {
         UUID uuid = villager.getUniqueId();
         int id = villager.getEntityId();
-        String name = villager.getName();
+
+        String name = plugin.getConverter().getNPC(villager)
+                .map(IVillagerNPC::getVillagerName)
+                .orElse(villager.getName());
+
         long seen = System.currentTimeMillis();
 
         VillagerInfo info = getInfoByUUID(uuid);
@@ -429,7 +437,7 @@ public final class VillagerTracker implements Listener {
     }
 
     private boolean isInvalidEntity(Entity entity) {
-        return entity == null || entity.isDead() || !(entity instanceof Villager);
+        return entity == null || entity.isDead() || !(entity instanceof Villager villager) || isShopkeeper(villager);
     }
 
     @SuppressWarnings("deprecation")
@@ -440,6 +448,7 @@ public final class VillagerTracker implements Listener {
     public void spawnNPC(Villager villager) {
         if (Config.DISABLE_SKINS.asBool()) return;
         if (!plugin.isEnabledIn(villager.getWorld())) return;
+        if (isShopkeeper(villager)) return;
 
         int entityId = villager.getEntityId();
 
@@ -448,7 +457,11 @@ public final class VillagerTracker implements Listener {
         WrappedSignedProperty textures = getTextures(villager);
         Preconditions.checkArgument(textures != null, "Invalid textures!");
 
-        WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), villager.getName());
+        String name = plugin.getConverter().getNPC(villager)
+                .map(IVillagerNPC::getVillagerName)
+                .orElse(villager.getName());
+
+        WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), name);
         profile.getProperties().put("textures", textures);
 
         NPC.builder()
@@ -460,6 +473,31 @@ public final class VillagerTracker implements Listener {
                 .lookAtPlayer(false)
                 .imitatePlayer(false)
                 .build(pool);
+
+        if (!Config.DISABLE_NAMETAGS.asBool()) return;
+
+        Team hideTeam = getOrCreateNametagTeam();
+        hideTeam.addEntry(name);
+    }
+
+    public Team getOrCreateNametagTeam() {
+        @SuppressWarnings("ConstantConditions") Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+
+        Team team = scoreboard.getTeam(NAMETAG_TEAM_NAME);
+
+        if (team != null) {
+            if (teamCleared) return team;
+            try {
+                team.getEntries().forEach(team::removeEntry);
+                teamCleared = true;
+            } catch (IllegalStateException ignore) {
+            }
+        } else {
+            team = scoreboard.registerNewTeam(NAMETAG_TEAM_NAME);
+            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        }
+
+        return team;
     }
 
     public WrappedSignedProperty getTextures(Villager villager) {
@@ -497,6 +535,10 @@ public final class VillagerTracker implements Listener {
 
     public boolean fixSleep() {
         return !playerSleepFix.isEmpty();
+    }
+
+    public boolean isShopkeeper(Villager villager) {
+        return villager.hasMetadata("shopkeeper");
     }
 
     private static class SpawnHandler implements SpawnCustomizer {

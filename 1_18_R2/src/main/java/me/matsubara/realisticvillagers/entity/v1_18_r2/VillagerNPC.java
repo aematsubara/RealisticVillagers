@@ -28,6 +28,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.*;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
@@ -290,6 +291,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
 
+        // Save the previous (vanilla) custom name.
+        Component customName = getCustomName(true);
+        if (customName != null) {
+            tag.putString("CustomName", Component.Serializer.toJson(customName));
+        } else {
+            tag.remove("CustomName");
+        }
+
         CompoundTag bukkit = getOrCreateBukkitTag(tag);
         savePluginData(bukkit);
 
@@ -347,6 +356,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         Tag base = bukkit.get(plugin.getValuesKey().toString());
         loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
+
+        // Previous versions of this plugin used setCustomName() before.
+        Component customName = getCustomName();
+        if (customName != null && villagerName.equals(customName.getString())) {
+            setCustomName(null);
+        }
     }
 
     public void loadPluginData(CompoundTag villagerTag) {
@@ -433,10 +448,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public CraftVillager getBukkitEntity() {
         return (CraftVillager) super.getBukkitEntity();
-    }
-
-    public void setVillagerName(String villagerName) {
-        setCustomName(new TextComponent(this.villagerName = villagerName));
     }
 
     public boolean hasPartner() {
@@ -1232,8 +1243,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (living.getMainHandItem().getItem() instanceof AxeItem) disableShield(true);
     }
 
+    @Override
+    public @Nullable Component getCustomName() {
+        return getCustomName(false);
+    }
+
+    private @Nullable Component getCustomName(boolean vanilla) {
+        return vanilla ? super.getCustomName() : new TextComponent(villagerName);
+    }
+
     public boolean canBreedWith(VillagerNPC other) {
-        return !other.getSex().equalsIgnoreCase(sex)
+        return other.getSex() != null
+                && !other.getSex().equalsIgnoreCase(sex)
                 && canBreed()
                 && other.canBreed()
                 && (!hasPartner() ? !other.hasPartner() : isPartner(other.getUUID()))

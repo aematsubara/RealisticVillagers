@@ -649,3 +649,6 @@ worlds-filter:
     - world_name_1
     - world_name_2
     - world_name_3
+
+# Whether to disable player nametags.
+disable-nametags: false

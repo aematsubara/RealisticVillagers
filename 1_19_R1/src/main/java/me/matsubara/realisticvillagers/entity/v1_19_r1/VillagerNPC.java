@@ -297,6 +297,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
 
+        // Save the previous (vanilla) custom name.
+        Component customName = getCustomName(true);
+        if (customName != null) {
+            tag.putString("CustomName", Component.Serializer.toJson(customName));
+        } else {
+            tag.remove("CustomName");
+        }
+
         CompoundTag bukkit = getOrCreateBukkitTag(tag);
         savePluginData(bukkit);
 
@@ -354,6 +362,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         Tag base = bukkit.get(plugin.getValuesKey().toString());
         loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
+
+        // Previous versions of this plugin used setCustomName() before.
+        Component customName = getCustomName();
+        if (customName != null && villagerName.equals(customName.getString())) {
+            setCustomName(null);
+        }
     }
 
     public void loadPluginData(CompoundTag villagerTag) {
@@ -440,11 +454,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public CraftVillager getBukkitEntity() {
         return (CraftVillager) super.getBukkitEntity();
-    }
-
-    @Override
-    public void setVillagerName(String villagerName) {
-        setCustomName(Component.literal(this.villagerName = villagerName));
     }
 
     public boolean hasPartner() {
@@ -1244,8 +1253,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (living.canDisableShield()) disableShield(true);
     }
 
+    @Override
+    public @Nullable Component getCustomName() {
+        return getCustomName(false);
+    }
+
+    private @Nullable Component getCustomName(boolean vanilla) {
+        return vanilla ? super.getCustomName() : Component.literal(villagerName);
+    }
+
     public boolean canBreedWith(VillagerNPC other) {
-        return !other.getSex().equalsIgnoreCase(sex)
+        return other.getSex() != null
+                && !other.getSex().equalsIgnoreCase(sex)
                 && canBreed()
                 && other.canBreed()
                 && (!hasPartner() ? !other.hasPartner() : isPartner(other.getUUID()))

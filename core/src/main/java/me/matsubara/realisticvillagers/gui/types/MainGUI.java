@@ -7,6 +7,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.tracker.VillagerInfo;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import org.apache.commons.lang3.text.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.attribute.Attribute;
@@ -168,7 +169,8 @@ public final class MainGUI extends InteractGUI {
         String type = npc.bukkit().getVillagerType().name().toLowerCase();
         type = plugin.getConfig().getString("variable-text.type." + type, type);
 
-        String profession = plugin.getConfig().getString("variable-text.profession." + npc.bukkit().getProfession().name().toLowerCase());
+        String defaultProfession = npc.bukkit().getProfession().name().toLowerCase();
+        String profession = plugin.getConfig().getString("variable-text.profession." + defaultProfession, WordUtils.capitalize(defaultProfession));
 
         String activity = npc.getActivityName(none);
         if (!activity.equalsIgnoreCase(none)) {
@@ -179,7 +181,7 @@ public final class MainGUI extends InteractGUI {
         double health = maxHealthAttribute != null ? fixedDecimal(maxHealthAttribute.getValue()) : npc.bukkit().getMaxHealth();
 
         return new ItemBuilder(item)
-                .replace("%villager-name%", npc.bukkit().getName())
+                .replace("%villager-name%", npc.getVillagerName())
                 .replace("%sex%", sex)
                 .replace("%age-stage%", age)
                 .replace("%health%", fixedDecimal(npc.bukkit().getHealth() + npc.bukkit().getAbsorptionAmount()))

@@ -33,6 +33,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scoreboard.Team;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +41,7 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
@@ -233,6 +234,7 @@ public final class RealisticVillagers extends JavaPlugin {
         }
 
         boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
+        boolean nametagsDisabled = Config.DISABLE_NAMETAGS.asBool();
 
         reloadConfig();
         messages.reloadConfig();
@@ -240,24 +242,37 @@ public final class RealisticVillagers extends JavaPlugin {
         initDefaultTargetEntities(defaultTargets);
         sender.sendMessage(messages.getRandomMessage(Messages.Message.RELOAD));
 
-        if (skinsDisabled == Config.DISABLE_SKINS.asBool()) return true;
+        handleChangedOption(
+                skinsDisabled,
+                Config.DISABLE_SKINS.asBool(),
+                (npc, state) -> {
+                    if (state) {
+                        villagerTracker.removeNPC(npc.bukkit().getEntityId());
+                        npc.sendSpawnPacket();
+                    } else {
+                        npc.sendDestroyPacket();
+                        villagerTracker.spawnNPC(npc.bukkit());
+                    }
+                });
 
-        if (Config.DISABLE_SKINS.asBool()) {
-            handleVillagers(npc -> {
-                villagerTracker.removeNPC(npc.bukkit().getEntityId());
-                npc.sendSpawnPacket();
-            });
-        } else {
-            handleVillagers(npc -> {
-                npc.sendDestroyPacket();
-                villagerTracker.spawnNPC(npc.bukkit());
-            });
-        }
+        handleChangedOption(
+                nametagsDisabled,
+                Config.DISABLE_NAMETAGS.asBool(),
+                (npc, state) -> {
+                    Team hideTeam = villagerTracker.getOrCreateNametagTeam();
+                    if (state) {
+                        hideTeam.addEntry(npc.getVillagerName());
+                    } else {
+                        hideTeam.getEntries().forEach(hideTeam::removeEntry);
+                    }
+                });
 
         return true;
     }
 
-    private void handleVillagers(Consumer<IVillagerNPC> consumer) {
+    private void handleChangedOption(boolean previous, boolean current, BiConsumer<IVillagerNPC, Boolean> consumer) {
+        if (previous == current) return;
+
         for (World world : getServer().getWorlds()) {
             for (Entity entity : world.getEntities()) {
                 if (!(entity instanceof Villager villager)) continue;
@@ -265,7 +280,7 @@ public final class RealisticVillagers extends JavaPlugin {
                 Optional<IVillagerNPC> npc = converter.getNPC(villager);
                 if (npc.isEmpty()) continue;
 
-                consumer.accept(npc.get());
+                consumer.accept(npc.get(), current);
             }
         }
     }
