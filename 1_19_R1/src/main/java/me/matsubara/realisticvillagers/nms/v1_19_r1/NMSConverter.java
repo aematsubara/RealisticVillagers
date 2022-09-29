@@ -5,7 +5,9 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.entity.v1_19_r1.VillagerNPC;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.Holder;
@@ -26,6 +28,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeMap;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
+import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
@@ -77,18 +81,24 @@ public class NMSConverter implements INMSConverter {
         return Optional.ofNullable(((CraftVillager) villager).getHandle() instanceof VillagerNPC npc ? npc : null);
     }
 
+    @SuppressWarnings("JavaReflectionMemberAccess")
     @Override
     public void registerEntity() {
         try {
             // "factory" field.
-            Field field = EntityType.VILLAGER.getClass().getDeclaredField("bs");
-            Reflection.setFieldUsingUnsafe(field, EntityType.VILLAGER, (EntityType.EntityFactory<Entity>) (type, level) -> {
-                if (plugin.isEnabledIn(level.getWorld())) {
-                    return new VillagerNPC(EntityType.VILLAGER, level);
-                } else {
-                    return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
-                }
-            });
+            Field field = EntityType.class.getDeclaredField("bs");
+            Reflection.setFieldUsingUnsafe(
+                    field,
+                    EntityType.VILLAGER,
+                    (EntityType.EntityFactory<net.minecraft.world.entity.npc.Villager>) (type, level) -> {
+                        if (level.getWorld() != null && plugin.isEnabledIn(level.getWorld())) {
+                            return new VillagerNPC(EntityType.VILLAGER, level);
+                        } else {
+                            return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
+                        }
+                    });
+            Reflection.setFieldUsingUnsafe(field, EntityType.WOLF, (EntityType.EntityFactory<Wolf>) PetWolf::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.CAT, (EntityType.EntityFactory<Cat>) PetCat::new);
         } catch (ReflectiveOperationException exception) {
             exception.printStackTrace();
         }

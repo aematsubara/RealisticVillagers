@@ -11,6 +11,8 @@ import me.matsubara.realisticvillagers.listener.PlayerListeners;
 import me.matsubara.realisticvillagers.listener.VillagerListeners;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
+import me.matsubara.realisticvillagers.manager.gift.Gift;
+import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.manager.gift.GiftManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerInfo;
@@ -70,9 +72,10 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private Messages messages;
     private INMSConverter converter;
-    private List<String> defaultTargets;
 
+    private List<String> defaultTargets;
     private List<String> worlds;
+    private Set<Gift> wantedItems;
 
     private final static Set<String> FILTER_TYPES = Sets.newHashSet("WHITELIST", "BLACKLIST");
 
@@ -97,8 +100,6 @@ public final class RealisticVillagers extends JavaPlugin {
             return;
         }
 
-        worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
-
         saveSkins("male");
         saveSkins("female");
 
@@ -110,6 +111,8 @@ public final class RealisticVillagers extends JavaPlugin {
         messages = new Messages(this);
         updateConfig("messages.yml", () -> messages.reloadConfig());
 
+        worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
+
         expectingManager = new ExpectingManager(this);
         giftManager = new GiftManager(this);
         cooldownManager = new InteractCooldownManager(this);
@@ -119,6 +122,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         defaultTargets = new ArrayList<>();
         initDefaultTargetEntities(defaultTargets);
+        reloadWantedItems();
 
         getServer().getPluginManager().registerEvents(new InventoryListeners(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListeners(this), this);
@@ -242,6 +246,8 @@ public final class RealisticVillagers extends JavaPlugin {
         initDefaultTargetEntities(defaultTargets);
         sender.sendMessage(messages.getRandomMessage(Messages.Message.RELOAD));
 
+        reloadWantedItems();
+
         handleChangedOption(
                 skinsDisabled,
                 Config.DISABLE_SKINS.asBool(),
@@ -336,6 +342,21 @@ public final class RealisticVillagers extends JavaPlugin {
 
         boolean contains = worlds.contains(world.getName());
         return type.equalsIgnoreCase("WHITELIST") == contains;
+    }
+
+    public boolean isWantedItem(IVillagerNPC npc, ItemStack item) {
+        // Not really a gift, but we use the same system.
+        return GiftCategory.appliesToVillager(wantedItems, npc, item);
+    }
+
+    private void reloadWantedItems() {
+        Set<Gift> wanted = giftManager.getGiftsFromCategory("default-wanted-items");
+        if (wantedItems != null) {
+            wantedItems.clear();
+            wantedItems.addAll(wanted);
+        } else {
+            wantedItems = wanted;
+        }
     }
 
     public NamespacedKey key(String name) {

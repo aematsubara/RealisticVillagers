@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2;
 
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.BlockPos;

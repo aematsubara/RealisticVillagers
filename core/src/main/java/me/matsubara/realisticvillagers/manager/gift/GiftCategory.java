@@ -9,6 +9,10 @@ import java.util.Set;
 public record GiftCategory(String name, int reputation, Set<Gift> gifts) {
 
     public boolean applies(@NotNull IVillagerNPC npc, @NotNull ItemStack item) {
+        return appliesToVillager(gifts, npc, item);
+    }
+
+    public static boolean appliesToVillager(@NotNull Set<Gift> gifts, @NotNull IVillagerNPC npc, @NotNull ItemStack item) {
         for (Gift gift : gifts) {
             if (!gift.is(item.getType())) continue;
             if (!(gift instanceof Gift.GiftWithCondition condition) || condition.test(npc)) return true;

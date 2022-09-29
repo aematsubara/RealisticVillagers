@@ -101,7 +101,8 @@ public enum Config {
     DISABLE_SKINS("disable-skins"),
     WORLDS_FILTER_TYPE("worlds-filter.type"),
     WORLDS_FILTER_WORLDS("worlds-filter.worlds"),
-    DISABLE_NAMETAGS("disable-nametags");
+    DISABLE_NAMETAGS("disable-nametags"),
+    TAME_COOLDOWN("tame-cooldown");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

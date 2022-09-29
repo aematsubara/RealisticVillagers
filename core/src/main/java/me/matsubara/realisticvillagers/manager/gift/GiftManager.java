@@ -34,54 +34,57 @@ public final class GiftManager {
 
         for (String key : section.getKeys(false)) {
             int reputation = Math.max(2, plugin.getConfig().getInt("gift." + key + ".reputation"));
-
-            Set<Gift> tags = new HashSet<>();
-            for (String materialOrTag : plugin.getConfig().getStringList("gift." + key + ".items")) {
-
-                Predicate<IVillagerNPC> predicate;
-                if (materialOrTag.startsWith("?")) {
-                    String[] data = materialOrTag.substring(1).split(":");
-                    if (data.length != 2) continue;
-
-                    try {
-                        Villager.Profession profession = Villager.Profession.valueOf(data[0].toUpperCase());
-                        predicate = npc -> npc.bukkit().getProfession() == profession;
-                    } catch (IllegalArgumentException exception) {
-                        exception.printStackTrace();
-                        continue;
-                    }
-                } else {
-                    predicate = null;
-                }
-
-                int indexOf = predicate != null ? materialOrTag.indexOf(":") : -1;
-                if (materialOrTag.startsWith("$") || (indexOf != -1 && materialOrTag.substring(indexOf + 1).startsWith("$"))) {
-                    String tagName = indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1);
-
-                    addMaterialsFromRegistry(tags, predicate, tagName.toLowerCase(), Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS);
-
-                    Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase());
-                    if (extra != null && !extra.isEmpty()) {
-                        for (Material material : extra) {
-                            addAndOverride(tags, createGift(material, predicate));
-                        }
-                    }
-                    continue;
-                }
-
-                try {
-                    String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0);
-                    Material material = Material.valueOf(materialName.toUpperCase());
-                    addAndOverride(tags, createGift(material, predicate));
-                } catch (IllegalArgumentException ignored) {
-                }
-            }
-
+            Set<Gift> tags = getGiftsFromCategory("gift." + key + ".items");
             data.add(new GiftCategory(key, reputation, tags));
         }
 
         // Sorted by reputation ascendent.
         data.sort(Comparator.comparingInt(GiftCategory::reputation));
+    }
+
+    public Set<Gift> getGiftsFromCategory(String path) {
+        Set<Gift> tags = new HashSet<>();
+        for (String materialOrTag : plugin.getConfig().getStringList(path)) {
+
+            Predicate<IVillagerNPC> predicate;
+            if (materialOrTag.startsWith("?")) {
+                String[] data = materialOrTag.substring(1).split(":");
+                if (data.length != 2) continue;
+
+                try {
+                    Villager.Profession profession = Villager.Profession.valueOf(data[0].toUpperCase());
+                    predicate = npc -> npc.bukkit().getProfession() == profession;
+                } catch (IllegalArgumentException exception) {
+                    exception.printStackTrace();
+                    continue;
+                }
+            } else {
+                predicate = null;
+            }
+
+            int indexOf = predicate != null ? materialOrTag.indexOf(":") : -1;
+            if (materialOrTag.startsWith("$") || (indexOf != -1 && materialOrTag.substring(indexOf + 1).startsWith("$"))) {
+                String tagName = indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1);
+
+                addMaterialsFromRegistry(tags, predicate, tagName.toLowerCase(), Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS);
+
+                Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase());
+                if (extra != null && !extra.isEmpty()) {
+                    for (Material material : extra) {
+                        addAndOverride(tags, createGift(material, predicate));
+                    }
+                }
+                continue;
+            }
+
+            try {
+                String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0);
+                Material material = Material.valueOf(materialName.toUpperCase());
+                addAndOverride(tags, createGift(material, predicate));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return tags;
     }
 
     private Gift createGift(Material material, @Nullable Predicate<IVillagerNPC> predicate) {

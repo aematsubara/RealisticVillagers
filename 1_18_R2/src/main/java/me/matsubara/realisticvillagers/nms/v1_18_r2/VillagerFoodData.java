@@ -2,7 +2,7 @@ package me.matsubara.realisticvillagers.nms.v1_18_r2;
 
 import lombok.Getter;
 import lombok.Setter;
-import me.matsubara.realisticvillagers.entity.v1_18_r2.VillagerNPC;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.event.VillagerFoodLevelChangeEvent;
 import net.minecraft.nbt.CompoundTag;

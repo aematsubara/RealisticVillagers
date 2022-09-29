@@ -652,3 +652,23 @@ worlds-filter:
 
 # Whether to disable player nametags.
 disable-nametags: false
+
+# The waiting time to try to tame again (in ticks). Use 0 or lower to set no limit.
+tame-cooldown: 600
+
+# Here you can choose the wanted items by the villagers. They'll go to pick them up if they are nearby.
+# This uses the same system as the gifts, you can add materials, tags, and profession condition; check @gift for more information.
+# Be careful with the items you add here, if you die near a villager they can pick up whatever they want.
+# NOTE: If you throw a wanted item to a villager they'll pick it up, but it will NOT count as a gift.
+default-wanted-items:
+  - BREAD
+  - POTATO
+  - CARROT
+  - WHEAT
+  - WHEAT_SEEDS
+  - BEETROOT
+  - BEETROOT_SEEDS
+  - ?FARMER:BONE_MEAL
+  - BONE
+  - COD
+  - SALMON
