@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
@@ -52,8 +53,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
                 && target.isAlive()
                 && !villager.isBaby()
                 && villager.distanceToSqr(target) <= 17.0d
-                // Don't show trades if villager is doing something.
-                && (!(villager instanceof VillagerNPC npc) || (npc.isDoingNothing() && !npc.isFishing() && !npc.isTaming() && !npc.isHealingGolem()));
+                && (!(villager instanceof VillagerNPC npc) || npc.isDoingNothing(ChangeItemType.SHOWING_TRADES));
     }
 
     @Override

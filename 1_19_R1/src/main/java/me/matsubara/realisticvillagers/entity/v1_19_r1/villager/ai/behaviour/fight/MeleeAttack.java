@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.fi
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,7 +44,7 @@ public class MeleeAttack extends Behavior<Villager> {
         BehaviorUtils.lookAtEntity(villager, target);
 
         // Random jump to be more "realistic".
-        if (villager.getRandom().nextFloat() < 0.45f) {
+        if (villager.getRandom().nextFloat() < Config.MELEE_ATTACK_JUMP_CHANCE.asFloat()) {
             villager.getJumpControl().jump();
         }
 

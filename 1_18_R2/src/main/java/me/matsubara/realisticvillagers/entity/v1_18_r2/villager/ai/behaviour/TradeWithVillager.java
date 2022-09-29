@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour;
 
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
-import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.meet.SocializeAtBell;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,7 +19,7 @@ public class TradeWithVillager extends net.minecraft.world.entity.ai.behavior.Tr
         return brain.getMemory(MemoryModuleType.INTERACTION_TARGET)
                 .filter(living -> living.getType() == EntityType.VILLAGER
                         && entityIsVisible(brain, living)
-                        && (!(living instanceof VillagerNPC npc) || SocializeAtBell.isValidSocializeTarget(npc)))
+                        && (!(living instanceof VillagerNPC npc) || npc.isDoingNothing(true)))
                 .isPresent();
     }
 

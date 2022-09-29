@@ -51,20 +51,11 @@ public class SocializeAtBell extends Behavior<Villager> {
         brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
                 .flatMap((nearest) -> nearest.findClosest((living) -> EntityType.VILLAGER.equals(living.getType())
                         && living.distanceToSqr(villager) <= 32.0d))
-                // Can't socialize if other villager is doing something.
-                .filter(nearest -> !(nearest instanceof VillagerNPC npc) || isValidSocializeTarget(npc))
+                .filter(nearest -> !(nearest instanceof VillagerNPC npc) || npc.isDoingNothing(true))
                 .ifPresent((target) -> {
                     brain.setMemory(MemoryModuleType.INTERACTION_TARGET, target);
                     brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
                     brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityTracker(target, false), SPEED_MODIFIER, 1));
                 });
-    }
-
-    public static boolean isValidSocializeTarget(VillagerNPC npc) {
-        return !npc.isFishing()
-                && !npc.isShowingTrades()
-                && !npc.isHealingGolem()
-                && !npc.isTaming()
-                && npc.isDoingNothing();
     }
 }

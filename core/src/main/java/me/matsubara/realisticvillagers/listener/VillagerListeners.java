@@ -10,6 +10,7 @@ import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
+import me.matsubara.realisticvillagers.util.Reflection;
 import org.bukkit.EntityEffect;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
@@ -29,7 +30,9 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.lang.invoke.MethodHandle;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,6 +41,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class VillagerListeners implements Listener {
 
     private final RealisticVillagers plugin;
+
+    private final static MethodHandle MODIFIERS = Reflection.getFieldGetter(EntityDamageEvent.class, "modifiers");
 
     public VillagerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -350,7 +355,7 @@ public final class VillagerListeners implements Listener {
                 2L);
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "unchecked"})
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
@@ -367,9 +372,14 @@ public final class VillagerListeners implements Listener {
             plugin.getMessages().send(npc, player, Messages.Message.ON_HIT);
         }
 
-        if (npc.isDamageSourceBlocked()) {
+        if (!npc.isDamageSourceBlocked()) return;
+
+        try {
+            EntityDamageEvent.DamageModifier modifier = EntityDamageEvent.DamageModifier.BLOCKING;
             double base = event.getDamage(EntityDamageEvent.DamageModifier.BASE);
-            event.setDamage(EntityDamageEvent.DamageModifier.BLOCKING, base);
+            ((Map<EntityDamageEvent.DamageModifier, Double>) MODIFIERS.invoke(event)).put(modifier, base);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
         }
     }
 }

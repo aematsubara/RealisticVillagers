@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
@@ -47,10 +48,7 @@ public class TamePet extends Behavior<Villager> {
         return isPetVisible(villager)
                 && villager.getInventory().hasAnyOf(tameItems)
                 && villager instanceof VillagerNPC npc
-                && !npc.isFishing()
-                && !npc.isShowingTrades()
-                && !npc.isHealingGolem()
-                && npc.isDoingNothing()
+                && npc.isDoingNothing(ChangeItemType.TAMING)
                 && !villager.getBrain().hasMemoryValue(VillagerNPC.HAS_TAMED_RECENTLY)
                 // Only tame if tame item isn't edible and villager isn't hungry.
                 && (tameItems.stream().noneMatch(Eat::isSafeFood) || !npc.getFoodData().needsFood());

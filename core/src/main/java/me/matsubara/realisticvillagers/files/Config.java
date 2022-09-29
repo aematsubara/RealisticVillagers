@@ -102,7 +102,8 @@ public enum Config {
     WORLDS_FILTER_TYPE("worlds-filter.type"),
     WORLDS_FILTER_WORLDS("worlds-filter.worlds"),
     DISABLE_NAMETAGS("disable-nametags"),
-    TAME_COOLDOWN("tame-cooldown");
+    TAME_COOLDOWN("tame-cooldown"),
+    MELEE_ATTACK_JUMP_CHANCE("melee-attack-jump-chance");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

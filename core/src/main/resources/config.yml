@@ -568,6 +568,7 @@ gift:
       - $GOLDEN_TOOLS
       - AMETHYST_SHARD
       - ARROW
+      - BONE
   better:
     reputation: 3
     items:
@@ -672,3 +673,7 @@ default-wanted-items:
   - BONE
   - COD
   - SALMON
+  - IRON_INGOT
+
+# Chance of jumping when attacking with a sword/axe (just to give more "realism").
+melee-attack-jump-chance: 0.35

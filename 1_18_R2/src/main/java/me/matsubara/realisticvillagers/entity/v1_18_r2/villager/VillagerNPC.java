@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -150,6 +151,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean showingTrades;
     private boolean isTaming;
     private boolean isHealingGolem;
+    private boolean isUsingBoneMeal;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -1076,8 +1078,26 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         handleRemaining(stack, remaining, entity);
     }
 
-    public boolean isDoingNothing() {
-        return !isFighting() && !isExpecting() && !isInteracting() && !isTrading() && procreatingWith == null && !isEating;
+    public boolean isDoingNothing(boolean checkAllChangeItemType) {
+        return isDoingNothing(checkAllChangeItemType ? ChangeItemType.NONE : null);
+    }
+
+    public boolean isDoingNothing(@Nullable ChangeItemType type) {
+        return !isFighting()
+                && !isExpecting()
+                && !isInteracting()
+                && !isTrading()
+                && !isProcreating()
+                && !isFishing()
+                && (type == null || !isChangingItem(type));
+    }
+
+    public boolean isChangingItem(ChangeItemType ignore) {
+        return ignore.isEating(isEating)
+                || ignore.isShowingTrades(showingTrades)
+                || ignore.isTaming(isTaming)
+                || ignore.isHealingGolem(isHealingGolem)
+                || ignore.isUsingBoneMeal(isUsingBoneMeal);
     }
 
     private void handleRemaining(ItemStack original, ItemStack remaining, ItemEntity itemEntity) {

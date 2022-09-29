@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.co
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.minecraft.server.level.ServerLevel;
@@ -33,29 +34,18 @@ public class Eat extends Behavior<Villager> {
     private ItemStack previousItem;
     private int duration;
 
-    private final static Set<MobEffect> UNSAFE = ImmutableSet.of(
-            MobEffects.HUNGER,
-            MobEffects.POISON,
-            MobEffects.CONFUSION);
+    private final static Set<MobEffect> UNSAFE = ImmutableSet.of(MobEffects.HUNGER, MobEffects.POISON, MobEffects.CONFUSION);
 
     public Eat() {
-        super(ImmutableMap.of(
-                        MemoryModuleType.INTERACTION_TARGET, MemoryStatus.VALUE_ABSENT,
-                        MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT),
-                100);
+        super(ImmutableMap.of(MemoryModuleType.INTERACTION_TARGET, MemoryStatus.VALUE_ABSENT), 100);
     }
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        if (!(villager instanceof VillagerNPC npc)
-                || !npc.isDoingNothing()
-                || npc.isFishing()
-                || npc.isShowingTrades()
-                || npc.isHealingGolem()
-                || npc.isTaming()) return false;
-
-        if (npc.getFoodLevel() >= 20) return false;
-        return npc.getInventory().getContents().stream().anyMatch(item -> isSafeFood(item.getItem()));
+        return villager instanceof VillagerNPC npc
+                && npc.isDoingNothing(ChangeItemType.EATING)
+                && npc.getFoodLevel() < 20
+                && npc.getInventory().getContents().stream().anyMatch(item -> isSafeFood(item.getItem()));
     }
 
     @Override

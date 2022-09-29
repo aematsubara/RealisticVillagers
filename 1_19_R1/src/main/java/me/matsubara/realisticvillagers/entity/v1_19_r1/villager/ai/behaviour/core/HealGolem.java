@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.co
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
@@ -45,10 +46,7 @@ public class HealGolem extends Behavior<Villager> {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         return isGolemVisible(villager)
                 && villager instanceof VillagerNPC npc
-                && !npc.isFishing()
-                && !npc.isShowingTrades()
-                && !npc.isTaming()
-                && npc.isDoingNothing()
+                && npc.isDoingNothing(ChangeItemType.HEALING_GOLEM)
                 && villager.getInventory().hasAnyOf(HEAL_ITEM)
                 && !villager.getBrain().hasMemoryValue(VillagerNPC.HAS_HEALED_GOLEM_RECENTLY)
                 && Config.VILLAGER_FIX_IRON_GOLEM_WITH_IRON.asBool();

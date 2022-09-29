@@ -41,7 +41,7 @@ public class StartFishing extends Behavior<Villager> {
         if (!villager.getMainHandItem().is(Items.FISHING_ROD)) return false;
         if (villager.getVillagerData().getProfession() != VillagerProfession.FISHERMAN) return false;
         if (fishedRecently(villager)) return false;
-        if (villager instanceof VillagerNPC npc && !npc.isDoingNothing()) return false;
+        if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(true)) return false;
 
         BlockPos villagerPos = villager.blockPosition();
 

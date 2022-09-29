@@ -28,6 +28,7 @@ import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.mee
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.rest.SleepInBed;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.stay.ResetStayStatus;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.work.StartFishing;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.work.UseBonemeal;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.work.WorkAtBarrel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
