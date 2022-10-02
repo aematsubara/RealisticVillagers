@@ -61,7 +61,8 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey childSexKey = key("ChildSex");
     private final NamespacedKey zombieTransformKey = key("ZombieTransform");
     private final NamespacedKey fishedKey = key("Fished");
-    private final NamespacedKey valuesKey = key("VillagerNPCValues");
+    private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
+    private final NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
 
     private VillagerTracker villagerTracker;
     private Shape ring;

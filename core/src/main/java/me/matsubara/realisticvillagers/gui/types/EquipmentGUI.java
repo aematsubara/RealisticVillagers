@@ -24,7 +24,7 @@ public final class EquipmentGUI extends InteractGUI {
 
     private final static ItemStack EMPTY = new ItemStack(Material.AIR);
     private final static String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
-    private final static EquipmentSlot[] ARMOR_SLOTS_ORDER = {
+    public final static EquipmentSlot[] ARMOR_SLOTS_ORDER = {
             EquipmentSlot.HEAD,
             EquipmentSlot.CHEST,
             EquipmentSlot.LEGS,
@@ -49,9 +49,7 @@ public final class EquipmentGUI extends InteractGUI {
     }
 
     private void fillInventory() {
-        for (ItemStack item : npc.bukkit().getInventory().getContents()) {
-            inventory.addItem(item == null || item.getType().isAir() ? EMPTY : item);
-        }
+        inventory.setContents(npc.bukkit().getInventory().getContents());
 
         int size = npc.bukkit().getInventory().getSize();
 

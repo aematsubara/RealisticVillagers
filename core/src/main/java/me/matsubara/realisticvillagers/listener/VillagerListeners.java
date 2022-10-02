@@ -7,6 +7,7 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
+import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
@@ -121,10 +122,10 @@ public final class VillagerListeners implements Listener {
         if (!(event.getEntity() instanceof Villager villager)) return;
 
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            Inventory openInventory = player.getOpenInventory().getTopInventory();
-            if (!(openInventory.getHolder() instanceof MainGUI main)) continue;
+            Inventory open = player.getOpenInventory().getTopInventory();
+            if (!(open.getHolder() instanceof InteractGUI interact)) continue;
 
-            if (main.getNPC().bukkit().equals(villager)) player.closeInventory();
+            if (interact.getNPC().bukkit().equals(villager)) player.closeInventory();
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;

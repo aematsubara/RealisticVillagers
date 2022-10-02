@@ -16,6 +16,8 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.listener.spawn.BukkitSpawnListeners;
+import me.matsubara.realisticvillagers.listener.spawn.PaperSpawnListeners;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import me.matsubara.realisticvillagers.util.npc.NPC;
 import me.matsubara.realisticvillagers.util.npc.NPCPool;
@@ -32,16 +34,18 @@ import org.bukkit.entity.*;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.*;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityPortalEnterEvent;
+import org.bukkit.event.entity.EntityPortalEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
-import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
@@ -55,13 +59,15 @@ import java.util.function.Predicate;
 import static com.comphenix.protocol.PacketType.Play.Server.*;
 
 @SuppressWarnings("OptionalGetWithoutIsPresent")
+@Getter
 public final class VillagerTracker implements Listener {
 
     private final RealisticVillagers plugin;
     private final NPCPool pool;
+    private final BukkitSpawnListeners spawnListeners;
     private final Map<UUID, String> transformations = new HashMap<>();
     private final Map<UUID, Integer> portalTransform = new HashMap<>();
-    private final @Getter Set<UUID> playerSleepFix = new HashSet<>();
+    private final Set<UUID> playerSleepFix = new HashSet<>();
     private final Set<VillagerInfo> villagers = new HashSet<>();
 
     private File file;
@@ -87,8 +93,14 @@ public final class VillagerTracker implements Listener {
                 .actionDistance(RENDER_DISTANCE)
                 .tabListRemoveTicks(40)
                 .build();
+        this.spawnListeners = new BukkitSpawnListeners(plugin);
 
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        PluginManager manager = plugin.getServer().getPluginManager();
+
+        PaperSpawnListeners paperListener = new PaperSpawnListeners(plugin);
+        if (!paperListener.isRegistered()) manager.registerEvents(spawnListeners, plugin);
+
+        manager.registerEvents(this, plugin);
         ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
                 ListenerPriority.HIGHEST,
                 SPAWN_ENTITY,
@@ -293,34 +305,6 @@ public final class VillagerTracker implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onCreatureSpawn(CreatureSpawnEvent event) {
-        LivingEntity entity = event.getEntity();
-
-        CreatureSpawnEvent.SpawnReason spawnReason = event.getSpawnReason();
-        handleSpawn(entity, spawnReason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
-
-        if (spawnReason != CreatureSpawnEvent.SpawnReason.INFECTION) return;
-        if (event.getEntityType() != EntityType.ZOMBIE_VILLAGER) return;
-
-        String tag = transformations.remove(entity.getUniqueId());
-        if (tag != null) entity.getPersistentDataContainer().set(
-                plugin.getZombieTransformKey(),
-                PersistentDataType.STRING,
-                tag);
-    }
-
-    @EventHandler
-    public void onEntitiesLoad(EntitiesLoadEvent event) {
-        if (!event.getChunk().isLoaded()) return;
-        event.getEntities().forEach(this::handleSpawn);
-    }
-
-    @EventHandler
-    public void onWorldLoad(WorldLoadEvent event) {
-        event.getWorld().getEntitiesByClass(Villager.class).forEach(this::handleSpawn);
-    }
-
     @EventHandler
     public void onEntitiesUnload(EntitiesUnloadEvent event) {
         for (Entity entity : event.getEntities()) {
@@ -352,26 +336,6 @@ public final class VillagerTracker implements Listener {
         if (!isInfection && reason != EntityTransformEvent.TransformReason.CURED) return;
 
         transformations.put(transformed.getUniqueId(), plugin.getConverter().getNPCTag((LivingEntity) entity));
-    }
-
-    private void handleSpawn(Entity entity) {
-        handleSpawn(entity, false);
-    }
-
-    private void handleSpawn(Entity entity, boolean isFromSpawnEgg) {
-        if (!(entity instanceof Villager villager)) return;
-
-        // Villager#readAdditionalSaveData() isn't called when entity spawn from egg.
-        if (isFromSpawnEgg) {
-            plugin.getConverter().loadDataFromTag(villager, "");
-        }
-
-        add(villager);
-
-        String tag = transformations.remove(villager.getUniqueId());
-        if (tag != null) plugin.getConverter().loadDataFromTag(villager, tag);
-
-        spawnNPC(villager);
     }
 
     @EventHandler

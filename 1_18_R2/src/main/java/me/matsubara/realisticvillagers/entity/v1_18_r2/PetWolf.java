@@ -1,9 +1,11 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2;
 
 import lombok.Setter;
+import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.nms.v1_18_r2.NMSConverter;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -22,12 +24,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftWolf;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
 import java.util.UUID;
 
 public class PetWolf extends Wolf implements Pet {
+
+    private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     @Setter
     private boolean tamedByPlayer;
@@ -76,13 +81,18 @@ public class PetWolf extends Wolf implements Pet {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        tag.putBoolean("TamedByPlayer", tamedByPlayer);
+        NMSConverter.updateTamedData(tag, plugin.getTamedByPlayerKey(), this, tamedByPlayer);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        tamedByPlayer = tag.getBoolean("TamedByPlayer");
+
+        if (tag.contains("TamedByPlayer")) {
+            tamedByPlayer = tag.getBoolean("TamedByPlayer");
+        } else {
+            tamedByPlayer = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByPlayerKey().toString());
+        }
     }
 
     @Nullable

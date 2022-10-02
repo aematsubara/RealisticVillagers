@@ -23,6 +23,7 @@ import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
+import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.NMSConverter;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.VillagerFoodData;
 import net.minecraft.Util;
@@ -91,7 +92,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -103,7 +103,6 @@ import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
 import org.bukkit.entity.FishHook;
 import org.bukkit.event.entity.*;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -306,21 +305,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             tag.remove("CustomName");
         }
 
-        CompoundTag bukkit = getOrCreateBukkitTag(tag);
+        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
         savePluginData(bukkit);
 
         tag.put("BukkitValues", bukkit);
 
-        // Remove previous data associated from THIS plugin only in the container.
-        PersistentDataContainer container = getBukkitEntity().getPersistentDataContainer();
-        for (NamespacedKey key : container.getKeys()) {
-            if (key.getNamespace().equalsIgnoreCase(plugin.getValuesKey().getNamespace())) {
-                container.remove(key);
-            }
-        }
-
-        // Save data in craft entity to prevent data-loss.
-        getBukkitEntity().readBukkitValues(tag);
+        NMSConverter.updateBukkitValues(tag, plugin.getNpcValuesKey().getNamespace(), this);
     }
 
     public void savePluginData(CompoundTag tag) {
@@ -344,7 +334,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             villagerTag.put("BedHome", bedHomeTag);
         }
         foodData.addAdditionalSaveData(villagerTag);
-        tag.put(plugin.getValuesKey().toString(), villagerTag);
+        tag.put(plugin.getNpcValuesKey().toString(), villagerTag);
     }
 
     private <T> void saveCollection(Collection<T> collection, Function<T, Tag> mapper, String name, CompoundTag tag) {
@@ -359,9 +349,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
 
-        CompoundTag bukkit = getOrCreateBukkitTag(tag);
+        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
 
-        Tag base = bukkit.get(plugin.getValuesKey().toString());
+        Tag base = bukkit.get(plugin.getNpcValuesKey().toString());
         loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
 
         // Previous versions of this plugin used setCustomName() before.
@@ -433,10 +423,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             T value = mapper.apply(content);
             if (value != null) collection.add(value);
         }
-    }
-
-    private CompoundTag getOrCreateBukkitTag(CompoundTag base) {
-        return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
     }
 
     @Override
@@ -988,6 +974,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @SuppressWarnings("WhileLoopReplaceableByForEach")
     private void updateSpecialPrices(Player player) {
         if (Config.DISABLE_SPECIAL_PRICES.asBool()) return;
+        if (Config.DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY.asBool()
+                && InventoryListeners.canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity())) {
+            return;
+        }
 
         int reputation = getPlayerReputation(player);
         if (reputation != 0) {

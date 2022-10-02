@@ -677,3 +677,14 @@ default-wanted-items:
 
 # Chance of jumping when attacking with a sword/axe (just to give more "realism").
 melee-attack-jump-chance: 0.35
+
+# Who can modify the inventory of a villager.
+# Options: EVERYONE / FAMILY / NONE
+# NOTE: Be careful with this.
+# * Some players may give gifts to villagers to increase their reputation and then take the items from these villagers.
+# * The higher the reputation, the greater the discounts.
+# * Check the option below to prevent this.
+who-can-modify-villager-inventory: NONE
+
+# Whether special prices are disabled when modifying the villager's inventory.
+disable-special-prices-if-allowed-to-modify-inventory: true

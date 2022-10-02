@@ -37,6 +37,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Instruments;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftVillager;
@@ -114,7 +115,7 @@ public class NMSConverter implements INMSConverter {
             if (npc.isEmpty()) return null;
 
             ((VillagerNPC) npc.get()).savePluginData(tag);
-            return tag.get(plugin.getValuesKey().toString()).toString();
+            return tag.get(plugin.getNpcValuesKey().toString()).toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
             return container.get(plugin.getZombieTransformKey(), PersistentDataType.STRING);
@@ -263,5 +264,31 @@ public class NMSConverter implements INMSConverter {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    public static CompoundTag getOrCreateBukkitTag(CompoundTag base) {
+        return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
+    }
+
+    public static void updateTamedData(CompoundTag tag, NamespacedKey key, LivingEntity living, boolean tamedByPlayer) {
+        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
+        bukkit.putBoolean(key.toString(), tamedByPlayer);
+
+        tag.put("BukkitValues", bukkit);
+
+        updateBukkitValues(tag, key.getNamespace(), living);
+    }
+
+    public static void updateBukkitValues(CompoundTag tag, String namespace, LivingEntity living) {
+        // Remove previous data associated from THIS plugin only in the container.
+        PersistentDataContainer container = living.getBukkitEntity().getPersistentDataContainer();
+        for (NamespacedKey key : container.getKeys()) {
+            if (key.getNamespace().equalsIgnoreCase(namespace)) {
+                container.remove(key);
+            }
+        }
+
+        // Save data in craft entity to prevent data-loss.
+        living.getBukkitEntity().readBukkitValues(tag);
     }
 }

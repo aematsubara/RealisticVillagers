@@ -22,8 +22,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -50,31 +53,80 @@ public final class InventoryListeners implements Listener {
         Inventory inventory = event.getInventory();
         if (!(inventory.getHolder() instanceof InteractGUI gui)) return;
 
-        if (gui.shouldStopInteracting()) gui.getNPC().stopInteracting();
+        IVillagerNPC npc = gui.getNPC();
+        if (gui.shouldStopInteracting()) npc.stopInteracting();
+
+        if (!(gui instanceof EquipmentGUI)) return;
+
+        if (!canModifyInventory(npc, (Player) event.getPlayer())) return;
+
+        int size = npc.bukkit().getInventory().getSize();
+
+        ItemStack[] contents = new ItemStack[size];
+        System.arraycopy(inventory.getContents(), 0, contents, 0, size);
+
+        npc.bukkit().getInventory().setContents(contents);
+
+        int armorStart = size + 10;
+        int armorEnd = armorStart + 6;
+
+        EntityEquipment equipment = npc.bukkit().getEquipment();
+        if (equipment == null) return;
+
+        ItemStack air = new ItemStack(Material.AIR);
+        for (int i = armorStart; i < armorEnd; i++) {
+            ItemStack item = inventory.getItem(i);
+            equipment.setItem(
+                    EquipmentGUI.ARMOR_SLOTS_ORDER[i - armorStart],
+                    item != null ? item : air);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        ItemStack current = event.getCurrentItem();
-        if (current == null) return;
-
         Inventory inventory = event.getClickedInventory();
         if (inventory == null) return;
 
-        if (inventory.getHolder() instanceof EquipmentGUI equipment) {
+        if (inventory.getType() == InventoryType.PLAYER
+                && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                && event.getView().getTopInventory().getHolder() instanceof InteractGUI interact
+                && (!(interact instanceof EquipmentGUI) || !canModifyInventory(interact.getNPC(), player))) {
             event.setCancelled(true);
-
-            if (current.isSimilar(equipment.getClose())) closeInventory(player);
             return;
         }
 
-        if (inventory.getHolder() instanceof CombatGUI combat) {
+        if (!(inventory.getHolder() instanceof InteractGUI interact)) return;
+
+        IVillagerNPC npc = interact.getNPC();
+        ItemStack current = event.getCurrentItem();
+
+        if (interact instanceof EquipmentGUI equipment) {
+            if (!canModifyInventory(npc, player)) {
+                event.setCancelled(true);
+            }
+
+            if (current != null) {
+                if (current.isSimilar(equipment.getBorder())
+                        || current.isSimilar(equipment.getHead())
+                        || current.isSimilar(equipment.getClose())) {
+                    event.setCancelled(true);
+                }
+
+                if (current.isSimilar(equipment.getClose())) closeInventory(player);
+            }
+            return;
+        }
+
+        if (current == null) {
             event.setCancelled(true);
+            return;
+        }
 
-            IVillagerNPC villager = ((CombatGUI) inventory.getHolder()).getNPC();
+        event.setCancelled(true);
 
+        if (interact instanceof CombatGUI combat) {
             if (current.isSimilar(combat.getNext())) {
                 combat.nextPage(event.getClick().isShiftClick());
             } else if (current.isSimilar(combat.getPrevious())) {
@@ -85,7 +137,7 @@ public final class InventoryListeners implements Listener {
                 combat.setShouldStopInteracting(false);
                 new AnvilGUI.Builder()
                         .onComplete((opener, text) -> {
-                            plugin.getServer().getScheduler().runTask(plugin, () -> new CombatGUI(plugin, opener, villager, text));
+                            plugin.getServer().getScheduler().runTask(plugin, () -> new CombatGUI(plugin, opener, npc, text));
                             return AnvilGUI.Response.close();
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
@@ -96,7 +148,7 @@ public final class InventoryListeners implements Listener {
                         .open((Player) event.getWhoClicked());
             } else if (current.isSimilar(combat.getClearSearch())) {
                 combat.setShouldStopInteracting(false);
-                new CombatGUI(plugin, player, villager, null);
+                new CombatGUI(plugin, player, npc, null);
             } else if (current.getItemMeta() != null) {
                 ItemMeta meta = current.getItemMeta();
                 PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -106,11 +158,11 @@ public final class InventoryListeners implements Listener {
 
                 EntityType targetType = EntityType.valueOf(type);
 
-                boolean enable = !villager.isTarget(targetType);
+                boolean enable = !npc.isTarget(targetType);
                 if (enable) {
-                    villager.addTarget(targetType);
+                    npc.addTarget(targetType);
                 } else {
-                    villager.removeTarget(targetType);
+                    npc.removeTarget(targetType);
                 }
 
                 inventory.setItem(event.getRawSlot(), new ItemBuilder(enable ? combat.getEnabled() : combat.getDisabled())
@@ -121,12 +173,7 @@ public final class InventoryListeners implements Listener {
             return;
         }
 
-        if (!(inventory.getHolder() instanceof MainGUI main)) return;
-
-        event.setCancelled(true);
-
-        IVillagerNPC npc = main.getNPC();
-
+        MainGUI main = (MainGUI) interact;
         boolean isClericPartner = current.isSimilar(main.getPapers()) && npc.isPartner(player.getUniqueId());
 
         if (current.isSimilar(main.getFollow())) {
@@ -281,5 +328,11 @@ public final class InventoryListeners implements Listener {
 
     private void closeInventory(Player player) {
         plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+    }
+
+    public static boolean canModifyInventory(IVillagerNPC npc, Player player) {
+        boolean isFamily = npc.isFamily(player.getUniqueId(), true);
+        String modifyInventory = Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY.asString();
+        return modifyInventory.equalsIgnoreCase("everyone") || (modifyInventory.equalsIgnoreCase("family") && isFamily);
     }
 }
