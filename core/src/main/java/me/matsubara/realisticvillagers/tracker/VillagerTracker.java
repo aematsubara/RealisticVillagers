@@ -126,16 +126,11 @@ public final class VillagerTracker implements Listener {
                 ENTITY_EFFECT) {
             @Override
             public void onPacketSending(PacketEvent event) {
-                if (Config.DISABLE_SKINS.asBool()) return;
-                if (!VillagerTracker.this.plugin.isEnabledIn(event.getPlayer().getWorld())) return;
-
-                PacketType type = event.getPacketType();
-
                 Player player = event.getPlayer();
                 Entity entity = event.getPacket().getEntityModifier(player.getWorld()).readSafely(0);
-
                 if (isInvalidEntity(entity)) return;
 
+                PacketType type = event.getPacketType();
                 if (isSpawnPacket(type)) {
                     event.setCancelled(true);
                     return;
@@ -184,6 +179,10 @@ public final class VillagerTracker implements Listener {
                     default -> particle = null;
                 }
                 if (particle != null) npc.spawnEntityEventParticle(particle);
+            }
+
+            private boolean isInvalidEntity(Entity entity) {
+                return entity == null || entity.isDead() || !(entity instanceof Villager villager) || isInvalid(villager);
             }
         });
 
@@ -400,22 +399,22 @@ public final class VillagerTracker implements Listener {
         return pool.getNpc(entityId).isPresent();
     }
 
-    private boolean isInvalidEntity(Entity entity) {
-        return entity == null || entity.isDead() || !(entity instanceof Villager villager) || isShopkeeper(villager);
-    }
-
     @SuppressWarnings("deprecation")
     private boolean isSpawnPacket(PacketType type) {
         return type == SPAWN_ENTITY_LIVING || (ReflectionUtils.supports(19) && type == SPAWN_ENTITY);
     }
 
+    public boolean isInvalid(Villager villager) {
+        return Config.DISABLE_SKINS.asBool()
+                || !plugin.isEnabledIn(villager.getWorld())
+                || villager.hasMetadata("shopkeeper")
+                || plugin.getConverter().getNPC(villager).isEmpty();
+    }
+
     public void spawnNPC(Villager villager) {
-        if (Config.DISABLE_SKINS.asBool()) return;
-        if (!plugin.isEnabledIn(villager.getWorld())) return;
-        if (isShopkeeper(villager)) return;
+        if (isInvalid(villager)) return;
 
         int entityId = villager.getEntityId();
-
         if (hasNPC(entityId)) return;
 
         WrappedSignedProperty textures = getTextures(villager);
@@ -499,10 +498,6 @@ public final class VillagerTracker implements Listener {
 
     public boolean fixSleep() {
         return !playerSleepFix.isEmpty();
-    }
-
-    public boolean isShopkeeper(Villager villager) {
-        return villager.hasMetadata("shopkeeper");
     }
 
     private static class SpawnHandler implements SpawnCustomizer {

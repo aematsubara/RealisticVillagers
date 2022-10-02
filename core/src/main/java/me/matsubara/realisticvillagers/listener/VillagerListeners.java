@@ -79,10 +79,7 @@ public final class VillagerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onVillagerCareerChange(VillagerCareerChangeEvent event) {
         Villager villager = event.getEntity();
-
-        if (Config.DISABLE_SKINS.asBool()) return;
-        if (!plugin.isEnabledIn(villager.getWorld())) return;
-        if (plugin.getVillagerTracker().isShopkeeper(villager)) return;
+        if (plugin.getVillagerTracker().isInvalid(villager)) return;
 
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
@@ -176,7 +173,7 @@ public final class VillagerListeners implements Listener {
         if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
         if (!(event.getRightClicked() instanceof Villager villager)) return;
-        if (plugin.getVillagerTracker().isShopkeeper(villager)) return;
+        if (plugin.getVillagerTracker().isInvalid(villager)) return;
 
         Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
 
