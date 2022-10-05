@@ -62,7 +62,9 @@ public final class Shape {
             }
         }
 
-        Bukkit.addRecipe(recipe);
+        if (!Bukkit.addRecipe(recipe)) {
+            plugin.getLogger().warning("The recipe couldn't be created for {" + name + "}!");
+        }
     }
 
     public Recipe getRecipe() {

@@ -1177,6 +1177,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public double getMeleeAttackRangeSqr(@Nullable LivingEntity living) {
+        return Config.MELEE_ATTACK_RANGE.asDouble();
+    }
+
+    @Override
     public void remove(RemovalReason reason) {
         super.remove(reason);
 

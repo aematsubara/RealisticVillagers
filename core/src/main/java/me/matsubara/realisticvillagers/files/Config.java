@@ -105,7 +105,8 @@ public enum Config {
     TAME_COOLDOWN("tame-cooldown"),
     MELEE_ATTACK_JUMP_CHANCE("melee-attack-jump-chance"),
     WHO_CAN_MODIFY_VILLAGER_INVENTORY("who-can-modify-villager-inventory"),
-    DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY("disable-special-prices-if-allowed-to-modify-inventory");
+    DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY("disable-special-prices-if-allowed-to-modify-inventory"),
+    MELEE_ATTACK_RANGE("melee-attack-range");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

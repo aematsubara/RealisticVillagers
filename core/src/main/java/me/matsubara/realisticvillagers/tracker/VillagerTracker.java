@@ -155,18 +155,36 @@ public final class VillagerTracker implements Listener {
 
                 if (!MOVEMENT_PACKETS.contains(type)) return;
 
-                if (!isSleeping) npc.get().setLocation(entity.getLocation());
+                Location location = entity.getLocation();
 
                 if (type == ENTITY_HEAD_ROTATION) {
-                    if (isSleeping) return;
+                    float yaw = (event.getPacket().getBytes().read(0) * 360.f) / 256.0f;
+                    float pitch = location.getPitch();
 
                     PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
                     moveLook.getIntegers().write(0, entityId);
                     moveLook.getBytes().write(0, event.getPacket().getBytes().read(0));
-                    moveLook.getBytes().write(1, (byte) (entity.getLocation().getPitch() * 256f / 360f));
+                    moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
 
-                    ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
+                    location.setYaw(yaw);
+                    location.setPitch(pitch);
+
+                    if (!isSleeping) ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
+                } else if (type == ENTITY_LOOK || type == REL_ENTITY_MOVE || type == REL_ENTITY_MOVE_LOOK) {
+                    double changeInX = event.getPacket().getShorts().read(0) / 4096.0d;
+                    double changeInY = event.getPacket().getShorts().read(1) / 4096.0d;
+                    double changeInZ = event.getPacket().getShorts().read(2) / 4096.0d;
+
+                    boolean hasRot = event.getPacket().getBooleans().read(0);
+                    float yaw = hasRot ? (event.getPacket().getBytes().read(0) * 360.f) / 256.0f : location.getYaw();
+                    float pitch = hasRot ? (event.getPacket().getBytes().read(1) * 360.f) / 256.0f : location.getPitch();
+
+                    location.add(changeInX, changeInY, changeInZ);
+                    location.setYaw(yaw);
+                    location.setPitch(pitch);
                 }
+
+                npc.get().setLocation(location);
             }
 
             private void handleStatus(IVillagerNPC npc, byte status) {

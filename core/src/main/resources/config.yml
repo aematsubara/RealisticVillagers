@@ -676,7 +676,8 @@ default-wanted-items:
   - IRON_INGOT
 
 # Chance of jumping when attacking with a sword/axe (just to give more "realism").
-melee-attack-jump-chance: 0.35
+# NOTE: It's recommended to leave it at 0 so that villagers are not attacked when jumping (or use a lower value).
+melee-attack-jump-chance: 0.0
 
 # Who can modify the inventory of a villager.
 # Options: EVERYONE / FAMILY / NONE
@@ -688,3 +689,7 @@ who-can-modify-villager-inventory: NONE
 
 # Whether special prices are disabled when modifying the villager's inventory.
 disable-special-prices-if-allowed-to-modify-inventory: true
+
+# Here you can change the melee attack range.
+# NOTE: Avoid setting values greater than 4.
+melee-attack-range: 3.375

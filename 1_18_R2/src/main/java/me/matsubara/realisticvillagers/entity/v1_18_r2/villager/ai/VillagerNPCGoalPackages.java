@@ -18,6 +18,7 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.cor
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core.SetRaidStatus;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core.*;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fight.BackUpIfTooClose;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fight.MeleeAttack;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fight.SetWalkTargetFromAttackTargetIfTargetOutOfReach;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fight.StopAttackingIfTargetInvalid;
@@ -44,6 +45,7 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.Items;
 
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class VillagerNPCGoalPackages {
@@ -55,6 +57,9 @@ public class VillagerNPCGoalPackages {
     private final static int GO_TO_WANTED_ITEM_DISTANCE = 10;
 
     private final static Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
+    private final static Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
+            (int) npc.getMeleeAttackRangeSqr(null) :
+            MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW;
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getCorePackage(VillagerProfession profession) {
         return ImmutableList.of(
@@ -67,7 +72,8 @@ public class VillagerNPCGoalPackages {
                 Pair.of(0, new SetRaidStatus()),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.JOB_SITE)),
                 Pair.of(0, new ValidateNearbyPoi(profession.getJobPoiType(), MemoryModuleType.POTENTIAL_JOB_SITE)),
-                Pair.of(0, new Eat()),
+                Pair.of(0, new Consume()),
+                Pair.of(1, new EatCake()),
                 Pair.of(1, new MoveToTargetSink()),
                 Pair.of(2, new PoiCompetitorScan(profession)),
                 Pair.of(3, new LookAndFollowPlayerSink(Villager.SPEED_MODIFIER)),
@@ -208,13 +214,7 @@ public class VillagerNPCGoalPackages {
                 Pair.of(1, runIf(
                         BlockAttackWithShield::notUsingShield,
                         new SetWalkTargetFromAttackTargetIfTargetOutOfReach(living -> Villager.SPEED_MODIFIER * 1.5f))),
-                Pair.of(1, runIf(
-                        villager -> villager instanceof VillagerNPC npc
-                                && npc.isHoldingRangeWeapon()
-                                && BlockAttackWithShield.notUsingShield(npc),
-                        new BackUpIfTooClose<>(
-                                MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW,
-                                SPEED_WHEN_STRAFING_BACK_FROM_TARGET))),
+                Pair.of(1, new BackUpIfTooClose(BACK_UP_FUNCTION, SPEED_WHEN_STRAFING_BACK_FROM_TARGET)),
                 Pair.of(2, new StopAttackingIfTargetInvalid()));
     }
 

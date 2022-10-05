@@ -58,6 +58,7 @@ public final class ItemBuilder {
         if (meta == null) return this;
 
         meta.setCustomModelData(data);
+        item.setItemMeta(meta);
         return this;
     }
 

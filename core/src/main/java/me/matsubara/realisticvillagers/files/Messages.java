@@ -79,7 +79,7 @@ public final class Messages {
             name = npc.getVillagerName() + " " + getVillagerTitle(profession);
         }
 
-        String formattedMessage = Config.VILLAGER_MESSAGE_FORMAT.asString()
+        String formattedMessage = Config.VILLAGER_MESSAGE_FORMAT.asStringTranslated()
                 .replace("%name%", name)
                 .replace("%message%", message);
 

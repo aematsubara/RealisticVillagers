@@ -51,7 +51,7 @@ public class TamePet extends Behavior<Villager> {
                 && npc.isDoingNothing(ChangeItemType.TAMING)
                 && !villager.getBrain().hasMemoryValue(VillagerNPC.HAS_TAMED_RECENTLY)
                 // Only tame if tame item isn't edible and villager isn't hungry.
-                && (tameItems.stream().noneMatch(Eat::isSafeFood) || !npc.getFoodData().needsFood());
+                && (tameItems.stream().noneMatch(Consume::isSafeFood) || !npc.getFoodData().needsFood());
     }
 
     @Override
