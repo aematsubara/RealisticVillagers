@@ -690,3 +690,6 @@ disable-special-prices-if-allowed-to-modify-inventory: true
 # Here you can change the melee attack range.
 # NOTE: Avoid setting values greater than 4.
 melee-attack-range: 3.375
+
+# Here you can choose whether villagers can ride a ship when they are near it.
+disable-villager-riding-nearby-boat: false

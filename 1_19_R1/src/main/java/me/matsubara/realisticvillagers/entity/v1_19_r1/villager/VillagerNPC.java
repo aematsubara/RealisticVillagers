@@ -858,16 +858,15 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public boolean startRiding(Entity entity) {
+        if (!Config.DISABLE_VILLAGER_RIDING_NEARBY_BOAT.asBool()) return super.startRiding(entity);
+
         StackTraceElement[] stacktraces = Thread.currentThread().getStackTrace();
         if (stacktraces.length >= 3) {
             if (Boat.class.getName().equalsIgnoreCase(stacktraces[2].getClassName())) {
-                if (!isInteracting()
-                        || !interactType.isFollowing()
-                        || entity.getPassengers().stream().noneMatch(passenger -> passenger.getUUID().equals(interactingWith))) {
-                    return false;
-                }
+                return false;
             }
         }
+
         return super.startRiding(entity);
     }
 
