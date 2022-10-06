@@ -35,7 +35,6 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scoreboard.Team;
 
 import java.io.File;
 import java.io.IOException;
@@ -265,14 +264,7 @@ public final class RealisticVillagers extends JavaPlugin {
         handleChangedOption(
                 nametagsDisabled,
                 Config.DISABLE_NAMETAGS.asBool(),
-                (npc, state) -> {
-                    Team hideTeam = villagerTracker.getOrCreateNametagTeam();
-                    if (state) {
-                        hideTeam.addEntry(npc.getVillagerName());
-                    } else {
-                        hideTeam.getEntries().forEach(hideTeam::removeEntry);
-                    }
-                });
+                (npc, state) -> villagerTracker.refreshNPC(npc.bukkit()));
 
         return true;
     }

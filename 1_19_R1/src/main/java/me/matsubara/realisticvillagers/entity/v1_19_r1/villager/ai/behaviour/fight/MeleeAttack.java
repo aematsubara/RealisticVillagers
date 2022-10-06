@@ -11,8 +11,6 @@ import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.item.AxeItem;
-import net.minecraft.world.item.SwordItem;
 
 public class MeleeAttack extends Behavior<Villager> {
 
@@ -28,14 +26,11 @@ public class MeleeAttack extends Behavior<Villager> {
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         LivingEntity target = getAttackTarget(villager);
-        return isHoldingMeleeWeapon(villager)
+        return villager instanceof VillagerNPC npc
+                && npc.isHoldingMeleeWeapon()
                 && BlockAttackWithShield.notUsingShield(villager)
                 && BehaviorUtils.canSee(villager, target)
                 && BehaviorUtils.isWithinAttackRange(villager, target, 0);
-    }
-
-    private boolean isHoldingMeleeWeapon(Villager villager) {
-        return villager.isHolding(item -> item.getItem() instanceof SwordItem || item.getItem() instanceof AxeItem);
     }
 
     @Override

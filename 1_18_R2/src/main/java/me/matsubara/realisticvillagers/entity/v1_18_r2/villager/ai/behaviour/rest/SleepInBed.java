@@ -2,11 +2,12 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.re
 
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.LivingEntity;
 
 public class SleepInBed extends net.minecraft.world.entity.ai.behavior.SleepInBed {
 
-    protected boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        return super.checkExtraStartConditions(level, villager) && (!(villager instanceof VillagerNPC npc) || npc.isDoingNothing(true));
+    @Override
+    protected boolean checkExtraStartConditions(ServerLevel level, LivingEntity living) {
+        return super.checkExtraStartConditions(level, living) && (!(living instanceof VillagerNPC npc) || npc.isDoingNothing(true));
     }
 }

@@ -2,7 +2,8 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fi
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
-import me.matsubara.realisticvillagers.files.Config;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -96,11 +97,15 @@ public class RangeWeaponAttack extends Behavior<Villager> {
 
             if (npc.getTicksUsingItem() < chargeDuration) return;
 
-            // Only stop releasing here if it's crossbow.
-            if (isCrossbow) stopCharging(npc);
+            // Only stop using here if it's crossbow and set crossbow as charged.
+            if (isCrossbow) {
+                stopCharging(npc);
 
-            // Set crossbow as charged.
-            CrossbowItem.setCharged(weapon, true);
+                ItemStack projectile = npc.getProjectile((ProjectileWeaponItem) weapon.getItem());
+                addChargedProjectiles(weapon, projectile);
+
+                CrossbowItem.setCharged(weapon, true);
+            }
 
             state = CrossbowState.CHARGED;
 
@@ -120,10 +125,12 @@ public class RangeWeaponAttack extends Behavior<Villager> {
                 npc.performRangedAttack(target, force);
             }
 
-            if (Config.REQUIRE_ARROWS_FOR_PROJECTILE_WEAPON.asBool()) {
-                // Remove arrow(s).
-                boolean hasInfinity = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.INFINITY_ARROWS, weapon) > 0;
-                if (!hasInfinity) npc.getInventory().removeItemType(Items.ARROW, 1);
+            ItemStack arrow = npc.getProjectile((ProjectileWeaponItem) weapon.getItem());
+
+            // Remove arrow(s).
+            boolean infinity = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.INFINITY_ARROWS, weapon) > 0;
+            if (!infinity || arrow.is(Items.SPECTRAL_ARROW)) {
+                arrow.shrink(1);
             }
 
             // Set crossbow as uncharged.
@@ -131,6 +138,19 @@ public class RangeWeaponAttack extends Behavior<Villager> {
 
             state = CrossbowState.UNCHARGED;
         }
+    }
+
+    private void addChargedProjectiles(ItemStack weapon, ItemStack projectile) {
+        CompoundTag weaponTag = weapon.getOrCreateTag();
+
+        ListTag projectiles = new ListTag();
+
+        int multishot = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.MULTISHOT, weapon);
+        for (int i = 0; i < (multishot > 0 ? 3 : 1); i++) {
+            projectiles.add(projectile.save(new CompoundTag()));
+        }
+
+        weaponTag.put("ChargedProjectiles", projectiles);
     }
 
     private void stopCharging(VillagerNPC npc) {

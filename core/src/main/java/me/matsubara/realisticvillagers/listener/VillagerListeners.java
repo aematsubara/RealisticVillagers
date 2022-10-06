@@ -84,11 +84,7 @@ public final class VillagerListeners implements Listener {
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
 
-            // Remove previous.
-            plugin.getVillagerTracker().removeNPC(villager.getEntityId());
-
-            // Create with new skin.
-            plugin.getVillagerTracker().spawnNPC(villager);
+            plugin.getVillagerTracker().refreshNPC(villager);
 
             // Give fishing rod.
             if (event.getProfession() == Villager.Profession.FISHERMAN) {

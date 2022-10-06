@@ -80,6 +80,7 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
+import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -464,12 +465,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         this.interactType = interactType;
     }
 
-    @Override
-    public boolean canFireProjectileWeapon(ProjectileWeaponItem item) {
-        return (item == Items.BOW || item == Items.CROSSBOW) &&
-                (!Config.REQUIRE_ARROWS_FOR_PROJECTILE_WEAPON.asBool() || inventory.hasAnyOf(ALLOWED_ARROW_TYPE));
-    }
-
     public int getMeleeAttackCooldown() {
         return Config.MELEE_ATTACK_COOLDOWN.asInt();
     }
@@ -492,7 +487,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean isHoldingMeleeWeapon() {
-        return isHolding(item -> item.getItem() instanceof SwordItem || item.getItem() instanceof AxeItem);
+        return isHolding(item -> item.getItem() instanceof SwordItem || item.getItem() instanceof AxeItem || item.is(Items.TRIDENT));
     }
 
     public boolean isHoldingRangeWeapon() {
@@ -530,23 +525,34 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         InteractionHand hand = ProjectileUtil.getWeaponHoldingHand(this, getMainHandItem().getItem());
 
         ItemStack weapon = getItemInHand(hand);
-        ItemStack arrow = new ItemStack(Items.ARROW);
+        ItemStack arrow = getProjectile((ProjectileWeaponItem) weapon.getItem());
+
+        boolean isRocket = arrow.is(Items.FIREWORK_ROCKET);
 
         ArrowItem arrowAsItem = (ArrowItem) (arrow.getItem() instanceof ArrowItem ? arrow.getItem() : Items.ARROW);
 
         AbstractArrow projectile;
         if (isBow) {
             projectile = ProjectileUtil.getMobArrow(this, arrow, force);
+
+            float powerForTime = BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION);
+            if (powerForTime == 1.0f) {
+                projectile.setCritArrow(true);
+            }
         } else {
+            // TODO: Should spawn a firework instead of an arrow.
             projectile = arrowAsItem.createArrow(level, arrow, this);
             projectile.setSoundEvent(SoundEvents.CROSSBOW_HIT);
             projectile.setShotFromCrossbow(true);
+            projectile.setCritArrow(true);
 
             int piercing = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.PIERCING, weapon);
             if (piercing > 0) projectile.setPierceLevel((byte) piercing);
         }
-        projectile.setCritArrow(true);
-        projectile.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
+
+        if (!isRocket) {
+            projectile.pickup = AbstractArrow.Pickup.ALLOWED;
+        }
 
         if (isBow) {
             shootBow(target, projectile);
@@ -568,8 +574,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (event.isCancelled()) {
             event.getProjectile().remove();
             return;
-        } else if (event.getProjectile() == projectile.getBukkitEntity() && !level.addFreshEntity(projectile))
+        } else if (event.getProjectile() == projectile.getBukkitEntity() && !level.addFreshEntity(projectile)) {
+            plugin.getLogger().info("Can't add projectile to world!");
             return;
+        }
 
         onCrossbowAttackPerformed();
     }
@@ -589,6 +597,23 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 (float) (14 - level.getDifficulty().getId() * 4));
 
         playSound(SoundEvents.ARROW_SHOOT, 1.0f, 1.0f / (random.nextFloat() * 0.4f + 0.8f));
+    }
+
+    @Override
+    public boolean canFireProjectileWeapon(ProjectileWeaponItem item) {
+        return !getProjectile(item).isEmpty();
+    }
+
+    public ItemStack getProjectile(ProjectileWeaponItem item) {
+        ItemStack held = ProjectileWeaponItem.getHeldProjectile(this, item.getSupportedHeldProjectiles());
+        if (!held.isEmpty()) return held;
+
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (item.getAllSupportedProjectiles().test(stack)) return stack;
+        }
+
+        return ItemStack.EMPTY;
     }
 
     @Override
@@ -819,6 +844,21 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         SoundEvent tradeSound = getTradeUpdatedSound(!item.isEmpty());
         if (tradeSound != null) playSound(tradeSound, getSoundVolume(), getVoicePitch());
+    }
+
+    @Override
+    public boolean startRiding(Entity entity) {
+        StackTraceElement[] stacktraces = Thread.currentThread().getStackTrace();
+        if (stacktraces.length >= 3) {
+            if (Boat.class.getName().equalsIgnoreCase(stacktraces[2].getClassName())) {
+                if (!isInteracting()
+                        || !interactType.isFollowing()
+                        || entity.getPassengers().stream().noneMatch(passenger -> passenger.getUUID().equals(interactingWith))) {
+                    return false;
+                }
+            }
+        }
+        return super.startRiding(entity);
     }
 
     @Override

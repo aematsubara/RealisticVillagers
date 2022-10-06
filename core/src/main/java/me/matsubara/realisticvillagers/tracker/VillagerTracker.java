@@ -47,6 +47,7 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
@@ -72,10 +73,11 @@ public final class VillagerTracker implements Listener {
 
     private File file;
     private FileConfiguration configuration;
-    private boolean teamCleared;
+    // private boolean teamCleared;
 
     private final static int RENDER_DISTANCE = 32;
     private final static String NAMETAG_TEAM_NAME = "RVNametag";
+    private final static String HIDE_NAMETAG_NAME = "abcdefghijklmnño";
     private final static Predicate<Entity> APPLY_FOR_TRANSFORM = entity -> entity instanceof Villager || entity instanceof ZombieVillager;
     private final static Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
             ENTITY_VELOCITY,
@@ -429,6 +431,11 @@ public final class VillagerTracker implements Listener {
                 || plugin.getConverter().getNPC(villager).isEmpty();
     }
 
+    public void refreshNPC(Villager villager) {
+        removeNPC(villager.getEntityId());
+        spawnNPC(villager);
+    }
+
     public void spawnNPC(Villager villager) {
         if (isInvalid(villager)) return;
 
@@ -438,9 +445,15 @@ public final class VillagerTracker implements Listener {
         WrappedSignedProperty textures = getTextures(villager);
         Preconditions.checkArgument(textures != null, "Invalid textures!");
 
-        String name = plugin.getConverter().getNPC(villager)
-                .map(IVillagerNPC::getVillagerName)
-                .orElse(villager.getName());
+        String name;
+        if (Config.DISABLE_NAMETAGS.asBool()) {
+            name = HIDE_NAMETAG_NAME;
+            checkNametagTeam();
+        } else {
+            name = plugin.getConverter().getNPC(villager)
+                    .map(IVillagerNPC::getVillagerName)
+                    .orElse(villager.getName());
+        }
 
         WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), name);
         profile.getProperties().put("textures", textures);
@@ -454,31 +467,22 @@ public final class VillagerTracker implements Listener {
                 .lookAtPlayer(false)
                 .imitatePlayer(false)
                 .build(pool);
-
-        if (!Config.DISABLE_NAMETAGS.asBool()) return;
-
-        Team hideTeam = getOrCreateNametagTeam();
-        hideTeam.addEntry(name);
     }
 
-    public Team getOrCreateNametagTeam() {
-        @SuppressWarnings("ConstantConditions") Scoreboard scoreboard = Bukkit.getScoreboardManager().getMainScoreboard();
+    private void checkNametagTeam() {
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager == null) return;
 
+        Scoreboard scoreboard = manager.getMainScoreboard();
+
+        Team team = getNametagTeam(scoreboard);
+        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        team.addEntry(HIDE_NAMETAG_NAME);
+    }
+
+    private Team getNametagTeam(Scoreboard scoreboard) {
         Team team = scoreboard.getTeam(NAMETAG_TEAM_NAME);
-
-        if (team != null) {
-            if (teamCleared) return team;
-            try {
-                team.getEntries().forEach(team::removeEntry);
-                teamCleared = true;
-            } catch (IllegalStateException ignore) {
-            }
-        } else {
-            team = scoreboard.registerNewTeam(NAMETAG_TEAM_NAME);
-            team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        }
-
-        return team;
+        return team != null ? team : scoreboard.registerNewTeam(NAMETAG_TEAM_NAME);
     }
 
     public WrappedSignedProperty getTextures(Villager villager) {

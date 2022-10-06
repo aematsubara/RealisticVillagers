@@ -13,10 +13,12 @@ import org.bukkit.block.data.type.Bed;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -38,6 +40,12 @@ public final class ExpectingManager implements Listener {
         this.plugin = plugin;
         this.plugin.getServer().getPluginManager().registerEvents(this, plugin);
         this.villagerExpectingCache = new HashMap<>();
+    }
+
+    @EventHandler()
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (!(event.getEntity() instanceof Villager villager)) return;
+        villagerExpectingCache.entrySet().removeIf(next -> next.getValue().bukkit().equals(villager));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

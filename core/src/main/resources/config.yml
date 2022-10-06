@@ -57,9 +57,6 @@ villager-defend-family-member: true
 # If the villager must defend the hero of the village (only if the villager has a weapon).
 villager-defend-hero-of-the-village: true
 
-# Whether arrows should be required to use a bow/crossbow.
-require-arrows-for-projectile-weapon: true
-
 # If true, arrows shot by villagers will pass through other villagers.
 arrows-pass-through-other-villagers: true
 

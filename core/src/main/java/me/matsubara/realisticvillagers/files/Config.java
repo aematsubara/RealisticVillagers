@@ -13,7 +13,6 @@ public enum Config {
     ATTACK_PLAYER_WEARING_MONSTER_SKULL("attack-player-wearing-monster-skull"),
     ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK("attack-player-playing-goat-horn-seek"),
     GOAT_HORN_SEEK_RANGE("goat-horn-seek-range"),
-    REQUIRE_ARROWS_FOR_PROJECTILE_WEAPON("require-arrows-for-projectile-weapon"),
     MELEE_ATTACK_COOLDOWN("melee-attack-cooldown"),
     VILLAGER_FIX_IRON_GOLEM_WITH_IRON("villager-fix-iron-golem-with-iron"),
     VILLAGER_FIX_IRON_GOLEM_COOLDOWN("villager-fix-iron-golem-cooldown"),

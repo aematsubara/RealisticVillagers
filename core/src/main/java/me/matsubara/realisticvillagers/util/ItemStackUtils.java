@@ -78,11 +78,15 @@ public final class ItemStackUtils {
     }
 
     public static boolean isWeapon(ItemStack item) {
-        return isSword(item) || isBow(item) || isAxe(item);
+        return item.getType() == Material.TRIDENT || isSword(item) || isBow(item) || isAxe(item);
     }
 
     public static boolean isBetterArmorMaterial(ItemStack toCheck, ItemStack actual) {
-        return ArrayUtils.indexOf(ARMOR, toCheck.getType().name()) > ArrayUtils.indexOf(ARMOR, actual.getType().name());
+        return getArmorIndex(toCheck) > getArmorIndex(actual);
+    }
+
+    private static int getArmorIndex(ItemStack item) {
+        return item.getType() == Material.TURTLE_HELMET ? 1 : ArrayUtils.indexOf(ARMOR, item.getType().name());
     }
 
     public static boolean isBetterAxeMaterial(ItemStack toCheck, ItemStack actual) {
@@ -120,7 +124,12 @@ public final class ItemStackUtils {
     private static double getArmorBasePoints(ItemStack item) {
         // https://www.reddit.com/r/Minecraft/comments/157mxr/fyi_specifics_on_armor_enchantment_damage/
 
-        int checkIndex = ArrayUtils.indexOf(ARMOR, item.getType().name());
+        int checkIndex;
+        if (item.getType() == Material.TURTLE_HELMET) {
+            checkIndex = 4;
+        } else {
+            checkIndex = ArrayUtils.indexOf(ARMOR, item.getType().name());
+        }
 
         // Initialize points based on the type of the armor, leather = 0, gold = gold = 1, chainmail = 2, etc...
         double points = (checkIndex < 4) ? 0 : (double) (checkIndex / 4);
@@ -187,6 +196,8 @@ public final class ItemStackUtils {
             handle(villager, item, content, (first, second) -> getAxeBasePoints(first) > getAxeBasePoints(second));
         } else if (isBow(item)) {
             handle(villager, item, content, (first, second) -> getBowBasePoints(first) > getBowBasePoints(second));
+        } else if (item.getType() == Material.TRIDENT) {
+            handle(villager, item, content, (first, second) -> getTridentBasePoints(first) > getTridentBasePoints(second));
         }
     }
 
@@ -246,6 +257,18 @@ public final class ItemStackUtils {
         return points;
     }
 
+    private static double getTridentBasePoints(ItemStack item) {
+        double points = 0.0d;
+
+        // https://minecraft.fandom.com/wiki/Impaling - level × 2.5.
+        int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
+        if (impalingLevel > 0) {
+            points += impalingLevel * 2.5d;
+        }
+
+        return points;
+    }
+
     public static void setArmorItem(Villager villager, ItemStack item) {
         if (item == null || item.getType().isAir() || villager.getEquipment() == null) return;
 
@@ -269,7 +292,6 @@ public final class ItemStackUtils {
 
     public static EquipmentSlot getSlotByItem(ItemStack item) {
         String name = item.getType().name();
-
         if (name.contains("HELMET")) return EquipmentSlot.HEAD;
         if (name.contains("CHESTPLATE")) return EquipmentSlot.CHEST;
         if (name.contains("LEGGINGS")) return EquipmentSlot.LEGS;
