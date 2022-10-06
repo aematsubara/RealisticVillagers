@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.listener;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -22,14 +23,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.UUID;
 
+@SuppressWarnings("ClassCanBeRecord")
 public final class PlayerListeners implements Listener {
 
     private final RealisticVillagers plugin;
-    private final SimpleDateFormat simpleFormat = new SimpleDateFormat("mm:ss");
 
     public PlayerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -102,7 +101,7 @@ public final class PlayerListeners implements Listener {
 
         int growCooldown = Config.BABY_GROW_COOLDOWN.asInt();
         if (elapsedTime <= growCooldown) {
-            String next = simpleFormat.format(new Date(growCooldown - elapsedTime));
+            String next = PluginUtils.getTimeString(growCooldown - elapsedTime);
             player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.BABY_GROW).replace("%time%", next));
             return;
         }

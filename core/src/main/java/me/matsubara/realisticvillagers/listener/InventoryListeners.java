@@ -14,6 +14,7 @@ import me.matsubara.realisticvillagers.gui.types.EquipmentGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
 import me.matsubara.realisticvillagers.task.BabyTask;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.EntityEffect;
 import org.bukkit.Material;
@@ -33,8 +34,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
@@ -211,8 +210,7 @@ public final class InventoryListeners implements Listener {
             int procreationCooldown = Config.PROCREATION_COOLDOWN.asInt();
 
             if (elapsedTime <= procreationCooldown) {
-                SimpleDateFormat nextProcreateFormat = new SimpleDateFormat("mm:ss");
-                String next = nextProcreateFormat.format(new Date(procreationCooldown - elapsedTime));
+                String next = PluginUtils.getTimeString(procreationCooldown - elapsedTime);
                 plugin.getMessages().send(npc, player, Messages.Message.PROCREATE_FAIL_HAS_BABY);
                 player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.PROCREATE_COOLDOWN).replace("%time%", next));
                 closeInventory(player);

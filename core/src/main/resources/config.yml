@@ -205,6 +205,11 @@ villager-message-format: "%name%: %message%"
 
 # Texts that are used in some variables.
 variable-text:
+  acronym:
+    second: "s"
+    minute: "m"
+    hour: "h"
+    day: "d"
   none: "None"
   unknown: "Unknown"
   villager: "Villager"

@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.util;
 import com.google.common.base.Preconditions;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import me.matsubara.realisticvillagers.files.Config;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -13,6 +14,7 @@ import java.lang.invoke.MethodHandle;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -102,5 +104,41 @@ public final class PluginUtils {
         x = initialZ * sinYaw + initialX * cosYaw;
 
         return new Vector(x, y, z);
+    }
+
+    public static String getTimeString(long millis) {
+        long days = TimeUnit.MILLISECONDS.toDays(millis);
+
+        millis -= TimeUnit.DAYS.toMillis(days);
+        long hours = TimeUnit.MILLISECONDS.toHours(millis);
+
+        millis -= TimeUnit.HOURS.toMillis(hours);
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
+
+        millis -= TimeUnit.MINUTES.toMillis(minutes);
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+
+        StringBuilder builder = new StringBuilder();
+
+        if (days > 0L) {
+            builder.append(days).append(Config.ACRONYM_DAY.asString());
+        }
+
+        if (hours > 0L) {
+            if (days > 0L) builder.append(", ");
+            builder.append(hours).append(Config.ACRONYM_HOUR.asString());
+        }
+
+        if (minutes > 0L) {
+            if (hours > 0L || days > 0L) builder.append(", ");
+            builder.append(minutes).append(Config.ACRONYM_MINUTE.asString());
+        }
+
+        if (seconds > 0L) {
+            if (minutes > 0L || hours > 0L || days > 0L) builder.append(", ");
+            builder.append(seconds).append(Config.ACRONYM_SECOND.asString());
+        }
+
+        return builder.toString();
     }
 }
