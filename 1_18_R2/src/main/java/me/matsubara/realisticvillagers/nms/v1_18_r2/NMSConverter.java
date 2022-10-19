@@ -13,6 +13,7 @@ import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -45,6 +46,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.IdentityHashMap;
@@ -113,7 +117,7 @@ public class NMSConverter implements INMSConverter {
             return tag.get(plugin.getNpcValuesKey().toString()).toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
-            return container.get(plugin.getZombieTransformKey(), PersistentDataType.STRING);
+            return container.getOrDefault(plugin.getZombieTransformKey(), PersistentDataType.STRING, "");
         }
         return null;
     }
@@ -170,6 +174,26 @@ public class NMSConverter implements INMSConverter {
             ((VillagerNPC) npc.get()).loadPluginData(villagerTag);
         } catch (CommandSyntaxException exception) {
             exception.printStackTrace();
+        }
+    }
+
+    @Override
+    public void removePartnerFromPlayerNBT(File file) {
+        try {
+            CompoundTag tag = NbtIo.readCompressed(new FileInputStream(file));
+
+            CompoundTag bukkit = getOrCreateBukkitTag(tag);
+            bukkit.remove(plugin.getMarriedWith().toString());
+
+            if (bukkit.isEmpty()) {
+                tag.remove("BukkitValues");
+            } else {
+                tag.put("BukkitValues", bukkit);
+            }
+
+            NbtIo.writeCompressed(tag, file);
+        } catch (IOException exception) {
+            plugin.getLogger().warning("Error loading player data!");
         }
     }
 

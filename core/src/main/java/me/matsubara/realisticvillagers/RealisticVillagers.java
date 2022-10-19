@@ -63,7 +63,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
     private final NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
 
-    private VillagerTracker villagerTracker;
+    private VillagerTracker tracker;
     private Shape ring;
 
     private ExpectingManager expectingManager;
@@ -117,7 +117,7 @@ public final class RealisticVillagers extends JavaPlugin {
         giftManager = new GiftManager(this);
         cooldownManager = new InteractCooldownManager(this);
 
-        villagerTracker = new VillagerTracker(this);
+        tracker = new VillagerTracker(this);
         ring = createWeddingRing();
 
         defaultTargets = new ArrayList<>();
@@ -252,19 +252,21 @@ public final class RealisticVillagers extends JavaPlugin {
                 skinsDisabled,
                 Config.DISABLE_SKINS.asBool(),
                 (npc, state) -> {
+                    if (tracker.isInvalid(npc.bukkit(), true)) return;
+
                     if (state) {
-                        villagerTracker.removeNPC(npc.bukkit().getEntityId());
+                        tracker.removeNPC(npc.bukkit().getEntityId());
                         npc.sendSpawnPacket();
                     } else {
                         npc.sendDestroyPacket();
-                        villagerTracker.spawnNPC(npc.bukkit());
+                        tracker.spawnNPC(npc.bukkit());
                     }
                 });
 
         handleChangedOption(
                 nametagsDisabled,
                 Config.DISABLE_NAMETAGS.asBool(),
-                (npc, state) -> villagerTracker.refreshNPC(npc.bukkit()));
+                (npc, state) -> tracker.refreshNPC(npc.bukkit()));
 
         return true;
     }
@@ -288,7 +290,7 @@ public final class RealisticVillagers extends JavaPlugin {
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
         if (partner == null) return false;
 
-        VillagerInfo partnerInfo = villagerTracker.get(UUID.fromString(partner));
+        VillagerInfo partnerInfo = tracker.get(UUID.fromString(partner));
         if (partnerInfo != null && partnerInfo.isDead()) {
             player.getPersistentDataContainer().remove(marriedWith);
             return false;
@@ -358,13 +360,5 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public String getSkinFolder() {
         return getDataFolder() + File.separator + "skins";
-    }
-
-    public INMSConverter getConverter() {
-        return converter;
-    }
-
-    public VillagerTracker getVillagerTracker() {
-        return villagerTracker;
     }
 }

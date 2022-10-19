@@ -396,6 +396,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         double z = coords.getDouble(2);
 
         ServerLevel level = ((CraftWorld) world).getHandle();
+        if (!level.getChunkSource().isChunkLoaded((int) x, (int) z)) return;
+
         GlobalPos pos = GlobalPos.of(level.dimension(), new BlockPos(x, y, z));
 
         BlockState state = level.getBlockState(pos.pos());
@@ -1192,7 +1194,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         super.startSleeping(pos);
         collides = false;
 
-        if (plugin.getVillagerTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_SLEPT, lastSlept);
+        if (plugin.getTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_SLEPT, lastSlept);
     }
 
     @Override
@@ -1202,7 +1204,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         super.stopSleeping();
         collides = true;
 
-        if (plugin.getVillagerTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_WOKEN, lastWoken);
+        if (plugin.getTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_WOKEN, lastWoken);
     }
 
     @Override

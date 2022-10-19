@@ -27,14 +27,15 @@ public class BukkitSpawnListeners implements Listener {
     public void onCreatureSpawn(CreatureSpawnEvent event) {
         LivingEntity entity = event.getEntity();
 
-        CreatureSpawnEvent.SpawnReason spawnReason = event.getSpawnReason();
-        handleSpawn(entity, spawnReason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG
-                || spawnReason == CreatureSpawnEvent.SpawnReason.CUSTOM);
+        CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+        handleSpawn(
+                entity,
+                reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG || reason == CreatureSpawnEvent.SpawnReason.CUSTOM);
 
-        if (spawnReason != CreatureSpawnEvent.SpawnReason.INFECTION) return;
+        if (reason != CreatureSpawnEvent.SpawnReason.INFECTION) return;
         if (event.getEntityType() != EntityType.ZOMBIE_VILLAGER) return;
 
-        String tag = plugin.getVillagerTracker().getTransformations().remove(entity.getUniqueId());
+        String tag = plugin.getTracker().getTransformations().remove(entity.getUniqueId());
         if (tag != null) entity.getPersistentDataContainer().set(
                 plugin.getZombieTransformKey(),
                 PersistentDataType.STRING,
@@ -71,9 +72,10 @@ public class BukkitSpawnListeners implements Listener {
             plugin.getConverter().loadDataFromTag(villager, "");
         }
 
-        VillagerTracker tracker = plugin.getVillagerTracker();
+        VillagerTracker tracker = plugin.getTracker();
         tracker.add(villager);
 
+        // If the zombie villager wasn't an infected villager, the tag will be empty.
         String tag = tracker.getTransformations().remove(villager.getUniqueId());
         if (tag != null) plugin.getConverter().loadDataFromTag(villager, tag);
 

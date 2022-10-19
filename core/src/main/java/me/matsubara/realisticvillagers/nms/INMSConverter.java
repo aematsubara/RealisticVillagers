@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.File;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +24,6 @@ public interface INMSConverter {
     void createBaby(Location location, String name, String sex, UUID mother, Player father);
 
     void loadDataFromTag(Villager villager, String tag);
+
+    void removePartnerFromPlayerNBT(File file);
 }

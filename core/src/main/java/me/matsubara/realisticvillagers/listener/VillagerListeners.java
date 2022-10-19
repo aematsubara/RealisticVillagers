@@ -79,12 +79,12 @@ public final class VillagerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onVillagerCareerChange(VillagerCareerChangeEvent event) {
         Villager villager = event.getEntity();
-        if (plugin.getVillagerTracker().isInvalid(villager)) return;
+        if (plugin.getTracker().isInvalid(villager)) return;
 
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
 
-            plugin.getVillagerTracker().refreshNPC(villager);
+            plugin.getTracker().refreshNPC(villager);
 
             // Give fishing rod.
             if (event.getProfession() == Villager.Profession.FISHERMAN) {
@@ -169,7 +169,7 @@ public final class VillagerListeners implements Listener {
         if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
 
         if (!(event.getRightClicked() instanceof Villager villager)) return;
-        if (plugin.getVillagerTracker().isInvalid(villager)) return;
+        if (plugin.getTracker().isInvalid(villager, true)) return;
 
         Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
 

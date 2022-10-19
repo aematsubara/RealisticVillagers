@@ -39,7 +39,7 @@ public final class EquipmentGUI extends InteractGUI {
                 .setDisplayName("&7")
                 .build();
 
-        WrappedSignedProperty textures = Config.DISABLE_SKINS.asBool() ? null : plugin.getVillagerTracker().getTextures(npc.bukkit());
+        WrappedSignedProperty textures = Config.DISABLE_SKINS.asBool() ? null : plugin.getTracker().getTextures(npc.bukkit());
         this.head = new ItemBuilder(PluginUtils.createHead(textures == null ? VILLAGER_HEAD_TEXTURE : textures.getValue()))
                 .setDisplayName("&7")
                 .build();

@@ -6,6 +6,7 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.tracker.VillagerInfo;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.text.WordUtils;
 import org.bukkit.Bukkit;
@@ -107,10 +108,12 @@ public final class MainGUI extends InteractGUI {
         String unknown = Config.UNKNOWN.asString();
         String villagerType = Config.VILLAGER.asString();
 
+        VillagerTracker tracker = plugin.getTracker();
+
         // Get partner name.
         OfflinePlayer partnerPlayer = npc.getPartner() != null
                 && !npc.isPartnerVillager() ? Bukkit.getOfflinePlayer(npc.getPartner()) : null;
-        VillagerInfo partnerInfo = plugin.getVillagerTracker().get(npc.getPartner());
+        VillagerInfo partnerInfo = tracker.get(npc.getPartner());
         String partnerName = null;
         if (partnerPlayer != null) {
             partnerName = partnerPlayer.getName();
@@ -129,7 +132,7 @@ public final class MainGUI extends InteractGUI {
         // Get father name.
         OfflinePlayer fatherPlayer = npc.getFather() != null
                 && !npc.isFatherVillager() ? Bukkit.getOfflinePlayer(npc.getFather()) : null;
-        VillagerInfo fatherInfo = plugin.getVillagerTracker().get(npc.getFather());
+        VillagerInfo fatherInfo = tracker.get(npc.getFather());
         String fatherName = null;
         if (fatherPlayer != null) {
             fatherName = fatherPlayer.getName();
@@ -148,7 +151,7 @@ public final class MainGUI extends InteractGUI {
         }
 
         // Get mother name.
-        VillagerInfo motherInfo = plugin.getVillagerTracker().get(npc.getMother());
+        VillagerInfo motherInfo = tracker.get(npc.getMother());
         String motherName = motherInfo != null ? motherInfo.getLastKnownName() : unknown;
         if (!motherName.equalsIgnoreCase(unknown)) {
             if (motherInfo != null && motherInfo.isDead()) motherName += " †";
@@ -158,7 +161,7 @@ public final class MainGUI extends InteractGUI {
         // Get childrens name.
         List<String> childrens = new ArrayList<>();
         for (UUID childrenUUID : npc.getChildrens()) {
-            VillagerInfo childrenInfo = plugin.getVillagerTracker().get(childrenUUID);
+            VillagerInfo childrenInfo = tracker.get(childrenUUID);
             if (childrenInfo != null)
                 childrens.add(childrenInfo.getLastKnownName() + (childrenInfo.isDead() ? " †" : ""));
         }

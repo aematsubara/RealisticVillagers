@@ -26,6 +26,7 @@ import me.matsubara.realisticvillagers.util.npc.modifier.MetadataModifier;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -313,6 +314,17 @@ public final class VillagerTracker implements Listener {
         Player player = Bukkit.getPlayer(partner);
         if (player != null && player.isOnline()) {
             player.getPersistentDataContainer().remove(plugin.getMarriedWith());
+            return;
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            File data = new File(world.getWorldFolder(), "playerdata");
+
+            File playerFile = new File(data, partner + ".dat");
+            if (!playerFile.exists()) continue;
+
+            // Player is offline, we need to modify the NBT file (if possible).
+            plugin.getConverter().removePartnerFromPlayerNBT(playerFile);
         }
     }
 
@@ -424,11 +436,15 @@ public final class VillagerTracker implements Listener {
         return type == SPAWN_ENTITY_LIVING || (ReflectionUtils.supports(19) && type == SPAWN_ENTITY);
     }
 
-    public boolean isInvalid(Villager villager) {
-        return Config.DISABLE_SKINS.asBool()
-                || !plugin.isEnabledIn(villager.getWorld())
+    public boolean isInvalid(Villager villager, boolean ignoreSkinsState) {
+        return (!ignoreSkinsState && Config.DISABLE_SKINS.asBool())
                 || villager.hasMetadata("shopkeeper")
+                || !plugin.isEnabledIn(villager.getWorld())
                 || plugin.getConverter().getNPC(villager).isEmpty();
+    }
+
+    public boolean isInvalid(Villager villager) {
+        return isInvalid(villager, false);
     }
 
     public void refreshNPC(Villager villager) {
@@ -549,7 +565,7 @@ public final class VillagerTracker implements Listener {
             if (villager.bukkit().isSleeping()) {
                 Location home = villager.bukkit().getMemory(MemoryKey.HOME);
 
-                plugin.getVillagerTracker().getPlayerSleepFix().add(player.getUniqueId());
+                plugin.getTracker().getPlayerSleepFix().add(player.getUniqueId());
 
                 npc.teleport().queueTeleport(location, villager.bukkit().isOnGround()).send(player);
                 npc.metadata().queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
@@ -558,7 +574,7 @@ public final class VillagerTracker implements Listener {
 
                 plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
                     if (home != null) villager.bukkit().sleep(home);
-                    plugin.getVillagerTracker().getPlayerSleepFix().remove(player.getUniqueId());
+                    plugin.getTracker().getPlayerSleepFix().remove(player.getUniqueId());
                 }, 2L);
             }
 

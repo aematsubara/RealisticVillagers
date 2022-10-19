@@ -35,7 +35,7 @@ public class PaperSpawnListeners implements EventExecutor {
             plugin.getServer().getPluginManager().registerEvents(new Listener() {
                 @EventHandler(ignoreCancelled = true)
                 public void onCreatureSpawn(CreatureSpawnEvent event) {
-                    plugin.getVillagerTracker().getSpawnListeners().onCreatureSpawn(event);
+                    plugin.getTracker().getSpawnListeners().onCreatureSpawn(event);
                 }
             }, plugin);
             registered = true;
@@ -47,7 +47,7 @@ public class PaperSpawnListeners implements EventExecutor {
     @Override
     public void execute(@NotNull Listener listener, @NotNull Event event) {
         if (event instanceof EntityEvent entityEvent) {
-            plugin.getVillagerTracker().getSpawnListeners().handleSpawn(entityEvent.getEntity());
+            plugin.getTracker().getSpawnListeners().handleSpawn(entityEvent.getEntity());
         }
     }
 }
