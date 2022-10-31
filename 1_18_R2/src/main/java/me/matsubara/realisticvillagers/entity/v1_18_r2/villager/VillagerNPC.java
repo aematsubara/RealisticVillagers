@@ -3,7 +3,6 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Dynamic;
@@ -17,6 +16,7 @@ import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.DummyFishingHook;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.VillagerNPCGoalPackages;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core.LootChest;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.sensing.VillagerHostilesSensor;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
@@ -60,6 +60,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
 import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -152,20 +153,22 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean isTaming;
     private boolean isHealingGolem;
     private boolean isUsingBoneMeal;
+    private boolean isLooting;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
     private final VillagerFoodData foodData = new VillagerFoodData(this);
 
-    public final static MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
-    public final static MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
-    public final static MemoryModuleType<Boolean> HAS_TAMED_RECENTLY = NMSConverter.registerMemoryType("has_tamed_recently", Codec.BOOL);
-    public final static MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
-    public final static MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
+    public static final MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_TAMED_RECENTLY = NMSConverter.registerMemoryType("has_tamed_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_LOOTED_RECENTLY = NMSConverter.registerMemoryType("has_looted_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
+    public static final MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
 
-    public final static Activity STAY = NMSConverter.registerActivity("stay");
+    public static final Activity STAY = NMSConverter.registerActivity("stay");
 
-    private final static ImmutableList<MemoryModuleType<?>> MEMORIES = ImmutableList.of(
+    private static final ImmutableList<MemoryModuleType<?>> MEMORIES = ImmutableList.of(
             MemoryModuleType.HOME,
             MemoryModuleType.JOB_SITE,
             MemoryModuleType.POTENTIAL_JOB_SITE,
@@ -198,14 +201,15 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             HAS_HEALED_GOLEM_RECENTLY,
             HAS_FISHED_RECENTLY,
             HAS_TAMED_RECENTLY,
+            HAS_LOOTED_RECENTLY,
             CELEBRATE_VICTORY,
             STAY_PLACE,
             MemoryModuleType.ATTACK_TARGET,
             MemoryModuleType.ATTACK_COOLING_DOWN);
 
-    private final static SensorType<VillagerHostilesSensor> NEAREST_HOSTILE = NMSConverter.registerSensor("nearest_hostile", VillagerHostilesSensor::new);
+    private static final SensorType<VillagerHostilesSensor> NEAREST_HOSTILE = NMSConverter.registerSensor("nearest_hostile", VillagerHostilesSensor::new);
 
-    private final static ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSORS = ImmutableList.of(
+    private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSORS = ImmutableList.of(
             SensorType.NEAREST_LIVING_ENTITIES,
             SensorType.NEAREST_BED,
             SensorType.HURT_BY,
@@ -216,9 +220,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             SensorType.NEAREST_ITEMS,
             NEAREST_HOSTILE != null ? NEAREST_HOSTILE : SensorType.VILLAGER_HOSTILES);
 
-    private final static Set<Item> ALLOWED_ARROW_TYPE = Sets.newHashSet(Items.ARROW);
-    private final static EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(VillagerNPC.class, EntityDataSerializers.BOOLEAN);
-    private final static ImmutableSet<Class<? extends Item>> DO_NOT_SAVE = ImmutableSet.of(
+    private static final EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(VillagerNPC.class, EntityDataSerializers.BOOLEAN);
+    private static final ImmutableSet<Class<? extends Item>> DO_NOT_SAVE = ImmutableSet.of(
             SwordItem.class,
             AxeItem.class,
             ProjectileWeaponItem.class,
@@ -396,7 +399,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         double z = coords.getDouble(2);
 
         ServerLevel level = ((CraftWorld) world).getHandle();
-        if (!level.getChunkSource().isChunkLoaded((int) x, (int) z)) return;
+        if (!level.getChunkSource().isChunkLoaded((int) x, (int) z)
+                || level.getChunkIfLoaded((int) x, (int) z) == null) return;
 
         GlobalPos pos = GlobalPos.of(level.dimension(), new BlockPos(x, y, z));
 
@@ -650,9 +654,17 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         item.ifPresent(value -> setItemSlot(slot, value.getDefaultInstance()));
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void die(DamageSource source) {
         super.die(source);
+
+        // Stop all behaviors.
+        for (Behavior<? super Villager> behavior : getBrain().getRunningBehaviors()) {
+            if (behavior instanceof LootChest loot) {
+                loot.doStop((ServerLevel) level, this, level.getGameTime());
+            }
+        }
 
         if (!level.isClientSide && hasPartner() && !isPartnerVillager) {
             Player player = level.getPlayerByUUID(getPartner());
@@ -683,7 +695,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData groupData, @Nullable CompoundTag tag) {
-        if (!isBaby()) {
+        if (!isBaby() && spawnType != MobSpawnType.BREEDING) {
             maybeWearWeaponAndShield();
 
             maybeWearArmor(EquipmentSlot.HEAD);
@@ -810,7 +822,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public ItemStack eat(Level level, ItemStack item) {
         foodData.eat(item.getItem(), item);
-        level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5f, random.nextFloat() * 0.1f + 0.9f);
+        level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, getSoundSource(), 0.5f, random.nextFloat() * 0.1f + 0.9f);
         return super.eat(level, item);
     }
 
@@ -1090,7 +1102,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         ItemStack fakeRemaining = new SimpleContainer(container).addItem(stack);
 
         EntityPickupItemEvent event = CraftEventFactory.callEntityPickupItemEvent(this, entity, fakeRemaining.getCount(), false);
-        if (event.isCancelled()) return;
+        // TODO if (event.isCancelled()) return;
 
         stack = CraftItemStack.asNMSCopy(event.getItem().getItemStack());
 
@@ -1128,7 +1140,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 || ignore.isShowingTrades(showingTrades)
                 || ignore.isTaming(isTaming)
                 || ignore.isHealingGolem(isHealingGolem)
-                || ignore.isUsingBoneMeal(isUsingBoneMeal);
+                || ignore.isUsingBoneMeal(isUsingBoneMeal)
+                || ignore.isLooting(isLooting);
     }
 
     private void handleRemaining(ItemStack original, ItemStack remaining, ItemEntity itemEntity) {

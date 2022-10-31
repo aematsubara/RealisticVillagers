@@ -16,7 +16,7 @@ public class PaperSpawnListeners implements EventExecutor {
     private final RealisticVillagers plugin;
     private @Getter boolean registered;
 
-    private final static String EVENT_CLASS = "com.destroystokyo.paper.event.entity.EntityAddToWorldEvent";
+    private static final String EVENT_CLASS = "com.destroystokyo.paper.event.entity.EntityAddToWorldEvent";
 
     public PaperSpawnListeners(RealisticVillagers plugin) {
         this.plugin = plugin;

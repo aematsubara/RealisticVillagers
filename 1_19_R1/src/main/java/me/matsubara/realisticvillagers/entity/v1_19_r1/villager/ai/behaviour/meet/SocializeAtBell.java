@@ -17,7 +17,7 @@ import java.util.Optional;
 
 public class SocializeAtBell extends Behavior<Villager> {
 
-    private final static float SPEED_MODIFIER = 0.3f;
+    private static final float SPEED_MODIFIER = 0.3f;
 
     public SocializeAtBell() {
         super(ImmutableMap.of(
@@ -35,6 +35,7 @@ public class SocializeAtBell extends Behavior<Villager> {
         Optional<GlobalPos> meetPos = brain.getMemory(MemoryModuleType.MEETING_POINT);
 
         return level.getRandom().nextInt(100) == 0
+                && (!(villager instanceof VillagerNPC npc) || npc.isDoingNothing(true))
                 && meetPos.isPresent()
                 && level.dimension() == meetPos.get().dimension()
                 && meetPos.get().pos().closerToCenterThan(villager.position(), 4.0d)

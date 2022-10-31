@@ -19,7 +19,7 @@ public abstract class InteractGUI implements InventoryHolder {
     protected final Inventory inventory;
     private boolean shouldStopInteracting;
 
-    private final static UnaryOperator<String> EMPTY = string -> string;
+    private static final UnaryOperator<String> EMPTY = string -> string;
 
     protected InteractGUI(String name, RealisticVillagers plugin, IVillagerNPC npc, int size, @Nullable UnaryOperator<String> operator) {
         this.name = name;

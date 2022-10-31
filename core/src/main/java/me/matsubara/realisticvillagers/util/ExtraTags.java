@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class ExtraTags {
 
-    public final static Map<String, Set<Material>> TAGS = new HashMap<>();
+    public static final Map<String, Set<Material>> TAGS = new HashMap<>();
 
     static {
         Set<Material> leatherArmor = Sets.newHashSet(

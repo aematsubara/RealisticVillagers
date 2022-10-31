@@ -26,8 +26,8 @@ public class SetLookAndInteractPlayer extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        // Don't interact if the NPC is expecting something.
-        return !(villager instanceof VillagerNPC npc) || !npc.isExpecting();
+        // Don't interact if the NPC is expecting something or looting.
+        return !(villager instanceof VillagerNPC npc) || (!npc.isExpecting() && !npc.isLooting());
     }
 
     public void start(ServerLevel level, Villager villager, long time) {

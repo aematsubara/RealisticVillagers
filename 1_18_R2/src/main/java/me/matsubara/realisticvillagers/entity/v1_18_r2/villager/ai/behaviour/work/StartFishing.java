@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 public class StartFishing extends Behavior<Villager> {
 
-    private final static int RANGE = 16;
+    private static final int RANGE = 16;
 
     private @Nullable BlockPos waterPos;
 

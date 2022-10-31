@@ -54,7 +54,7 @@ public class PetCat extends Cat implements Pet {
     private CatAvoidEntityGoal<Player> avoidPlayersGoal;
     private @Nullable CatTemptGoal temptGoal;
 
-    private final static Ingredient TEMPT_INGREDIENT = Ingredient.of(Items.COD, Items.SALMON);
+    private static final Ingredient TEMPT_INGREDIENT = Ingredient.of(Items.COD, Items.SALMON);
 
     public PetCat(EntityType<? extends Cat> type, Level level) {
         super(type, level);

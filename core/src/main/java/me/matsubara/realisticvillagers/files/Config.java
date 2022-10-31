@@ -91,6 +91,7 @@ public enum Config {
 
     BABY_TITLE("input-gui.baby.title"),
     BABY_TEXT("input-gui.baby.text"),
+    BABY_INVALID_NAME("input-gui.baby.invalid-name"),
 
     FISHING_ROD_CHANCE("fishing-rod-chance"),
     FISHING_COOLDOWN("fishing-cooldown"),
@@ -110,7 +111,13 @@ public enum Config {
     ACRONYM_SECOND("variable-text.acronym.second"),
     ACRONYM_MINUTE("variable-text.acronym.minute"),
     ACRONYM_HOUR("variable-text.acronym.hour"),
-    ACRONYM_DAY("variable-text.acronym.day");
+    ACRONYM_DAY("variable-text.acronym.day"),
+    LOOT_CHEST_ENABLED("loot-chest.enabled"),
+    LOOT_CHEST_REQUIRED_SIGN_LINE("loot-chest.required-sign-line"),
+    LOOT_CHEST_NITWIT_SHUFFLE_INVENTORY("loot-chest.nitwit-shuffle-inventory"),
+    LOOT_CHEST_COOLDOWN("loot-chest.cooldown"),
+    LOOT_CHEST_PER_CHEST_COOLDOWN("loot-chest.per-chest-cooldown"),
+    LOOT_CHEST_ALLOW_BABIES("loot-chest.allow-babies");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

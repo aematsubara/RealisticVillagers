@@ -29,7 +29,7 @@ import java.util.Optional;
 
 public class VillagerPanicTrigger extends Behavior<Villager> {
 
-    private final static ImmutableSet<Item> HALLOWEEN_MASKS = ImmutableSet.of(
+    private static final ImmutableSet<Item> HALLOWEEN_MASKS = ImmutableSet.of(
             Items.DRAGON_HEAD,
             Items.WITHER_SKELETON_SKULL,
             Items.ZOMBIE_HEAD,

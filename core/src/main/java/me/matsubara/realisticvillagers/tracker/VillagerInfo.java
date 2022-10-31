@@ -10,7 +10,7 @@ public class VillagerInfo {
     private long lastSeen;
 
     // After a week, consider as dead.
-    public final static long CONSIDER_AS_DEAD = 604800000;
+    public static final long CONSIDER_AS_DEAD = 604800000;
 
     public VillagerInfo(UUID uuid, int id, String lastKnownName) {
         this(uuid, id, lastKnownName, System.currentTimeMillis());

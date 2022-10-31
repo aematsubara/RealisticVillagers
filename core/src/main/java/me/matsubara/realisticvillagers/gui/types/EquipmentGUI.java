@@ -22,9 +22,9 @@ public final class EquipmentGUI extends InteractGUI {
     private final ItemStack border;
     private final ItemStack head;
 
-    private final static ItemStack EMPTY = new ItemStack(Material.AIR);
-    private final static String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
-    public final static EquipmentSlot[] ARMOR_SLOTS_ORDER = {
+    private static final ItemStack EMPTY = new ItemStack(Material.AIR);
+    private static final String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
+    public static final EquipmentSlot[] ARMOR_SLOTS_ORDER = {
             EquipmentSlot.HEAD,
             EquipmentSlot.CHEST,
             EquipmentSlot.LEGS,

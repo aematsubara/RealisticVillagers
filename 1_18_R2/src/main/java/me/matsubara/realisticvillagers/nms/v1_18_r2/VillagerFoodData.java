@@ -29,9 +29,9 @@ public class VillagerFoodData {
     private float saturationLevel;
     private float exhaustionLevel;
 
-    private final static int SATURATED_REGEN_RATE = 10;
-    private final static int UNSATURATED_REGEN_RATE = 80;
-    private final static int STARVATION_RATE = 80;
+    private static final int SATURATED_REGEN_RATE = 10;
+    private static final int UNSATURATED_REGEN_RATE = 80;
+    private static final int STARVATION_RATE = 80;
 
     public VillagerFoodData(VillagerNPC npc) {
         this.npc = npc;

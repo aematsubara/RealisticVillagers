@@ -9,6 +9,7 @@ import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.listener.PlayerListeners;
 import me.matsubara.realisticvillagers.listener.VillagerListeners;
+import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
 import me.matsubara.realisticvillagers.manager.gift.Gift;
@@ -47,7 +48,7 @@ import java.util.function.BiConsumer;
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
 
-    private final static String SKINS_REPO = "https://raw.githubusercontent.com/aematsubara/villager-skins/main/";
+    private static final String SKINS_REPO = "https://raw.githubusercontent.com/aematsubara/villager-skins/main/";
 
     private final NamespacedKey giftKey = key("GiftUUID");
     private final NamespacedKey marriedWith = key("MarriedWith");
@@ -62,6 +63,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey fishedKey = key("Fished");
     private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
     private final NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
+    private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
 
     private VillagerTracker tracker;
     private Shape ring;
@@ -72,12 +74,13 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private Messages messages;
     private INMSConverter converter;
+    private ChestManager chestManager;
 
     private List<String> defaultTargets;
     private List<String> worlds;
     private Set<Gift> wantedItems;
 
-    private final static Set<String> FILTER_TYPES = Sets.newHashSet("WHITELIST", "BLACKLIST");
+    private static final Set<String> FILTER_TYPES = Sets.newHashSet("WHITELIST", "BLACKLIST");
 
     @Override
     public void onLoad() {
@@ -123,6 +126,8 @@ public final class RealisticVillagers extends JavaPlugin {
         defaultTargets = new ArrayList<>();
         initDefaultTargetEntities(defaultTargets);
         reloadWantedItems();
+
+        chestManager = new ChestManager(this);
 
         getServer().getPluginManager().registerEvents(new InventoryListeners(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListeners(this), this);

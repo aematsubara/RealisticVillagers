@@ -25,7 +25,7 @@ import java.util.Set;
 
 public class WorkAtBarrel extends WorkAtPoi {
 
-    private final static Set<Item> SAVE_ITEMS = ImmutableSet.of(
+    private static final Set<Item> SAVE_ITEMS = ImmutableSet.of(
             Items.COD,
             Items.SALMON,
             Items.TROPICAL_FISH,

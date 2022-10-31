@@ -33,8 +33,8 @@ public class CatTemptGoal extends Goal {
     private int calmDown;
     private boolean isRunning;
 
-    private final static double DISTANCE = 10.0d;
-    private final static TargetingConditions TEMP_TARGETING = TargetingConditions.forNonCombat().range(10.0).ignoreLineOfSight();
+    private static final double DISTANCE = 10.0d;
+    private static final TargetingConditions TEMP_TARGETING = TargetingConditions.forNonCombat().range(10.0).ignoreLineOfSight();
 
     public CatTemptGoal(Cat cat, double speedModifier, Ingredient items, boolean canScare) {
         this.cat = cat;

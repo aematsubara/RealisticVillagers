@@ -76,11 +76,11 @@ public final class VillagerTracker implements Listener {
     private FileConfiguration configuration;
     // private boolean teamCleared;
 
-    private final static int RENDER_DISTANCE = 32;
-    private final static String NAMETAG_TEAM_NAME = "RVNametag";
-    private final static String HIDE_NAMETAG_NAME = "abcdefghijklmnño";
-    private final static Predicate<Entity> APPLY_FOR_TRANSFORM = entity -> entity instanceof Villager || entity instanceof ZombieVillager;
-    private final static Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
+    private static final int RENDER_DISTANCE = 32;
+    private static final String NAMETAG_TEAM_NAME = "RVNametag";
+    private static final String HIDE_NAMETAG_NAME = "abcdefghijklmnño";
+    private static final Predicate<Entity> APPLY_FOR_TRANSFORM = entity -> entity instanceof Villager || entity instanceof ZombieVillager;
+    private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
             ENTITY_VELOCITY,
             REL_ENTITY_MOVE,
             ENTITY_LOOK,
@@ -428,7 +428,11 @@ public final class VillagerTracker implements Listener {
     }
 
     public boolean hasNPC(int entityId) {
-        return pool.getNpc(entityId).isPresent();
+        return getNPC(entityId).isPresent();
+    }
+
+    public Optional<NPC> getNPC(int entityId) {
+        return pool.getNpc(entityId);
     }
 
     @SuppressWarnings("deprecation")
@@ -544,7 +548,7 @@ public final class VillagerTracker implements Listener {
         private final IVillagerNPC villager;
 
         // Show everything except cape.
-        private final static MetadataModifier.EntityMetadata<Boolean, Byte> SKIN_LAYERS = new MetadataModifier.EntityMetadata<>(
+        private static final MetadataModifier.EntityMetadata<Boolean, Byte> SKIN_LAYERS = new MetadataModifier.EntityMetadata<>(
                 10,
                 Byte.class,
                 Arrays.asList(9, 9, 10, 14, 14, 15, 17),

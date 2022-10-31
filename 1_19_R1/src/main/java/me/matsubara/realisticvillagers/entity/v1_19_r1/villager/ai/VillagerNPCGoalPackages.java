@@ -8,9 +8,11 @@ import com.mojang.datafixers.util.Pair;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.PetCat;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
-import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.SetLookAndInteractPlayer;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.GiveGiftToHero;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.SetEntityLookTarget;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.ShowTradesToPlayer;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.TradeWithVillager;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.*;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.core.GoToPotentialJobSite;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.core.GoToWantedItem;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.core.LookAtTargetSink;
@@ -50,14 +52,16 @@ import java.util.function.Predicate;
 
 public class VillagerNPCGoalPackages {
 
-    private final static float STROLL_SPEED_MODIFIER = 0.4f;
-    private final static float SPEED_WHEN_STRAFING_BACK_FROM_TARGET = 0.75f;
+    private static final float STROLL_SPEED_MODIFIER = 0.4f;
+    private static final float SPEED_WHEN_STRAFING_BACK_FROM_TARGET = 0.75f;
 
-    private final static int MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW = 5;
-    private final static int GO_TO_WANTED_ITEM_DISTANCE = 10;
+    private static final int MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW = 5;
+    private static final int GO_TO_WANTED_ITEM_DISTANCE = 10;
 
-    private final static Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
-    private final static Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
+    private static final Predicate<LivingEntity> IS_DOING_NOTHING = living -> !(living instanceof VillagerNPC npc) || npc.isDoingNothing(true);
+    private static final Predicate<LivingEntity> DUMMY = living -> true;
+    private static final Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
+    private static final Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
             (int) npc.getMeleeAttackRangeSqr(null) :
             MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW;
 
@@ -79,6 +83,7 @@ public class VillagerNPCGoalPackages {
                 Pair.of(2, new PoiCompetitorScan(profession)),
                 Pair.of(3, new LookAndFollowPlayerSink(Villager.SPEED_MODIFIER)),
                 Pair.of(5, new GoToWantedItem(Villager.SPEED_MODIFIER, GO_TO_WANTED_ITEM_DISTANCE)),
+                Pair.of(5, new LootChest()),
                 Pair.of(6, new AcquirePoi(
                         profession.acquirableJobSite(),
                         MemoryModuleType.JOB_SITE,
@@ -171,10 +176,31 @@ public class VillagerNPCGoalPackages {
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getIdlePackage() {
         return ImmutableList.of(
                 Pair.of(2, new RunOne<>(ImmutableList.of(
-                        Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, Villager.SPEED_MODIFIER, 2), 2),
+                        Pair.of(new InteractWith<>(
+                                EntityType.VILLAGER,
+                                8,
+                                IS_DOING_NOTHING,
+                                DUMMY,
+                                MemoryModuleType.INTERACTION_TARGET,
+                                Villager.SPEED_MODIFIER,
+                                2), 2),
                         Pair.of(new InteractWithBreed(8, Villager.SPEED_MODIFIER, 2), 1),
-                        Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, Villager.SPEED_MODIFIER, 2), 1),
-                        Pair.of(InteractWith.of(EntityType.WOLF, 8, MemoryModuleType.INTERACTION_TARGET, Villager.SPEED_MODIFIER, 2), 1),
+                        Pair.of(new InteractWith<>(
+                                EntityType.CAT,
+                                8,
+                                IS_DOING_NOTHING,
+                                DUMMY,
+                                MemoryModuleType.INTERACTION_TARGET,
+                                Villager.SPEED_MODIFIER,
+                                2), 1),
+                        Pair.of(new InteractWith<>(
+                                EntityType.WOLF,
+                                8,
+                                IS_DOING_NOTHING,
+                                DUMMY,
+                                MemoryModuleType.INTERACTION_TARGET,
+                                Villager.SPEED_MODIFIER,
+                                2), 1),
                         Pair.of(new VillageBoundRandomStroll(Villager.SPEED_MODIFIER), 1),
                         Pair.of(new SetWalkTargetFromLookTarget(Villager.SPEED_MODIFIER, 2), 1),
                         Pair.of(new JumpOnBed(Villager.SPEED_MODIFIER), 1),

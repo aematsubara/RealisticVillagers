@@ -13,9 +13,9 @@ import java.util.function.BiPredicate;
 
 public final class ItemStackUtils {
 
-    private final static Map<Enchantment, Double> ARMOR_REDUCTION = new HashMap<>();
+    private static final Map<Enchantment, Double> ARMOR_REDUCTION = new HashMap<>();
 
-    private final static String[] ARMOR = {
+    private static final String[] ARMOR = {
             "LEATHER_HELMET",
             "LEATHER_CHESTPLATE",
             "LEATHER_LEGGINGS",
@@ -41,7 +41,7 @@ public final class ItemStackUtils {
             "NETHERITE_LEGGINGS",
             "NETHERITE_BOOTS"};
 
-    private final static String[] AXE = {
+    private static final String[] AXE = {
             "WOODEN_AXE",
             "STONE_AXE",
             "GOLDEN_AXE",
@@ -49,7 +49,7 @@ public final class ItemStackUtils {
             "DIAMOND_AXE",
             "NETHERITE_AXE"};
 
-    private final static String[] SWORD = {
+    private static final String[] SWORD = {
             "WOODEN_SWORD",
             "GOLDEN_SWORD",
             "STONE_SWORD",

@@ -14,7 +14,7 @@ import net.minecraft.world.entity.npc.Villager;
 
 public class MeleeAttack extends Behavior<Villager> {
 
-    private final static int COOLDOWN_BETWEEN_ATTACKS = 10;
+    private static final int COOLDOWN_BETWEEN_ATTACKS = 10;
 
     public MeleeAttack() {
         super(ImmutableMap.of(

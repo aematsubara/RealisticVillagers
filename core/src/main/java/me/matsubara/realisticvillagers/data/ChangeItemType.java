@@ -6,6 +6,7 @@ public enum ChangeItemType {
     TAMING,
     HEALING_GOLEM,
     USING_BONE_MEAL,
+    LOOTING,
     NONE;
 
     public boolean isEating(boolean eating) {
@@ -26,5 +27,9 @@ public enum ChangeItemType {
 
     public boolean isUsingBoneMeal(boolean usingBoneMeal) {
         return this != USING_BONE_MEAL && usingBoneMeal;
+    }
+
+    public boolean isLooting(boolean looting) {
+        return this != LOOTING && looting;
     }
 }

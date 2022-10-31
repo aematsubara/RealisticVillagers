@@ -8,7 +8,7 @@ public class VillagerRemoveEvent extends VillagerEvent {
 
     private final RemovalReason reason;
 
-    private final static HandlerList handlers = new HandlerList();
+    private static final HandlerList handlers = new HandlerList();
 
     public VillagerRemoveEvent(IVillagerNPC npc, RemovalReason reason) {
         super(npc);

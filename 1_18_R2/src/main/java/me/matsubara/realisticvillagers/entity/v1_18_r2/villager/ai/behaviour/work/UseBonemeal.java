@@ -32,7 +32,7 @@ public class UseBonemeal extends Behavior<Villager> {
 
     private ItemStack previousItem;
 
-    private final static int BONEMEALING_DURATION = 80;
+    private static final int BONEMEALING_DURATION = 80;
 
     public UseBonemeal() {
         super(ImmutableMap.of(

@@ -23,7 +23,6 @@ package me.matsubara.realisticvillagers.util;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
@@ -44,54 +43,58 @@ import java.util.Set;
 public final class InventoryUpdate {
 
     // Classes.
-    private final static Class<?> CRAFT_PLAYER;
-    private final static Class<?> CHAT_MESSAGE;
-    private final static Class<?> PACKET_PLAY_OUT_OPEN_WINDOW;
-    private final static Class<?> I_CHAT_BASE_COMPONENT;
-    private final static Class<?> CONTAINER;
-    private final static Class<?> CONTAINERS;
-    private final static Class<?> ENTITY_PLAYER;
-    private final static Class<?> I_CHAT_MUTABLE_COMPONENT;
+    private static final Class<?> CRAFT_PLAYER;
+    private static final Class<?> CHAT_MESSAGE;
+    private static final Class<?> PACKET_PLAY_OUT_OPEN_WINDOW;
+    private static final Class<?> I_CHAT_BASE_COMPONENT;
+    private static final Class<?> CONTAINER;
+    private static final Class<?> CONTAINERS;
+    private static final Class<?> ENTITY_PLAYER;
+    private static final Class<?> I_CHAT_MUTABLE_COMPONENT;
 
     // Methods.
-    private final static MethodHandle getHandle;
-    private final static MethodHandle getBukkitView;
-    private final static MethodHandle literal;
+    private static final MethodHandle getHandle;
+    private static final MethodHandle getBukkitView;
+    private static final MethodHandle literal;
 
     // Constructors.
-    private final static MethodHandle chatMessage;
-    private final static MethodHandle packetPlayOutOpenWindow;
+    private static final MethodHandle chatMessage;
+    private static final MethodHandle packetPlayOutOpenWindow;
 
     // Fields.
-    private final static MethodHandle activeContainer;
-    private final static MethodHandle windowId;
+    private static final MethodHandle activeContainer;
+    private static final MethodHandle windowId;
 
     // Methods factory.
-    private final static MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
-    private final static Set<String> UNOPENABLES = Sets.newHashSet("CRAFTING", "CREATIVE", "PLAYER");
+    private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(InventoryUpdate.class);
+    private static final Set<String> UNOPENABLES = Sets.newHashSet("CRAFTING", "CREATIVE", "PLAYER");
+    private static final boolean SUPPORTS_19 = ReflectionUtils.supports(19);
+    private static final boolean TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR = ReflectionUtils.supports(7) && ReflectionUtils.VER < 16;
+    private static final Object[] DUMMY_COLOR_MODIFIERS = new Object[0];
 
     static {
-        boolean supports19 = ReflectionUtils.supports(19);
-
         // Initialize classes.
         CRAFT_PLAYER = ReflectionUtils.getCraftClass("entity.CraftPlayer");
-        CHAT_MESSAGE = supports19 ? null : ReflectionUtils.getNMSClass("network.chat", "ChatMessage");
+        CHAT_MESSAGE = SUPPORTS_19 ? null : ReflectionUtils.getNMSClass("network.chat", "ChatMessage");
         PACKET_PLAY_OUT_OPEN_WINDOW = ReflectionUtils.getNMSClass("network.protocol.game", "PacketPlayOutOpenWindow");
         I_CHAT_BASE_COMPONENT = ReflectionUtils.getNMSClass("network.chat", "IChatBaseComponent");
         // Check if we use containers, otherwise, can throw errors on older versions.
         CONTAINERS = useContainers() ? ReflectionUtils.getNMSClass("world.inventory", "Containers") : null;
         ENTITY_PLAYER = ReflectionUtils.getNMSClass("server.level", "EntityPlayer");
         CONTAINER = ReflectionUtils.getNMSClass("world.inventory", "Container");
-        I_CHAT_MUTABLE_COMPONENT = supports19 ? ReflectionUtils.getNMSClass("network.chat", "IChatMutableComponent") : null;
+        I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? ReflectionUtils.getNMSClass("network.chat", "IChatMutableComponent") : null;
 
         // Initialize methods.
         getHandle = getMethod(CRAFT_PLAYER, "getHandle", MethodType.methodType(ENTITY_PLAYER));
         getBukkitView = getMethod(CONTAINER, "getBukkitView", MethodType.methodType(InventoryView.class));
-        literal = supports19 ? getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true) : null;
+        literal = SUPPORTS_19 ? getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true) : null;
 
         // Initialize constructors.
-        chatMessage = supports19 ? null : getConstructor(CHAT_MESSAGE, String.class);
+        chatMessage = SUPPORTS_19 ? null : TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR ?
+                getConstructor(CHAT_MESSAGE, String.class, Object[].class) :
+                getConstructor(CHAT_MESSAGE, String.class);
         packetPlayOutOpenWindow =
                 (useContainers()) ?
                         getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, CONTAINERS, I_CHAT_BASE_COMPONENT) :
@@ -110,24 +113,27 @@ public final class InventoryUpdate {
      * @param newTitle the new title for the inventory.
      */
 
-    public static void updateInventory(JavaPlugin plugin, Player player, String newTitle) {
+    public static void updateInventory(Player player, String newTitle) {
         Preconditions.checkArgument(player != null, "Cannot update inventory to null player.");
+        Preconditions.checkArgument(newTitle != null, "The new title can't be null.");
 
         try {
             // Get EntityPlayer from CraftPlayer.
             Object craftPlayer = CRAFT_PLAYER.cast(player);
             Object entityPlayer = getHandle.invoke(craftPlayer);
 
-            if (newTitle != null && newTitle.length() > 32) {
+            if (newTitle.length() > 32) {
                 newTitle = newTitle.substring(0, 32);
-            } else if (newTitle == null) newTitle = "";
+            }
 
             // Create new title.
             Object title;
             if (ReflectionUtils.supports(19)) {
                 title = literal.invoke(newTitle);
             } else {
-                title = chatMessage.invoke(newTitle);
+                title = TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR ?
+                        chatMessage.invoke(newTitle, DUMMY_COLOR_MODIFIERS) :
+                        chatMessage.invoke(newTitle);
             }
 
             // Get activeContainer from EntityPlayer.
@@ -140,7 +146,8 @@ public final class InventoryUpdate {
             Object bukkitView = getBukkitView.invoke(activeContainer);
             if (!(bukkitView instanceof InventoryView)) return;
 
-            InventoryView view = (InventoryView) bukkitView;
+            // Some people may be using an older version of java.
+            @SuppressWarnings("PatternVariableCanBeUsed") InventoryView view = (InventoryView) bukkitView;
             InventoryType type = view.getTopInventory().getType();
 
             // Workbenchs and anvils can change their title since 1.14.
@@ -157,9 +164,7 @@ public final class InventoryUpdate {
 
             // If the container was added in a newer version than the current, return.
             if (container.getContainerVersion() > ReflectionUtils.VER && useContainers()) {
-                Bukkit.getLogger().warning(String.format(
-                        "[%s] This container doesn't work on your current version.",
-                        plugin.getDescription().getName()));
+                PLUGIN.getLogger().warning("This container doesn't work on your current version.");
                 return;
             }
 
@@ -172,10 +177,9 @@ public final class InventoryUpdate {
             }
 
             // Create packet.
-            Object packet =
-                    (useContainers()) ?
-                            packetPlayOutOpenWindow.invoke(windowId, object, title) :
-                            packetPlayOutOpenWindow.invoke(windowId, object, title, size);
+            Object packet = useContainers() ?
+                    packetPlayOutOpenWindow.invoke(windowId, object, title) :
+                    packetPlayOutOpenWindow.invoke(windowId, object, title, size);
 
             // Send packet sync.
             ReflectionUtils.sendPacketSync(player, packet);
@@ -298,7 +302,7 @@ public final class InventoryUpdate {
         private final String minecraftName;
         private final String[] inventoryTypesNames;
 
-        private final static char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+        private static final char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 
         Containers(int containerVersion, String minecraftName, String... inventoryTypesNames) {
             this.containerVersion = containerVersion;

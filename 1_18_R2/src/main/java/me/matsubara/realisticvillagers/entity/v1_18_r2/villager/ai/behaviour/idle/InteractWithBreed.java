@@ -34,7 +34,7 @@ public class InteractWithBreed extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (!(villager instanceof VillagerNPC npc)) return;
+        if (!(villager instanceof VillagerNPC npc) || npc.isLooting()) return;
 
         Brain<Villager> brain = npc.getBrain();
 

@@ -68,14 +68,14 @@ public class NMSConverter implements INMSConverter {
     private final RealisticVillagers plugin;
 
     // Registry fields.
-    private final static MethodHandle INSTRUSIVE_HOLDER_CACHE = Reflection.getFieldSetter(MappedRegistry.class, "cc");
-    private final static MethodHandle FROZEN = Reflection.getFieldSetter(MappedRegistry.class, "ca");
-    private final static MethodHandle ATTRIBUTES = Reflection.getFieldGetter(AttributeMap.class, "b");
+    private static final MethodHandle INSTRUSIVE_HOLDER_CACHE = Reflection.getFieldSetter(MappedRegistry.class, "cc");
+    private static final MethodHandle FROZEN = Reflection.getFieldSetter(MappedRegistry.class, "ca");
+    private static final MethodHandle ATTRIBUTES = Reflection.getFieldGetter(AttributeMap.class, "b");
 
     // Constructors.
-    private final static MethodHandle MEMORY_MODULE_TYPE = Reflection.getConstructor(MemoryModuleType.class, Optional.class);
-    private final static MethodHandle SENSOR_TYPE = Reflection.getConstructor(SensorType.class, Supplier.class);
-    private final static MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
+    private static final MethodHandle MEMORY_MODULE_TYPE = Reflection.getConstructor(MemoryModuleType.class, Optional.class);
+    private static final MethodHandle SENSOR_TYPE = Reflection.getConstructor(SensorType.class, Supplier.class);
+    private static final MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
 
     public NMSConverter(RealisticVillagers plugin) {
         this.plugin = plugin;

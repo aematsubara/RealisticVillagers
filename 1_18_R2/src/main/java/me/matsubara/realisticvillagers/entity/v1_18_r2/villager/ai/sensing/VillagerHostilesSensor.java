@@ -24,9 +24,9 @@ import java.util.function.BiPredicate;
 
 public class VillagerHostilesSensor extends NearestVisibleLivingEntitySensor {
 
-    private final static Set<EntityType<?>> SPECIAL_ENTITIES = Sets.newHashSet(EntityType.CREEPER, EntityType.WITCH, EntityType.PLAYER);
+    private static final Set<EntityType<?>> SPECIAL_ENTITIES = Sets.newHashSet(EntityType.CREEPER, EntityType.WITCH, EntityType.PLAYER);
 
-    private final static BiPredicate<Player, LivingEntity> IS_BEING_TARGETED = (player, entity) -> entity instanceof Monster monster
+    private static final BiPredicate<Player, LivingEntity> IS_BEING_TARGETED = (player, entity) -> entity instanceof Monster monster
             && monster.getTarget() != null
             && monster.getTarget().equals(player);
 

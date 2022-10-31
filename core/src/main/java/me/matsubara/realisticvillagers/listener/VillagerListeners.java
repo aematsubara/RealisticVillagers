@@ -43,7 +43,7 @@ public final class VillagerListeners implements Listener {
 
     private final RealisticVillagers plugin;
 
-    private final static MethodHandle MODIFIERS = Reflection.getFieldGetter(EntityDamageEvent.class, "modifiers");
+    private static final MethodHandle MODIFIERS = Reflection.getFieldGetter(EntityDamageEvent.class, "modifiers");
 
     public VillagerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;

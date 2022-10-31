@@ -25,13 +25,13 @@ import java.util.Set;
 @SuppressWarnings("OptionalGetWithoutIsPresent")
 public class HealGolem extends Behavior<Villager> {
 
-    private final static int DISTANCE_TO_HEAL = 2;
-    private final static int IRON_INGOT_HEAL_AMOUNT = 25;
+    private static final int DISTANCE_TO_HEAL = 2;
+    private static final int IRON_INGOT_HEAL_AMOUNT = 25;
 
     private final float speedModifier;
     private ItemStack previousItem;
 
-    private final static Set<Item> HEAL_ITEM = Sets.newHashSet(Items.IRON_INGOT);
+    private static final Set<Item> HEAL_ITEM = Sets.newHashSet(Items.IRON_INGOT);
 
     @SuppressWarnings("ConstantConditions")
     public HealGolem(int duration, float speedModifier) {
@@ -49,6 +49,7 @@ public class HealGolem extends Behavior<Villager> {
                 && npc.isDoingNothing(ChangeItemType.HEALING_GOLEM)
                 && villager.getInventory().hasAnyOf(HEAL_ITEM)
                 && !villager.getBrain().hasMemoryValue(VillagerNPC.HAS_HEALED_GOLEM_RECENTLY)
+                && !villager.isSleeping()
                 && Config.VILLAGER_FIX_IRON_GOLEM_WITH_IRON.asBool();
     }
 

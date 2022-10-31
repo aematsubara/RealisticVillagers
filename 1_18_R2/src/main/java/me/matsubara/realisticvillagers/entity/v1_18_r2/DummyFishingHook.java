@@ -59,7 +59,7 @@ public class DummyFishingHook extends FishingHook {
     private boolean hasBeenShot;
     private boolean leftOwner;
 
-    private final static EntityDataAccessor<Boolean> BITING;
+    private static final EntityDataAccessor<Boolean> BITING;
 
     static {
         BITING = SynchedEntityData.defineId(DummyFishingHook.class, EntityDataSerializers.BOOLEAN);

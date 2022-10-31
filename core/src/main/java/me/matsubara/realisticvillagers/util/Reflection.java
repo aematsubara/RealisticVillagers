@@ -11,10 +11,11 @@ import java.lang.reflect.Modifier;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+// NOTE: Warning ("Usage of API marked for removal") disabled in IDEA.
 public final class Reflection {
 
-    private final static Unsafe UNSAFE = getUnsafe();
-    private final static MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
+    private static final Unsafe UNSAFE = getUnsafe();
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
     public static MethodHandle getFieldGetter(Class<?> clazz, String name) {
         return getField(clazz, name, true);

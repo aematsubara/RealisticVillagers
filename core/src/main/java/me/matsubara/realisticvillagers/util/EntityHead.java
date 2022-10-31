@@ -58,7 +58,7 @@ public enum EntityHead {
     WARDEN("6cf3674b2ddc0ef7c39e3b9c6b58677de5cf377d2eb073f2f3fe50919b1ca4c9");
 
     private final String url;
-    private final static Map<EntityHead, ItemStack> cacheHeads = new HashMap<>();
+    private static final Map<EntityHead, ItemStack> cacheHeads = new HashMap<>();
 
     static {
         for (EntityHead skull : values()) {

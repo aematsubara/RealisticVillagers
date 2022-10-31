@@ -21,8 +21,8 @@ import java.util.function.Predicate;
 
 public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
 
-    private final static double MAX_DISTANCE_LIMIT = 24.0d;
-    private final static long TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE = 200L;
+    private static final double MAX_DISTANCE_LIMIT = 24.0d;
+    private static final long TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE = 200L;
     private final Predicate<LivingEntity> stopAttackingWhen;
     private final Consumer<Villager> onTargetErased;
 

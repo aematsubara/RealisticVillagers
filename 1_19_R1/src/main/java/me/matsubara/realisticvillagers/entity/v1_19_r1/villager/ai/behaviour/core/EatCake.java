@@ -17,8 +17,9 @@ import org.bukkit.Bukkit;
 public class EatCake extends Behavior<Villager> {
 
     private BlockPos cakePos;
+    private int tryAgain;
 
-    private final static int SEARCH_RANGE = 6;
+    private static final int SEARCH_RANGE = 6;
 
     public EatCake() {
         super(ImmutableMap.of(), 100);
@@ -26,6 +27,13 @@ public class EatCake extends Behavior<Villager> {
 
     @Override
     protected boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+        if (villager.isSleeping()) return false;
+
+        if (tryAgain > 0) {
+            tryAgain--;
+            return false;
+        }
+
         if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(true) || npc.getFoodLevel() >= 20) {
             return false;
         }
@@ -50,33 +58,37 @@ public class EatCake extends Behavior<Villager> {
 
     @Override
     protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
-        return checkExtraStartConditions(level, villager);
+        boolean canReach = LootChest.canReach(villager, time);
+        if (!canReach) tryAgain = 600;
+
+        return checkExtraStartConditions(level, villager) && canReach;
     }
 
     @Override
     protected void tick(ServerLevel level, Villager villager, long time) {
-        if (cakePos.closerToCenterThan(villager.position(), 1.0d) && villager instanceof VillagerNPC npc) {
-            BlockState state = level.getBlockState(cakePos);
-
-            int oldFoodLevel = npc.getFoodLevel();
-
-            VillagerFoodLevelChangeEvent event = new VillagerFoodLevelChangeEvent(npc, 2 + oldFoodLevel);
-            Bukkit.getPluginManager().callEvent(event);
-            if (!event.isCancelled()) {
-                npc.getFoodData().eat(event.getFoodLevel() - oldFoodLevel, 0.1f);
-            }
-
-            int bites = state.getValue(CakeBlock.BITES);
-            level.gameEvent(villager, GameEvent.EAT, cakePos);
-            if (bites < 6) {
-                villager.swing(InteractionHand.MAIN_HAND);
-                level.setBlock(cakePos, state.setValue(CakeBlock.BITES, bites + 1), 3);
-            } else {
-                level.removeBlock(cakePos, false);
-                level.gameEvent(villager, GameEvent.BLOCK_DESTROY, cakePos);
-            }
-        } else {
+        if (!cakePos.closerToCenterThan(villager.position(), 1.0d) || !(villager instanceof VillagerNPC npc)) {
             BehaviorUtils.setWalkAndLookTargetMemories(villager, cakePos, Villager.SPEED_MODIFIER, 0);
+            return;
+        }
+
+        BlockState state = level.getBlockState(cakePos);
+
+        int oldFoodLevel = npc.getFoodLevel();
+
+        VillagerFoodLevelChangeEvent event = new VillagerFoodLevelChangeEvent(npc, 2 + oldFoodLevel);
+        Bukkit.getPluginManager().callEvent(event);
+        if (!event.isCancelled()) {
+            npc.getFoodData().eat(event.getFoodLevel() - oldFoodLevel, 0.1f);
+        }
+
+        int bites = state.getValue(CakeBlock.BITES);
+        level.gameEvent(villager, GameEvent.EAT, cakePos);
+        if (bites < 6) {
+            villager.swing(InteractionHand.MAIN_HAND);
+            level.setBlock(cakePos, state.setValue(CakeBlock.BITES, bites + 1), 3);
+        } else {
+            level.removeBlock(cakePos, false);
+            level.gameEvent(villager, GameEvent.BLOCK_DESTROY, cakePos);
         }
     }
 

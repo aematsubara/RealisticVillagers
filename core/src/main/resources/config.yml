@@ -102,6 +102,7 @@ input-gui:
   baby:
     title: "I'ts a %sex%!"
     text: "Name..."
+    invalid-name: "Invalid name!"
 
 # This only applies to villagers who have not yet spawned.
 # If the villager has no weapon in hand, he will flee from danger.
@@ -698,3 +699,21 @@ melee-attack-range: 3.375
 
 # Here you can choose whether villagers can ride a ship when they are near it.
 disable-villager-riding-nearby-boat: false
+
+# Here you can configure the looting of chests from villagers.
+# NOTE: The items that the villager will loot from the chests are those specified above in @default-wanted-items.
+loot-chest:
+  # Whether this behavior is enabled.
+  enabled: true
+  # The required text on some line of the sign that must be placed on the chest for the villagers to loot.
+  # If you want the villagers to be able to loot any chest, leave the text empty, like this: required-sign-line: "" (NOT RECOMMENDED)
+  required-sign-line: "[Villager]"
+  # If true, nitwit villagers will randomly order the chest after looting a chest.
+  nitwit-shuffle-inventory: false
+  # The time (in ticks) a villager must wait before being able to loot another chest.
+  cooldown: 2400
+  # The time (in millis) a villager must wait before being able to loot a specific chest.
+  # Once a villager loots a chest, this chest will receive a cooldown.
+  per-chest-cooldown: 3600000
+  # Whether villagers can loot chests.
+  allow-babies: false

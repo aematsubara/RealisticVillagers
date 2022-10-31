@@ -20,6 +20,7 @@ public class BabyTask extends BukkitRunnable {
     private final Player player;
 
     private int count = 0;
+    private boolean success = false;
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public BabyTask(RealisticVillagers plugin, Villager villager, Player player) {
@@ -31,30 +32,41 @@ public class BabyTask extends BukkitRunnable {
     @Override
     public void run() {
         if (++count == 10) {
-            boolean isBoy = ThreadLocalRandom.current().nextBoolean();
-            new AnvilGUI.Builder()
-                    .preventClose()
-                    .title(Config.BABY_TITLE.asStringTranslated().replace("%sex%", isBoy ? Config.BOY.asString() : Config.GIRL.asString()))
-                    .text(Config.BABY_TEXT.asStringTranslated())
-                    .itemLeft(new ItemStack(Material.PAPER))
-                    .onComplete((opener, result) -> {
-
-                        long procreation = System.currentTimeMillis();
-                        opener.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
-
-                        villager.addMinorPositive(opener.getUniqueId(), Config.BABY_REPUTATION.asInt());
-                        villager.setProcreatingWith(null);
-
-                        villager.setLastProcreation(procreation);
-                        return AnvilGUI.Response.close();
-                    })
-                    .plugin(plugin)
-                    .open(player);
+            openInventory(Config.BABY_TEXT.asStringTranslated());
             cancel();
             return;
         }
 
         villager.jumpIfPossible();
         player.spawnParticle(Particle.HEART, villager.bukkit().getEyeLocation(), 3, 0.1d, 0.1d, 0.1d);
+    }
+
+    private void openInventory(String text) {
+        boolean isBoy = ThreadLocalRandom.current().nextBoolean();
+
+        new AnvilGUI.Builder()
+                .title(Config.BABY_TITLE.asStringTranslated().replace("%sex%", isBoy ? Config.BOY.asString() : Config.GIRL.asString()))
+                .text(text)
+                .itemLeft(new ItemStack(Material.PAPER))
+                .onComplete((opener, result) -> {
+                    if (!result.matches("\\w{3,16}")) return AnvilGUI.Response.close();
+
+                    long procreation = System.currentTimeMillis();
+                    opener.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
+
+                    villager.addMinorPositive(opener.getUniqueId(), Config.BABY_REPUTATION.asInt());
+                    villager.setProcreatingWith(null);
+                    villager.setLastProcreation(procreation);
+
+                    success = true;
+                    return AnvilGUI.Response.close();
+                })
+                .onClose(opener -> {
+                    if (success) return;
+                    plugin.getServer().getScheduler().runTask(plugin, () -> openInventory(Config.BABY_INVALID_NAME.asStringTranslated()));
+                })
+                .plugin(plugin)
+                .open(player)
+                .getInventory();
     }
 }

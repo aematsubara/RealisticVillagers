@@ -20,10 +20,10 @@ import java.util.regex.Pattern;
 
 public final class PluginUtils {
 
-    private final static Pattern PATTERN = Pattern.compile("&(#[\\da-fA-F]{6})");
+    private static final Pattern PATTERN = Pattern.compile("&(#[\\da-fA-F]{6})");
 
-    private final static MethodHandle SET_PROFILE;
-    private final static MethodHandle PROFILE;
+    private static final MethodHandle SET_PROFILE;
+    private static final MethodHandle PROFILE;
 
     static {
         Class<?> craftMetaSkull = ReflectionUtils.getCraftClass("inventory.CraftMetaSkull");

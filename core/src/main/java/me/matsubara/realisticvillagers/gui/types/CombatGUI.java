@@ -29,9 +29,9 @@ public final class CombatGUI extends InteractGUI {
     private int current;
     private int pages;
 
-    private final static int[] SLOTS = {10, 11, 12, 13, 14, 15, 16};
-    private final static int[] STATUS_SLOTS = {19, 20, 21, 22, 23, 24, 25};
-    private final static int[] HOTBAR = {28, 29, 30, 31, 32, 33, 34};
+    private static final int[] SLOTS = {10, 11, 12, 13, 14, 15, 16};
+    private static final int[] STATUS_SLOTS = {19, 20, 21, 22, 23, 24, 25};
+    private static final int[] HOTBAR = {28, 29, 30, 31, 32, 33, 34};
 
     private final ItemStack previous;
     private final ItemStack search;
@@ -89,7 +89,7 @@ public final class CombatGUI extends InteractGUI {
         inventory.setItem(44, close);
         if (current < pages - 1) inventory.setItem(34, next);
 
-        InventoryUpdate.updateInventory(plugin, player, getTitle());
+        InventoryUpdate.updateInventory(player, getTitle());
 
         if (heads.isEmpty()) return;
 
@@ -104,7 +104,8 @@ public final class CombatGUI extends InteractGUI {
         for (int index = 0, aux = startFrom; isLastPage ? (index < heads.size() - startFrom) : (index < SLOTS.length); index++, aux++) {
             EntityHead skull = heads.get(aux);
 
-            String name = plugin.getConfig().getString("variable-text.entity." + skull.name().toLowerCase());
+            String defaultName = skull.name().toLowerCase();
+            String name = plugin.getConfig().getString("variable-text.entity." + defaultName, defaultName);
 
             ItemBuilder builder = new ItemBuilder(getGUIItem("entity"));
             if (skull.getUrl() == null) {
