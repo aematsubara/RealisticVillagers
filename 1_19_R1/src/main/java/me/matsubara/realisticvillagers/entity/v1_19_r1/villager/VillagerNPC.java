@@ -153,6 +153,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean isHealingGolem;
     private boolean isUsingBoneMeal;
     private boolean isLooting;
+    private boolean wasInfected;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -335,6 +336,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (father != null) villagerTag.putUUID("Father", father);
         if (mother != null) villagerTag.putUUID("Mother", mother);
         villagerTag.putBoolean("IsFatherVillager", isFatherVillager);
+        villagerTag.putBoolean("WasInfected", wasInfected);
         saveCollection(childrens, NbtUtils::createUUID, "Childrens", villagerTag);
         saveCollection(targetEntities, type -> StringTag.valueOf(type.toShortString()), "TargetEntities", villagerTag);
         if (bedHome != null && bedHomeWorld != null) {
@@ -376,7 +378,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         villagerName = villagerTag.getString("Name");
         sex = villagerTag.getString("Sex");
         if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
-        if (villagerName.isEmpty()) setVillagerName(plugin.getRandomNameBySex(sex));
+        if (villagerName.isEmpty()) setVillagerName(plugin.getTracker().getRandomNameBySex(sex));
         if (villagerTag.contains("Partner")) partner = villagerTag.getUUID("Partner");
         isPartnerVillager = villagerTag.getBoolean("IsPartnerVillager");
         lastProcreation = villagerTag.getLong("LastProcreation");
@@ -384,6 +386,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (villagerTag.contains("Father")) father = villagerTag.getUUID("Father");
         if (villagerTag.contains("Mother")) mother = villagerTag.getUUID("Mother");
         isFatherVillager = villagerTag.getBoolean("IsFatherVillager");
+        wasInfected = villagerTag.getBoolean("WasInfected");
         fillCollection(childrens, NbtUtils::loadUUID, "Childrens", villagerTag);
         fillCollection(targetEntities, input -> EntityType.byString(input.getAsString()).orElse(null), "TargetEntities", villagerTag);
         loadBedHomePosition(villagerTag);
@@ -700,7 +703,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData groupData, @Nullable CompoundTag tag) {
-        if (!isBaby() && spawnType != MobSpawnType.BREEDING) {
+        if (!isBaby() && spawnType != MobSpawnType.BREEDING && !wasInfected) {
+
             maybeWearWeaponAndShield();
 
             maybeWearArmor(EquipmentSlot.HEAD);
@@ -716,6 +720,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 enchantItemBySlot(slot, 0.5f);
             }
         }
+
+        if (wasInfected) wasInfected = false;
 
         if (getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
             LocalDate now = LocalDate.now();

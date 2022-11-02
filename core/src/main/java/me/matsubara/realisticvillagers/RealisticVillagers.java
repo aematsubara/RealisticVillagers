@@ -28,9 +28,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -42,7 +39,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 
 @Getter
@@ -302,21 +298,6 @@ public final class RealisticVillagers extends JavaPlugin {
         }
 
         return true;
-    }
-
-    public String getRandomNameBySex(String sex) {
-        File file = new File(getDataFolder(), "names.yml");
-        if (!file.exists()) return "";
-
-        FileConfiguration config = new YamlConfiguration();
-        try {
-            config.load(file);
-        } catch (IOException | InvalidConfigurationException exception) {
-            exception.printStackTrace();
-        }
-
-        List<String> names = config.getStringList(sex);
-        return names.get(ThreadLocalRandom.current().nextInt(names.size()));
     }
 
     private void initDefaultTargetEntities(List<String> list) {

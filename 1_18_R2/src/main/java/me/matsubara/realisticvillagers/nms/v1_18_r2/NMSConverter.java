@@ -106,14 +106,17 @@ public class NMSConverter implements INMSConverter {
 
     @SuppressWarnings("ConstantConditions")
     @Override
-    public String getNPCTag(org.bukkit.entity.LivingEntity entity) {
+    public String getNPCTag(org.bukkit.entity.LivingEntity entity, boolean isInfection) {
         if (entity instanceof Villager villager) {
             CompoundTag tag = new CompoundTag();
 
-            Optional<IVillagerNPC> npc = getNPC(villager);
-            if (npc.isEmpty()) return null;
+            Optional<IVillagerNPC> optional = getNPC(villager);
+            if (optional.isEmpty()) return null;
 
-            ((VillagerNPC) npc.get()).savePluginData(tag);
+            VillagerNPC npc = (VillagerNPC) optional.get();
+            npc.setWasInfected(isInfection);
+            npc.savePluginData(tag);
+
             return tag.get(plugin.getNpcValuesKey().toString()).toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();

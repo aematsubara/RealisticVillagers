@@ -17,7 +17,7 @@ public interface INMSConverter {
 
     void registerEntity();
 
-    String getNPCTag(LivingEntity entity);
+    String getNPCTag(LivingEntity entity, boolean isInfection);
 
     boolean isSeekGoatHorn(ItemStack item);
 

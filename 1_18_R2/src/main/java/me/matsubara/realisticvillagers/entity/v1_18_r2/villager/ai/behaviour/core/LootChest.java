@@ -10,9 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
@@ -20,15 +17,18 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.SignBlock;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.ChestType;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.craftbukkit.v1_18_R2.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_18_R2.block.CraftChest;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -38,7 +38,7 @@ import java.util.*;
 
 public class LootChest extends Behavior<Villager> {
 
-    private BlockPos chestPos;
+    private Chest chest;
     private boolean chestOpen;
     private final Map<String, Long> cooldown;
     private final List<ItemStack> items;
@@ -49,6 +49,7 @@ public class LootChest extends Behavior<Villager> {
     private int tryAgain;
 
     private static final int SEARCH_RANGE = 16;
+    private static final int TRY_AGAIN_COOLDOWN = 600;
 
     @SuppressWarnings("ConstantConditions")
     public LootChest() {
@@ -79,7 +80,7 @@ public class LootChest extends Behavior<Villager> {
         if (villager.isDeadOrDying()) return false;
         if (villager.getBrain().hasMemoryValue(VillagerNPC.HAS_LOOTED_RECENTLY)) return false;
 
-        if (chestPos != null) return true;
+        if (chest != null) return true;
 
         BlockPos.MutableBlockPos mutable = villager.blockPosition().mutable();
 
@@ -89,20 +90,20 @@ public class LootChest extends Behavior<Villager> {
                 for (int z = -SEARCH_RANGE; z <= SEARCH_RANGE; z++) {
                     mutable.set(villager.getX() + x, villager.getY() + y, villager.getZ() + z);
 
-                    Block block = level.getBlockState(mutable).getBlock();
-                    if (!(block instanceof ChestBlock)) continue;
+                    BlockState state = level.getWorld().getBlockState(mutable.getX(), mutable.getY(), mutable.getZ());
+                    if (state.getType() != Material.CHEST) continue;
 
-                    chestPos = new BlockPos(mutable);
+                    chest = (Chest) state;
 
-                    long last = cooldown.getOrDefault(chestPos.toShortString(), 0L);
+                    long last = cooldown.getOrDefault(chest.getLocation().toString(), 0L);
                     if (System.currentTimeMillis() - last <= Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong()) {
-                        chestPos = null;
+                        chest = null;
                         continue;
                     }
 
                     ChestManager chestManager = npc.getPlugin().getChestManager();
-                    if (chestManager.getVillagerChests().containsKey(toBukkit())) {
-                        chestPos = null;
+                    if (chestManager.getVillagerChests().containsKey(vector())) {
+                        chest = null;
                         continue;
                     }
 
@@ -121,44 +122,48 @@ public class LootChest extends Behavior<Villager> {
                         }
                     }
 
-                    chestPos = null;
+                    chest = null;
                 }
             }
         }
 
-        return chestPos != null;
+        boolean canStart = chest != null;
+        if (!canStart) tryAgain = TRY_AGAIN_COOLDOWN;
+
+        return canStart;
     }
 
     @Override
     protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
         UUID viewer;
         if (villager instanceof VillagerNPC npc) {
-            viewer = npc.getPlugin().getChestManager().getVillagerChests().get(toBukkit());
+            viewer = npc.getPlugin().getChestManager().getVillagerChests().get(vector());
         } else {
             viewer = null;
         }
 
         boolean canReach = canReach(villager, time);
-        if (!canReach) tryAgain = 600;
+        if (!canReach) tryAgain = TRY_AGAIN_COOLDOWN;
 
         return checkExtraStartConditions(level, villager)
-                && level.getBlockState(chestPos).getBlock() instanceof ChestBlock
                 && (viewer == null || viewer.equals(villager.getUUID()))
-                && canReach;
+                && canReach
+                && level.getWorld().getBlockAt(chest.getLocation()).getType() == Material.CHEST;
     }
 
     @Override
     protected void tick(ServerLevel level, Villager villager, long time) {
-        if (!chestPos.closerToCenterThan(villager.position(), 3.0d) || !(villager instanceof VillagerNPC npc)) {
-            BehaviorUtils.setWalkAndLookTargetMemories(villager, chestPos, Villager.SPEED_MODIFIER, 1);
+        BlockPos pos = ((CraftChest) chest).getPosition();
+        if (chest.getLocation().distance(villager.getBukkitEntity().getLocation()) > 3 || !(villager instanceof VillagerNPC npc)) {
+            BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, Villager.SPEED_MODIFIER, 1);
             return;
         }
 
         // Look at chest all the time.
-        BehaviorUtils.setWalkAndLookTargetMemories(villager, chestPos, Villager.SPEED_MODIFIER, 1);
+        BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, Villager.SPEED_MODIFIER, 1);
 
-        Inventory inventory = getChest(level).getInventory();
-        boolean isOpen = isOpen(level);
+        Inventory inventory = chest.getInventory();
+        boolean isOpen = isOpen();
 
         // Open the chest if not opened.
         if (!chestOpen) {
@@ -239,8 +244,8 @@ public class LootChest extends Behavior<Villager> {
     protected void stop(ServerLevel level, Villager villager, long time) {
         if (villager instanceof VillagerNPC npc) {
             npc.setLooting(false);
-            if (chestPos != null && chestOpen) {
-                containerAction(npc, level, false, isOpen(level));
+            if (chest != null && chestOpen) {
+                containerAction(npc, level, false, isOpen());
             }
         }
 
@@ -253,7 +258,7 @@ public class LootChest extends Behavior<Villager> {
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
 
-        chestPos = null;
+        chest = null;
         chestOpen = false;
         items.clear();
         looted = false;
@@ -278,9 +283,9 @@ public class LootChest extends Behavior<Villager> {
         ChestManager chestManager = npc.getPlugin().getChestManager();
         Map<Vector, UUID> chests = chestManager.getVillagerChests();
         if (open) {
-            chests.put(toBukkit(), npc.getUUID());
+            chests.put(vector(), npc.getUUID());
         } else {
-            chests.remove(toBukkit());
+            chests.remove(vector());
         }
 
         // If chest is open by one or more players and a villager close it, don't play animation nor sound.
@@ -288,7 +293,7 @@ public class LootChest extends Behavior<Villager> {
 
         for (ServerPlayer player : level.players()) {
             player.connection.connection.send(new ClientboundBlockEventPacket(
-                    chestPos,
+                    ((CraftChest) chest).getPosition(),
                     Blocks.CHEST,
                     1,
                     open ? 1 : 0));
@@ -299,38 +304,51 @@ public class LootChest extends Behavior<Villager> {
     }
 
     private void playSound(ServerLevel level, boolean open) {
-        BlockState state = level.getBlockState(chestPos);
+        Location location = chest.getLocation().clone().add(0.5d, 0.5d, 0.5d);
 
-        double x = chestPos.getX() + 0.5d;
-        double y = chestPos.getY() + 0.5d;
-        double z = chestPos.getZ() + 0.5d;
-
-        ChestType type = state.getValue(ChestBlock.TYPE);
-        if (type != ChestType.SINGLE) {
-            Direction direction = ChestBlock.getConnectedDirection(state);
-            x += direction.getStepX() * 0.5d;
-            z += direction.getStepZ() * 0.5d;
+        org.bukkit.block.data.type.Chest data = (org.bukkit.block.data.type.Chest) chest.getBlockData();
+        org.bukkit.block.data.type.Chest.Type type = (data).getType();
+        if (type != org.bukkit.block.data.type.Chest.Type.SINGLE) {
+            BlockFace facing = data.getFacing();
+            facing = type == org.bukkit.block.data.type.Chest.Type.LEFT ? getClockWise(facing) : getCounterClockWise(facing);
+            location.add(facing.getModX() * 0.5d, 0.0d, facing.getModZ() * 0.5d);
         }
 
-        SoundEvent sound = open ? SoundEvents.CHEST_OPEN : SoundEvents.CHEST_CLOSE;
-        level.playSound(null, x, y, z, sound, SoundSource.BLOCKS, 0.5f, level.random.nextFloat() * 0.1f + 0.9f);
+        Sound sound = open ? Sound.BLOCK_CHEST_OPEN : Sound.BLOCK_CHEST_CLOSE;
+        level.getWorld().playSound(location, sound, SoundCategory.BLOCKS, 0.5f, level.random.nextFloat() * 0.1f + 0.9f);
     }
 
-    private Vector toBukkit() {
-        return new Vector(chestPos.getX(), chestPos.getY(), chestPos.getZ());
+    public BlockFace getCounterClockWise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.WEST;
+            case SOUTH -> BlockFace.EAST;
+            case WEST -> BlockFace.SOUTH;
+            case EAST -> BlockFace.NORTH;
+            default -> null;
+        };
     }
 
-    private boolean isOpen(ServerLevel level) {
-        return !getChest(level).getBlockInventory().getViewers().isEmpty();
+    public BlockFace getClockWise(BlockFace face) {
+        return switch (face) {
+            case NORTH -> BlockFace.EAST;
+            case SOUTH -> BlockFace.WEST;
+            case WEST -> BlockFace.NORTH;
+            case EAST -> BlockFace.SOUTH;
+            default -> null;
+        };
     }
 
-    private Chest getChest(ServerLevel level) {
-        return (Chest) level.getWorld().getBlockState(CraftBlock.at(level, chestPos).getLocation());
+    private Vector vector() {
+        return chest.getLocation().toVector();
+    }
+
+    private boolean isOpen() {
+        return !chest.getBlockInventory().getViewers().isEmpty();
     }
 
     private void addToCooldown() {
-        if (chestPos != null) cooldown.put(
-                chestPos.toShortString(),
+        if (chest != null) cooldown.put(
+                chest.getLocation().toString(),
                 System.currentTimeMillis() + Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong());
     }
 

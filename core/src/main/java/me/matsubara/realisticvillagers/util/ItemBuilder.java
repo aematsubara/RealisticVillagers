@@ -16,7 +16,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public final class ItemBuilder {
@@ -36,6 +35,7 @@ public final class ItemBuilder {
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     public ItemBuilder setHead(String texture, boolean isUrl) {
         if (item.getType() != Material.PLAYER_HEAD) {
             setType(Material.PLAYER_HEAD);
@@ -242,8 +242,10 @@ public final class ItemBuilder {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return this;
 
-        if (meta.hasLore() && meta.getLore() != null) {
-            meta.setLore(meta.getLore().stream().map(line -> line.replace(target, replace)).collect(Collectors.toList()));
+        List<String> lore;
+        if (meta.hasLore() && (lore = meta.getLore()) != null) {
+            lore.replaceAll(line -> line.replace(target, replace));
+            meta.setLore(lore);
         }
 
         item.setItemMeta(meta);

@@ -1,38 +1,28 @@
 package me.matsubara.realisticvillagers.tracker;
 
-import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.listener.npc.NPCHandler;
+import me.matsubara.realisticvillagers.listener.protocol.VillagerHandler;
 import me.matsubara.realisticvillagers.listener.spawn.BukkitSpawnListeners;
 import me.matsubara.realisticvillagers.listener.spawn.PaperSpawnListeners;
-import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import me.matsubara.realisticvillagers.util.npc.NPC;
 import me.matsubara.realisticvillagers.util.npc.NPCPool;
-import me.matsubara.realisticvillagers.util.npc.SpawnCustomizer;
-import me.matsubara.realisticvillagers.util.npc.modifier.MetadataModifier;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
-import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -42,15 +32,13 @@ import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 import org.bukkit.scoreboard.Team;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,9 +46,6 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
-import static com.comphenix.protocol.PacketType.Play.Server.*;
-
-@SuppressWarnings("OptionalGetWithoutIsPresent")
 @Getter
 public final class VillagerTracker implements Listener {
 
@@ -69,24 +54,14 @@ public final class VillagerTracker implements Listener {
     private final BukkitSpawnListeners spawnListeners;
     private final Map<UUID, String> transformations = new HashMap<>();
     private final Map<UUID, Integer> portalTransform = new HashMap<>();
-    private final Set<UUID> playerSleepFix = new HashSet<>();
     private final Set<VillagerInfo> villagers = new HashSet<>();
-
-    private File file;
-    private FileConfiguration configuration;
-    // private boolean teamCleared;
+    private final Map<String, Pair<File, FileConfiguration>> files = new HashMap<>();
+    private final VillagerHandler handler;
 
     private static final int RENDER_DISTANCE = 32;
     private static final String NAMETAG_TEAM_NAME = "RVNametag";
     private static final String HIDE_NAMETAG_NAME = "abcdefghijklmnño";
     private static final Predicate<Entity> APPLY_FOR_TRANSFORM = entity -> entity instanceof Villager || entity instanceof ZombieVillager;
-    private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
-            ENTITY_VELOCITY,
-            REL_ENTITY_MOVE,
-            ENTITY_LOOK,
-            ENTITY_TELEPORT,
-            ENTITY_HEAD_ROTATION,
-            REL_ENTITY_MOVE_LOOK);
 
     public VillagerTracker(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -104,141 +79,21 @@ public final class VillagerTracker implements Listener {
         if (!paperListener.isRegistered()) manager.registerEvents(spawnListeners, plugin);
 
         manager.registerEvents(this, plugin);
-        ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(plugin,
-                ListenerPriority.HIGHEST,
-                SPAWN_ENTITY,
-                SPAWN_ENTITY_EXPERIENCE_ORB,
-                NAMED_ENTITY_SPAWN,
-                ANIMATION,
-                BLOCK_BREAK_ANIMATION,
-                ENTITY_STATUS,
-                REL_ENTITY_MOVE,
-                REL_ENTITY_MOVE_LOOK,
-                ENTITY_LOOK,
-                ENTITY_HEAD_ROTATION,
-                CAMERA,
-                ENTITY_METADATA,
-                ATTACH_ENTITY,
-                ENTITY_VELOCITY,
-                ENTITY_EQUIPMENT,
-                MOUNT,
-                ENTITY_SOUND,
-                COLLECT,
-                ENTITY_TELEPORT,
-                UPDATE_ATTRIBUTES,
-                ENTITY_EFFECT) {
-            @Override
-            public void onPacketSending(PacketEvent event) {
-                Player player = event.getPlayer();
-                Entity entity = event.getPacket().getEntityModifier(player.getWorld()).readSafely(0);
-                if (isInvalidEntity(entity)) return;
+        ProtocolLibrary.getProtocolManager().addPacketListener(handler = new VillagerHandler(plugin));
 
-                PacketType type = event.getPacketType();
-                if (isSpawnPacket(type)) {
-                    event.setCancelled(true);
-                    return;
-                }
-
-                if (type == ENTITY_STATUS) {
-                    IVillagerNPC npc = VillagerTracker.this.plugin.getConverter().getNPC((Villager) entity).get();
-                    handleStatus(npc, event.getPacket().getBytes().readSafely(0));
-                }
-
-                int entityId = entity.getEntityId();
-
-                Optional<NPC> npc = pool.getNpc(entityId);
-                if (npc.isEmpty()) return;
-
-                boolean isSleeping = ((Villager) entity).isSleeping();
-
-                if (!playerSleepFix.isEmpty() && !playerSleepFix.contains(player.getUniqueId()) && isSleeping) {
-                    event.setCancelled(true);
-                    return;
-                }
-
-                if (!MOVEMENT_PACKETS.contains(type)) return;
-
-                Location location = entity.getLocation();
-
-                if (type == ENTITY_HEAD_ROTATION) {
-                    float yaw = (event.getPacket().getBytes().read(0) * 360.f) / 256.0f;
-                    float pitch = location.getPitch();
-
-                    PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
-                    moveLook.getIntegers().write(0, entityId);
-                    moveLook.getBytes().write(0, event.getPacket().getBytes().read(0));
-                    moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
-
-                    location.setYaw(yaw);
-                    location.setPitch(pitch);
-
-                    if (!isSleeping) ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
-                } else if (type == ENTITY_LOOK || type == REL_ENTITY_MOVE || type == REL_ENTITY_MOVE_LOOK) {
-                    double changeInX = event.getPacket().getShorts().read(0) / 4096.0d;
-                    double changeInY = event.getPacket().getShorts().read(1) / 4096.0d;
-                    double changeInZ = event.getPacket().getShorts().read(2) / 4096.0d;
-
-                    boolean hasRot = event.getPacket().getBooleans().read(0);
-                    float yaw = hasRot ? (event.getPacket().getBytes().read(0) * 360.f) / 256.0f : location.getYaw();
-                    float pitch = hasRot ? (event.getPacket().getBytes().read(1) * 360.f) / 256.0f : location.getPitch();
-
-                    location.add(changeInX, changeInY, changeInZ);
-                    location.setYaw(yaw);
-                    location.setPitch(pitch);
-                }
-
-                npc.get().setLocation(location);
-            }
-
-            private void handleStatus(IVillagerNPC npc, byte status) {
-                Particle particle;
-                switch (status) {
-                    case 12 -> particle = Particle.HEART;
-                    case 13 -> particle = Particle.VILLAGER_ANGRY;
-                    case 14 -> particle = Particle.VILLAGER_HAPPY;
-                    case 42 -> particle = npc.canAttack() ? null : Particle.WATER_SPLASH;
-                    default -> particle = null;
-                }
-                if (particle != null) npc.spawnEntityEventParticle(particle);
-            }
-
-            private boolean isInvalidEntity(Entity entity) {
-                return entity == null || entity.isDead() || !(entity instanceof Villager villager) || isInvalid(villager);
-            }
-        });
-
-        load();
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void load() {
-        file = new File(plugin.getDataFolder(), "villagers.yml");
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
-        }
-        configuration = new YamlConfiguration();
-        try {
-            configuration.load(file);
-            update();
-        } catch (IOException | InvalidConfigurationException exception) {
-            exception.printStackTrace();
-        }
+        update();
     }
 
     private void update() {
         villagers.clear();
 
-        ConfigurationSection section = configuration.getConfigurationSection("villagers");
+        ConfigurationSection section = getDataFile().getConfigurationSection("villagers");
         if (section == null) return;
 
         for (String path : section.getKeys(false)) {
             UUID uuid = UUID.fromString(path);
-            String lastKnownName = configuration.getString("villagers." + path + ".last-known-name");
-            long lastSeen = configuration.getLong("villagers." + path + ".last-seen");
+            String lastKnownName = getDataFile().getString("villagers." + path + ".last-known-name");
+            long lastSeen = getDataFile().getLong("villagers." + path + ".last-seen");
             villagers.add(new VillagerInfo(uuid, -1, lastKnownName, lastSeen));
         }
     }
@@ -262,8 +117,8 @@ public final class VillagerTracker implements Listener {
             villagers.add(new VillagerInfo(uuid, id, name));
         }
 
-        configuration.set("villagers." + uuid + ".last-known-name", name);
-        configuration.set("villagers." + uuid + ".last-seen", seen);
+        getDataFile().set("villagers." + uuid + ".last-known-name", name);
+        getDataFile().set("villagers." + uuid + ".last-seen", seen);
 
         saveConfig();
     }
@@ -297,8 +152,8 @@ public final class VillagerTracker implements Listener {
         if (info == null) return;
 
         info.setLastSeen(-1L);
-        configuration.set("villagers." + info.getUUID() + ".last-seen", -1L);
-        configuration.set("villagers." + info.getUUID() + ".death", System.currentTimeMillis());
+        getDataFile().set("villagers." + info.getUUID() + ".last-seen", -1L);
+        getDataFile().set("villagers." + info.getUUID() + ".death", System.currentTimeMillis());
         saveConfig();
     }
 
@@ -330,7 +185,8 @@ public final class VillagerTracker implements Listener {
 
     private void saveConfig() {
         try {
-            configuration.save(file);
+            Pair<File, FileConfiguration> data = getFile("villagers.yml");
+            data.getSecond().save(data.getFirst());
         } catch (IOException exception) {
             exception.printStackTrace();
         }
@@ -366,7 +222,7 @@ public final class VillagerTracker implements Listener {
         boolean isInfection = reason == EntityTransformEvent.TransformReason.INFECTION;
         if (!isInfection && reason != EntityTransformEvent.TransformReason.CURED) return;
 
-        transformations.put(transformed.getUniqueId(), plugin.getConverter().getNPCTag((LivingEntity) entity));
+        transformations.put(transformed.getUniqueId(), plugin.getConverter().getNPCTag((LivingEntity) entity, isInfection));
     }
 
     @EventHandler
@@ -420,7 +276,7 @@ public final class VillagerTracker implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        playerSleepFix.remove(event.getPlayer().getUniqueId());
+        handler.getSleeping().remove(event.getPlayer().getUniqueId());
     }
 
     public void removeNPC(int entityId) {
@@ -433,11 +289,6 @@ public final class VillagerTracker implements Listener {
 
     public Optional<NPC> getNPC(int entityId) {
         return pool.getNpc(entityId);
-    }
-
-    @SuppressWarnings("deprecation")
-    private boolean isSpawnPacket(PacketType type) {
-        return type == SPAWN_ENTITY_LIVING || (ReflectionUtils.supports(19) && type == SPAWN_ENTITY);
     }
 
     public boolean isInvalid(Villager villager, boolean ignoreSkinsState) {
@@ -481,7 +332,7 @@ public final class VillagerTracker implements Listener {
         NPC.builder()
                 .profile(profile)
                 .location(villager.getLocation())
-                .spawnCustomizer(new SpawnHandler(plugin, villager))
+                .spawnCustomizer(new NPCHandler(plugin, villager))
                 .entityId(entityId)
                 .usePlayerProfiles(false)
                 .lookAtPlayer(false)
@@ -506,17 +357,11 @@ public final class VillagerTracker implements Listener {
     }
 
     public WrappedSignedProperty getTextures(Villager villager) {
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager).get();
+        IVillagerNPC npc = plugin.getConverter().getNPC(villager).orElse(null);
+        if (npc == null) return null;
 
-        File file = new File(plugin.getSkinFolder(), npc.getSex() + ".yml");
-        if (!file.exists()) return null;
-
-        FileConfiguration config = new YamlConfiguration();
-        try {
-            config.load(file);
-        } catch (IOException | InvalidConfigurationException exception) {
-            exception.printStackTrace();
-        }
+        Pair<File, FileConfiguration> pair = getFile(plugin.getSkinFolder(), npc.getSex() + ".yml");
+        FileConfiguration config = pair.getSecond();
 
         String profession = villager.getProfession().name().toLowerCase();
 
@@ -539,66 +384,45 @@ public final class VillagerTracker implements Listener {
     }
 
     public boolean fixSleep() {
-        return !playerSleepFix.isEmpty();
+        return !handler.getSleeping().isEmpty();
     }
 
-    private static class SpawnHandler implements SpawnCustomizer {
-
-        private final RealisticVillagers plugin;
-        private final IVillagerNPC villager;
-
-        // Show everything except cape.
-        private static final MetadataModifier.EntityMetadata<Boolean, Byte> SKIN_LAYERS = new MetadataModifier.EntityMetadata<>(
-                10,
-                Byte.class,
-                Arrays.asList(9, 9, 10, 14, 14, 15, 17),
-                input -> (byte) (input ? 126 : 0));
-
-        public SpawnHandler(RealisticVillagers plugin, Villager villager) {
-            this.plugin = plugin;
-            this.villager = plugin.getConverter().getNPC(villager).get();
-        }
-
-        @Override
-        public void handleSpawn(@NotNull NPC npc, @NotNull Player player) {
-            Location location = villager.bukkit().getLocation();
-
-            npc.rotation().queueRotate(location.getYaw(), location.getPitch()).send(player);
-            npc.metadata().queue(SKIN_LAYERS, true).send(player);
-
-            if (villager.bukkit().isSleeping()) {
-                Location home = villager.bukkit().getMemory(MemoryKey.HOME);
-
-                plugin.getTracker().getPlayerSleepFix().add(player.getUniqueId());
-
-                npc.teleport().queueTeleport(location, villager.bukkit().isOnGround()).send(player);
-                npc.metadata().queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
-
-                villager.bukkit().wakeup();
-
-                plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                    if (home != null) villager.bukkit().sleep(home);
-                    plugin.getTracker().getPlayerSleepFix().remove(player.getUniqueId());
-                }, 2L);
-            }
-
-            EntityEquipment equipment = villager.bukkit().getEquipment();
-            if (equipment == null) return;
-
-            for (EquipmentSlot slot : EquipmentSlot.values()) {
-                npc.equipment().queue(slotToWrapper(slot), equipment.getItem(slot)).send(player);
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private Pair<File, FileConfiguration> loadFile(@Nullable String folder, String fileName) {
+        File file = new File(folder != null ? folder : plugin.getDataFolder().getPath(), fileName);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException exception) {
+                exception.printStackTrace();
             }
         }
-
-        private EnumWrappers.ItemSlot slotToWrapper(EquipmentSlot slot) {
-            return switch (slot) {
-                case HEAD -> EnumWrappers.ItemSlot.HEAD;
-                case CHEST -> EnumWrappers.ItemSlot.CHEST;
-                case LEGS -> EnumWrappers.ItemSlot.LEGS;
-                case FEET -> EnumWrappers.ItemSlot.FEET;
-                case HAND -> EnumWrappers.ItemSlot.MAINHAND;
-                case OFF_HAND -> EnumWrappers.ItemSlot.OFFHAND;
-            };
+        FileConfiguration configuration = new YamlConfiguration();
+        try {
+            configuration.load(file);
+        } catch (IOException | InvalidConfigurationException exception) {
+            exception.printStackTrace();
         }
+        return new Pair<>(file, configuration);
+    }
+
+    public Pair<File, FileConfiguration> getFile(String fileName) {
+        return getFile(null, fileName);
+    }
+
+    public Pair<File, FileConfiguration> getFile(@Nullable String folder, String fileName) {
+        return files.computeIfAbsent(fileName, name -> loadFile(folder, fileName));
+    }
+
+    private FileConfiguration getDataFile() {
+        return getFile("villagers.yml").getSecond();
+    }
+
+    public String getRandomNameBySex(String sex) {
+        Pair<File, FileConfiguration> pair = getFile("names.yml");
+        FileConfiguration config = pair.getSecond();
+
+        List<String> names = config.getStringList(sex);
+        return names.get(ThreadLocalRandom.current().nextInt(names.size()));
     }
 }
