@@ -5,6 +5,7 @@ import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.manager.ChestManager;
+import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
@@ -72,6 +73,8 @@ public class LootChest extends Behavior<Villager> {
         if (!(villager instanceof VillagerNPC npc)
                 || !npc.isDoingNothing(ChangeItemType.LOOTING)
                 || !canStoreItems(npc)) {
+            // Task already started, probably the villager was interrupted while looting.
+            if (chest != null) addToCooldown = true;
             return false;
         }
 
@@ -213,8 +216,16 @@ public class LootChest extends Behavior<Villager> {
         if (!inventory.containsAtLeast(item, 1)) return;
         if (!inventory.removeItem(item).isEmpty()) return;
 
-        // Add to villager inventory.
-        villager.getInventory().addItem(CraftItemStack.asNMSCopy(item));
+        if (ItemStackUtils.isWeapon(item)
+                || ItemStackUtils.getSlotByItem(item) != null
+                || item.getType() == Material.SHIELD) {
+            // Equip armor/weapon.
+            ItemStackUtils.setBetterWeaponInMaindHand(npc.bukkit(), item);
+            ItemStackUtils.setArmorItem(npc.bukkit(), item);
+        } else {
+            // Add to villager inventory.
+            villager.getInventory().addItem(CraftItemStack.asNMSCopy(item));
+        }
 
         // Only shuffle at last item and if villager is a nitwit.
         if (items.isEmpty()

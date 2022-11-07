@@ -38,7 +38,7 @@ public final class PlayerListeners implements Listener {
     public void onPlayerInteract(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Villager villager)) return;
 
-        if (!plugin.isEnabledIn(villager.getWorld())) return;
+        if (plugin.getTracker().isInvalid(villager, true)) return;
 
         ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
         if (item == null) return;
@@ -83,12 +83,6 @@ public final class PlayerListeners implements Listener {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
 
-        Block clicked = event.getClickedBlock();
-        if (clicked == null) return;
-
-        EquipmentSlot hand = event.getHand();
-        if (hand == null) return;
-
         PersistentDataContainer container = meta.getPersistentDataContainer();
         long procreation = container.getOrDefault(plugin.getProcreationKey(), PersistentDataType.LONG, -1L);
         if (procreation == -1) return;
@@ -97,12 +91,20 @@ public final class PlayerListeners implements Listener {
 
         event.setCancelled(true);
 
+        Block clicked = event.getClickedBlock();
+        if (clicked == null) return;
+
+        EquipmentSlot hand = event.getHand();
+        if (hand == null) return;
+
         if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
+
+        Messages messages = plugin.getMessages();
 
         int growCooldown = Config.BABY_GROW_COOLDOWN.asInt();
         if (elapsedTime <= growCooldown) {
             String next = PluginUtils.getTimeString(growCooldown - elapsedTime);
-            player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.BABY_GROW).replace("%time%", next));
+            messages.send(player, Messages.Message.BABY_GROW, string -> string.replace("%time%", next));
             return;
         }
 
@@ -114,7 +116,7 @@ public final class PlayerListeners implements Listener {
 
         Block spawnAt = clicked.getRelative(BlockFace.UP);
         if (!spawnAt.isPassable() || !spawnAt.getRelative(BlockFace.UP).isPassable()) {
-            player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.CAN_NOT_SPAWN_BABY));
+            messages.send(player, Messages.Message.CAN_NOT_SPAWN_BABY);
             return;
         }
 

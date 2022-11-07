@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -21,7 +22,7 @@ public class LookAtTargetSink extends Behavior<Villager> {
     public boolean canStillUse(ServerLevel level, Villager villager, long time) {
         return villager.getBrain().getMemory(MemoryModuleType.LOOK_TARGET)
                 .filter((tracker) -> tracker.isVisibleBy(villager))
-                .isPresent();
+                .isPresent() && (!(villager instanceof VillagerNPC npc) || !npc.isShakingHead());
     }
 
     @Override

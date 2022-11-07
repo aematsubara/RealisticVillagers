@@ -33,6 +33,8 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.StringUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +62,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
     private final NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
     private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
+    private final NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
 
     private VillagerTracker tracker;
     private Shape ring;
@@ -76,6 +79,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private List<String> worlds;
     private Set<Gift> wantedItems;
 
+    private static final Set<String> COMMAND_ARGS = Sets.newHashSet("reload", "ring");
     private static final Set<String> FILTER_TYPES = Sets.newHashSet("WHITELIST", "BLACKLIST");
 
     @Override
@@ -228,15 +232,24 @@ public final class RealisticVillagers extends JavaPlugin {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!command.getName().equalsIgnoreCase("realisticvillagers")) return true;
 
-        if (!sender.hasPermission("realisticvillagers.reload")) {
-            sender.sendMessage(messages.getRandomMessage(Messages.Message.NO_PERMISSION));
+        if (!hasPermission(sender, "realisticvillagers.help")) return true;
+
+        if (args.length != 1 || !COMMAND_ARGS.contains(args[0].toLowerCase())) {
+            messages.sendMessages(sender, Messages.Message.HELP);
             return true;
         }
 
-        if (args.length != 1 || !args[0].equalsIgnoreCase("reload")) {
-            sender.sendMessage(messages.getRandomMessage(Messages.Message.WRONG_COMMAND));
+        if (args[0].equalsIgnoreCase("ring")) {
+            if (!hasPermission(sender, "realisticvillagers.ring")) return true;
+
+            if (sender instanceof Player player) {
+                player.getInventory().addItem(ring.getRecipe().getResult());
+            }
+
             return true;
         }
+
+        if (!hasPermission(sender, "realisticvillagers.reload")) return true;
 
         boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
         boolean nametagsDisabled = Config.DISABLE_NAMETAGS.asBool();
@@ -245,7 +258,7 @@ public final class RealisticVillagers extends JavaPlugin {
         messages.reloadConfig();
         giftManager.loadGiftCategories();
         initDefaultTargetEntities(defaultTargets);
-        sender.sendMessage(messages.getRandomMessage(Messages.Message.RELOAD));
+        messages.send(sender, Messages.Message.RELOAD);
 
         reloadWantedItems();
 
@@ -270,6 +283,19 @@ public final class RealisticVillagers extends JavaPlugin {
                 (npc, state) -> tracker.refreshNPC(npc.bukkit()));
 
         return true;
+    }
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private boolean hasPermission(CommandSender sender, String permission) {
+        if (sender.hasPermission(permission)) return true;
+        messages.send(sender, Messages.Message.NO_PERMISSION);
+        return false;
+    }
+
+    @Override
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+        if (!command.getName().equalsIgnoreCase("realisticvillagers")) return null;
+        return args.length == 1 ? StringUtil.copyPartialMatches(args[0], COMMAND_ARGS, new ArrayList<>()) : null;
     }
 
     private void handleChangedOption(boolean previous, boolean current, BiConsumer<IVillagerNPC, Boolean> consumer) {

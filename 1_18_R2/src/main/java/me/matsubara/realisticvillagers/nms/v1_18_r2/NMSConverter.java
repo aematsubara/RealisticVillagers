@@ -9,6 +9,7 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.PetCat;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
@@ -91,7 +92,7 @@ public class NMSConverter implements INMSConverter {
                     field,
                     EntityType.VILLAGER,
                     (EntityType.EntityFactory<net.minecraft.world.entity.npc.Villager>) (type, level) -> {
-                        if (level.getWorld() != null && plugin.isEnabledIn(level.getWorld())) {
+                        if (PluginUtils.spawnCustom() && level.getWorld() != null && plugin.isEnabledIn(level.getWorld())) {
                             return new VillagerNPC(EntityType.VILLAGER, level);
                         } else {
                             return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);

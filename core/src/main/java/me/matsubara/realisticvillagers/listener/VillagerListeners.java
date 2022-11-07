@@ -2,17 +2,13 @@ package me.matsubara.realisticvillagers.listener;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.InteractType;
-import me.matsubara.realisticvillagers.data.InteractionTargetType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import org.bukkit.EntityEffect;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
@@ -29,13 +25,11 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.lang.invoke.MethodHandle;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @SuppressWarnings("ClassCanBeRecord")
@@ -70,6 +64,7 @@ public final class VillagerListeners implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         if (!Config.ARROWS_PASS_THROUGH_OTHER_VILLAGERS.asBool()) return;
 
+        // It's a custom villager since vanilla ones can't shoot arrows.
         if (!(event.getEntity().getShooter() instanceof Villager)) return;
         if (!(event.getHitEntity() instanceof Villager)) return;
 
@@ -122,7 +117,7 @@ public final class VillagerListeners implements Listener {
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;
-        if (!plugin.isEnabledIn(villager.getWorld())) return;
+        if (plugin.getTracker().isInvalid(villager, true)) return;
 
         List<ItemStack> drops = event.getDrops();
         drops.clear();
@@ -146,12 +141,14 @@ public final class VillagerListeners implements Listener {
     public void onEntityInteract(EntityInteractEvent event) {
         if (event.getEntityType() != EntityType.VILLAGER) return;
         if (event.getBlock().getType() != Material.FARMLAND) return;
-        if (((Villager) event.getEntity()).getProfession() != Villager.Profession.FARMER) return;
 
-        if (!plugin.isEnabledIn(event.getEntity().getWorld())) return;
+        Villager villager = (Villager) event.getEntity();
+        if (villager.getProfession() != Villager.Profession.FARMER) return;
 
         // Prevent farmer villager trampling farmlands.
-        event.setCancelled(true);
+        if (!plugin.getTracker().isInvalid(villager, true)) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -165,10 +162,9 @@ public final class VillagerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (Config.DISABLE_INTERACTIONS.asBool()) return;
-        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
-
         if (!(event.getRightClicked() instanceof Villager villager)) return;
+
+        if (Config.DISABLE_INTERACTIONS.asBool()) return;
         if (plugin.getTracker().isInvalid(villager, true)) return;
 
         Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
@@ -185,44 +181,45 @@ public final class VillagerListeners implements Listener {
         event.setCancelled(true);
 
         Player player = event.getPlayer();
+        Messages messages = plugin.getMessages();
 
         // Prevent interacting with villager if it's fighting.
         if (npc.isFighting() || npc.isInsideRaid()) {
-            player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_FIGHTING_OR_RAID));
+            messages.send(player, Messages.Message.INTERACT_FAIL_FIGHTING_OR_RAID);
             return;
         }
 
         if (npc.isProcreating()) {
-            player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_PROCREATING));
+            messages.send(player, Messages.Message.INTERACT_FAIL_PROCREATING);
             return;
         }
 
         if (npc.isExpectingGift()) {
             if (npc.isExpectingGiftFrom(player.getUniqueId())) {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_YOU));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_YOU);
             } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE);
             }
             return;
         }
 
         if (npc.isExpectingBed()) {
             if (npc.isExpectingBedFrom(player.getUniqueId())) {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_YOU));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_YOU);
             } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE);
             }
             return;
         }
 
         if (npc.isInteracting()) {
             if (!npc.getInteractingWith().equals(player.getUniqueId())) {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_INTERACTING));
+                messages.send(player, Messages.Message.INTERACT_FAIL_INTERACTING);
             } else if (npc.isFollowing()) {
-                plugin.getMessages().send(npc, player, Messages.Message.FOLLOW_ME_STOP);
+                messages.send(player, npc, Messages.Message.FOLLOW_ME_STOP);
                 npc.stopInteracting();
             } else if (npc.isStayingInPlace()) {
-                plugin.getMessages().send(npc, player, Messages.Message.STAY_HERE_STOP);
+                messages.send(player, npc, Messages.Message.STAY_HERE_STOP);
                 npc.stopInteracting();
                 npc.stopStayingInPlace();
             }
@@ -231,17 +228,7 @@ public final class VillagerListeners implements Listener {
         }
 
         if (villager.isTrading()) {
-            player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_TRADING));
-            return;
-        }
-
-        IVillagerNPC other = plugin.getExpectingManager().get(player.getUniqueId());
-        if (other != null) {
-            if (other.isExpectingGift()) {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_GIFT));
-            } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_BED));
-            }
+            messages.send(player, Messages.Message.INTERACT_FAIL_TRADING);
             return;
         }
 
@@ -250,103 +237,6 @@ public final class VillagerListeners implements Listener {
 
         // Set interacting with id.
         npc.setInteractingWithAndType(player.getUniqueId(), InteractType.GUI);
-    }
-
-    @EventHandler
-    public void onVillagerPickGift(VillagerPickGiftEvent event) {
-        IVillagerNPC npc = event.getNPC();
-
-        Player player = event.getGifter();
-        UUID playerUUID = player.getUniqueId();
-
-        ItemStack gift = event.getGift();
-
-        int reputation = npc.getReputation(playerUUID);
-        int repRequiredToMarry = Config.REPUTATION_REQUIRED_TO_MARRY.asInt();
-
-        boolean isRing = gift.isSimilar(plugin.getRing().getRecipe().getResult());
-
-        boolean alreadyMarriedWithPlayer = isRing && npc.isPartner(playerUUID);
-
-        boolean successByRing = isRing
-                && npc.bukkit().isAdult()
-                && reputation >= repRequiredToMarry
-                && !npc.isFamily(playerUUID, false)
-                && !npc.hasPartner()
-                && !plugin.isMarried(player)
-                && !alreadyMarriedWithPlayer;
-
-        GiftCategory category = plugin.getGiftManager().getCategory(npc, gift);
-        boolean success = successByRing || (!isRing && category != null) || alreadyMarriedWithPlayer;
-
-        int amount;
-        if (success) {
-            amount = successByRing ? Config.WEDDING_RING_REPUTATION.asInt() : alreadyMarriedWithPlayer ? 0 : category.reputation();
-        } else {
-            amount = isRing ? 0 : Config.BAD_GIFT_REPUTATION.asInt();
-        }
-
-        if (amount != 0) {
-            if (success) {
-                npc.addMinorPositive(playerUUID, amount);
-            } else {
-                npc.addMinorNegative(playerUUID, amount);
-            }
-        }
-
-        InteractionTargetType target = InteractionTargetType.getInteractionTarget(npc, player);
-
-        if (successByRing) {
-            npc.bukkit().playEffect(EntityEffect.VILLAGER_HEART);
-            plugin.getMessages().send(npc, player, Messages.Message.MARRRY_SUCCESS);
-            npc.setPartner(playerUUID, false);
-            player.getPersistentDataContainer().set(
-                    plugin.getMarriedWith(),
-                    PersistentDataType.STRING,
-                    npc.bukkit().getUniqueId().toString());
-            return;
-        }
-
-        if (success) {
-            npc.bukkit().playEffect(EntityEffect.VILLAGER_HAPPY);
-        } else if (isRing && !npc.isFamily(playerUUID, false) && npc.bukkit().isAdult()) {
-            npc.bukkit().playEffect(EntityEffect.VILLAGER_ANGRY);
-
-            Messages.Message message;
-            if (npc.hasPartner()) {
-                message = Messages.Message.MARRY_FAIL_MARRIED_TO_OTHER;
-            } else if (plugin.isMarried(player)) {
-                message = Messages.Message.MARRY_FAIL_PLAYER_MARRIED;
-            } else {
-                message = Messages.Message.MARRY_FAIL_LOW_REPUTATION;
-            }
-
-            plugin.getMessages().send(npc, player, message);
-            dropRing(npc, gift);
-            return;
-        }
-
-        if (success && alreadyMarriedWithPlayer) {
-            plugin.getMessages().send(npc, player, Messages.Message.MARRY_FAIL_MARRIED_TO_GIVER);
-            return;
-        }
-
-        if (!success && isRing && !npc.bukkit().isAdult()) {
-            dropRing(npc, gift);
-        }
-
-        plugin.getMessages().send(npc, player, plugin.getMessages().getRandomGiftMessage(target, category));
-
-        ItemStackUtils.setBetterWeaponInMaindHand(npc.bukkit(), gift);
-        ItemStackUtils.setArmorItem(npc.bukkit(), gift);
-    }
-
-    private void dropRing(IVillagerNPC npc, ItemStack gift) {
-        npc.drop(gift);
-        plugin.getServer().getScheduler().runTaskLater(
-                plugin,
-                () -> npc.bukkit().getInventory().removeItem(plugin.getRing().getRecipe().getResult()),
-                2L);
     }
 
     @SuppressWarnings({"deprecation", "unchecked"})
@@ -363,7 +253,7 @@ public final class VillagerListeners implements Listener {
         if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;
 
         if (villager.getTarget() == null && byEntity.getDamager() instanceof Player player) {
-            plugin.getMessages().send(npc, player, Messages.Message.ON_HIT);
+            plugin.getMessages().send(player, npc, Messages.Message.ON_HIT);
         }
 
         if (!npc.isDamageSourceBlocked()) return;

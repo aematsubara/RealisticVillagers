@@ -39,12 +39,7 @@ public class InteractCooldownManager implements Listener {
         InteractCooldown cooldown = getCooldown(player.getUniqueId(), villager.getUniqueId(), type);
 
         if (cooldown == null) {
-            long finish = System.currentTimeMillis() + plugin.getConfig().getLong("interact-cooldown." + type, 1L) * 1000L;
-            cooldowns.add(new InteractCooldown(
-                    player.getUniqueId(),
-                    villager.getUniqueId(),
-                    type,
-                    finish));
+            addCooldown(player, villager, type);
             return true;
         }
 
@@ -52,6 +47,11 @@ public class InteractCooldownManager implements Listener {
         if (!inCooldown) cooldowns.remove(cooldown);
 
         return !inCooldown;
+    }
+
+    public void addCooldown(Player player, Villager villager, String type) {
+        long finish = System.currentTimeMillis() + plugin.getConfig().getLong("interact-cooldown." + type, 1L) * 1000L;
+        cooldowns.add(new InteractCooldown(player.getUniqueId(), villager.getUniqueId(), type, finish));
     }
 
     private InteractCooldown getCooldown(UUID player, UUID villager, String type) {

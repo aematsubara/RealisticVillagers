@@ -2,8 +2,8 @@ package me.matsubara.realisticvillagers.listener;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
+import me.matsubara.realisticvillagers.data.GUIInteractType;
 import me.matsubara.realisticvillagers.data.InteractType;
-import me.matsubara.realisticvillagers.data.InteractionTargetType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerChatInteractionEvent;
 import me.matsubara.realisticvillagers.files.Config;
@@ -12,6 +12,7 @@ import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.CombatGUI;
 import me.matsubara.realisticvillagers.gui.types.EquipmentGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.task.BabyTask;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
@@ -172,16 +173,34 @@ public final class InventoryListeners implements Listener {
             return;
         }
 
+        UUID playerUUID = player.getUniqueId();
+        int reputation = npc.getReputation(playerUUID);
+
         MainGUI main = (MainGUI) interact;
-        boolean isClericPartner = current.isSimilar(main.getPapers()) && npc.isPartner(player.getUniqueId());
+        boolean isClericPartner = current.isSimilar(main.getPapers()) && npc.isPartner(playerUUID);
+
+        Messages messages = plugin.getMessages();
+        ExpectingManager expectingManager = plugin.getExpectingManager();
 
         if (current.isSimilar(main.getFollow())) {
-            npc.setInteractType(InteractType.FOLLOWING);
-            plugin.getMessages().send(npc, player, Messages.Message.FOLLOW_ME_START);
+            int required = Config.REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW.asInt();
+            if (reputation >= required) {
+                npc.setInteractType(InteractType.FOLLOWING);
+                messages.send(player, npc, Messages.Message.FOLLOW_ME_START);
+            } else {
+                messages.send(player, npc, Messages.Message.FOLLOW_ME_LOW_REPUTATION);
+                npc.shakeHead(player);
+            }
         } else if (current.isSimilar(main.getStay())) {
-            npc.setInteractType(InteractType.STAY);
-            npc.stayInPlace();
-            plugin.getMessages().send(npc, player, Messages.Message.STAY_HERE_START);
+            int required = Config.REPUTATION_REQUIRED_TO_ASK_TO_STAY.asInt();
+            if (reputation >= required) {
+                npc.setInteractType(InteractType.STAY);
+                npc.stayInPlace();
+                messages.send(player, npc, Messages.Message.STAY_HERE_START);
+            } else {
+                messages.send(player, npc, Messages.Message.STAY_HERE_LOW_REPUTATION);
+                npc.shakeHead(player);
+            }
         } else if (current.isSimilar(main.getInfo())) {
             return;
         } else if (current.isSimilar(main.getInspect())) {
@@ -190,16 +209,23 @@ public final class InventoryListeners implements Listener {
             return;
         } else if (current.isSimilar(main.getGift())) {
             if (!npc.isExpectingGift()) {
-                npc.startExpectingFrom(ExpectingType.GIFT, player.getUniqueId(), Config.TIME_TO_EXPECT.asInt());
-                player.sendMessage(REPLACE_TIME.apply(plugin.getMessages().getRandomMessage(Messages.Message.THROW_GIFT)));
-                plugin.getMessages().send(npc, player, Messages.Message.GIFT_EXPECTING);
-                plugin.getExpectingManager().expect(player.getUniqueId(), npc);
+                IVillagerNPC other = expectingManager.get(playerUUID);
+                if (other != null && other.isExpectingGift()) {
+                    messages.send(player, Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_GIFT);
+                } else if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), "gift")) {
+                    npc.startExpectingFrom(ExpectingType.GIFT, playerUUID, Config.TIME_TO_EXPECT.asInt());
+                    messages.send(player, Messages.Message.THROW_GIFT, REPLACE_TIME);
+                    messages.send(player, npc, Messages.Message.GIFT_EXPECTING);
+                    expectingManager.expect(playerUUID, npc);
+                } else {
+                    messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
+                }
             } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getProcreate())) {
-            if (npc.getReputation(player.getUniqueId()) < Config.REPUTATION_REQUIRED_TO_PROCREATE.asInt()) {
-                plugin.getMessages().send(npc, player, Messages.Message.PROCREATE_FAIL_LOW_REPUTATION);
+            if (reputation < Config.REPUTATION_REQUIRED_TO_PROCREATE.asInt()) {
+                messages.send(player, npc, Messages.Message.PROCREATE_FAIL_LOW_REPUTATION);
                 closeInventory(player);
                 return;
             }
@@ -211,31 +237,31 @@ public final class InventoryListeners implements Listener {
 
             if (elapsedTime <= procreationCooldown) {
                 String next = PluginUtils.getTimeString(procreationCooldown - elapsedTime);
-                plugin.getMessages().send(npc, player, Messages.Message.PROCREATE_FAIL_HAS_BABY);
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.PROCREATE_COOLDOWN).replace("%time%", next));
+                messages.send(player, npc, Messages.Message.PROCREATE_FAIL_HAS_BABY);
+                messages.send(player, Messages.Message.PROCREATE_COOLDOWN, string -> string.replace("%time%", next));
                 closeInventory(player);
                 return;
             }
 
-            npc.setProcreatingWith(player.getUniqueId());
+            npc.setProcreatingWith(playerUUID);
             new BabyTask(plugin, npc.bukkit(), player).runTaskTimer(plugin, 0L, 20L);
         } else if (current.isSimilar(main.getDivorce()) || isClericPartner) {
             ItemStack divorcePapers = new ItemBuilder(main.getPapers()).clearLore().build();
             boolean hasDivorcePapers = player.getInventory().containsAtLeast(divorcePapers, 1) || isClericPartner;
 
-            int reputation;
+            int lossReputation;
             if (hasDivorcePapers) {
-                reputation = Config.DIVORCE_REPUTATION_LOSS_PAPERS.asInt();
+                lossReputation = Config.DIVORCE_REPUTATION_LOSS_PAPERS.asInt();
             } else {
-                reputation = Config.DIVORCE_REPUTATION_LOSS.asInt();
+                lossReputation = Config.DIVORCE_REPUTATION_LOSS.asInt();
             }
 
-            npc.addMinorNegative(player.getUniqueId(), reputation);
+            npc.addMinorNegative(playerUUID, lossReputation);
 
             if (hasDivorcePapers) {
-                plugin.getMessages().send(npc, player, Messages.Message.DIVORCE_PAPERS);
+                messages.send(player, npc, Messages.Message.DIVORCE_PAPERS);
             } else {
-                plugin.getMessages().send(npc, player, Messages.Message.DIVORCE_NORMAL);
+                messages.send(player, npc, Messages.Message.DIVORCE_NORMAL);
             }
 
             if (hasDivorcePapers && !isClericPartner) player.getInventory().removeItem(divorcePapers);
@@ -247,30 +273,37 @@ public final class InventoryListeners implements Listener {
             new CombatGUI(plugin, player, npc, null);
             return;
         } else if (current.isSimilar(main.getHome())) {
-            if (!npc.isExpectingBed()) {
-                npc.startExpectingFrom(ExpectingType.BED, player.getUniqueId(), Config.TIME_TO_EXPECT.asInt());
-                player.sendMessage(REPLACE_TIME.apply(plugin.getMessages().getRandomMessage(Messages.Message.SELECT_BED)));
-                plugin.getMessages().send(npc, player, Messages.Message.SET_HOME_EXPECTING);
-                plugin.getExpectingManager().expect(player.getUniqueId(), npc);
+            IVillagerNPC other = expectingManager.get(playerUUID);
+            if (other != null && other.isExpectingBed()) {
+                messages.send(player, Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_BED);
+            } else if (!npc.isExpectingBed()) {
+                npc.startExpectingFrom(ExpectingType.BED, playerUUID, Config.TIME_TO_EXPECT.asInt());
+                messages.send(player, Messages.Message.SELECT_BED, REPLACE_TIME);
+                messages.send(player, npc, Messages.Message.SET_HOME_EXPECTING);
+                expectingManager.expect(playerUUID, npc);
             } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE));
+                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getPapers())) {
             if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), "divorce-papers")) {
-                plugin.getMessages().send(npc, player, Messages.Message.CLERIC_DIVORCE_PAPERS);
+                messages.send(player, npc, Messages.Message.CLERIC_DIVORCE_PAPERS);
                 npc.drop(new ItemBuilder(main.getPapers()).clearLore().build());
             } else {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_IN_COOLDOWN));
+                messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
             }
         } else if (current.isSimilar(main.getTrade()) || current.isSimilar(main.getNoTrades())) {
             if (npc.bukkit().isTrading()) {
-                player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_TRADING));
+                messages.send(player, Messages.Message.INTERACT_FAIL_TRADING);
             } else {
-                if (npc.bukkit().getRecipes().isEmpty()) return;
-
-                // Start trading from villager instance so discounts are applied to the player.
-                plugin.getServer().getScheduler().runTask(plugin, () -> npc.startTrading(player));
-                return;
+                if (npc.bukkit().getRecipes().isEmpty()) {
+                    // Is a baby villager or has empty trades, shake head at player.
+                    messages.send(player, npc, Messages.Message.NO_TRADES);
+                    npc.shakeHead(player);
+                } else {
+                    // Start trading from villager instance so discounts are applied to the player.
+                    plugin.getServer().getScheduler().runTask(plugin, () -> npc.startTrading(player));
+                    return;
+                }
             }
         } else if (current.getItemMeta() != null) {
             ItemMeta meta = current.getItemMeta();
@@ -278,16 +311,16 @@ public final class InventoryListeners implements Listener {
             PersistentDataContainer container = meta.getPersistentDataContainer();
             String type = container.get(plugin.getChatInteractionTypeKey(), PersistentDataType.STRING);
             if (type != null) {
-                VillagerChatInteractionEvent.ChatType chatType;
+                GUIInteractType interactType;
                 if (type.equalsIgnoreCase("proud-of")) {
-                    chatType = VillagerChatInteractionEvent.ChatType.BE_PROUD_OF;
+                    interactType = GUIInteractType.BE_PROUD_OF;
                 } else {
-                    chatType = VillagerChatInteractionEvent.ChatType.valueOf(type);
+                    interactType = GUIInteractType.valueOf(type);
                 }
-                if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), chatType.getName())) {
-                    handleChatInteraction(npc, chatType, player);
+                if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), interactType.getName())) {
+                    handleChatInteraction(npc, interactType, player);
                 } else {
-                    player.sendMessage(plugin.getMessages().getRandomMessage(Messages.Message.INTERACT_FAIL_IN_COOLDOWN));
+                    messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
                 }
             }
         }
@@ -295,17 +328,17 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
-    public void handleChatInteraction(IVillagerNPC npc, VillagerChatInteractionEvent.ChatType type, Player player) {
+    public void handleChatInteraction(IVillagerNPC npc, GUIInteractType interactType, Player player) {
         UUID playerUUID = player.getUniqueId();
 
-        boolean successByJoke = type.isJoke() && Config.PARTNER_JOKE_ALWAYS_SUCCESS.asBool() && npc.isPartner(playerUUID);
-        boolean success = !type.isInsult()
+        boolean successByJoke = interactType.isJoke() && Config.PARTNER_JOKE_ALWAYS_SUCCESS.asBool() && npc.isPartner(playerUUID);
+        boolean success = !interactType.isInsult()
                 && (successByJoke
-                || type.isGreet()
-                || type.isBeProudOf()
+                || interactType.isGreet()
+                || interactType.isBeProudOf()
                 || ThreadLocalRandom.current().nextFloat() < Config.CHANCE_OF_CHAT_INTERACTION_SUCCESS.asFloat());
 
-        VillagerChatInteractionEvent chatEvent = new VillagerChatInteractionEvent(npc, player, type, success);
+        VillagerChatInteractionEvent chatEvent = new VillagerChatInteractionEvent(npc, player, interactType, success);
         plugin.getServer().getPluginManager().callEvent(chatEvent);
 
         int amount = Math.max(2, Config.CHAT_INTERACT_REPUTATION.asInt());
@@ -315,13 +348,10 @@ public final class InventoryListeners implements Listener {
             npc.addMinorNegative(playerUUID, amount);
         }
 
-        EntityEffect effect = chatEvent.isSuccess() ? type.isFlirt() ? EntityEffect.VILLAGER_HEART : EntityEffect.VILLAGER_HAPPY : EntityEffect.VILLAGER_ANGRY;
+        EntityEffect effect = chatEvent.isSuccess() ? interactType.isFlirt() ? EntityEffect.VILLAGER_HEART : EntityEffect.VILLAGER_HAPPY : EntityEffect.VILLAGER_ANGRY;
         npc.bukkit().playEffect(effect);
 
-
-        InteractionTargetType targetType = InteractionTargetType.getInteractionTarget(npc, player);
-        String message = plugin.getMessages().getRandomInteractionMessage(targetType, type, chatEvent.isSuccess());
-        plugin.getMessages().send(npc, player, message);
+        plugin.getMessages().sendRandomInteractionMessage(player, npc, interactType, chatEvent.isSuccess());
     }
 
     private void closeInventory(Player player) {

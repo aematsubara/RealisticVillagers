@@ -104,15 +104,19 @@ public class VillagerHandler extends PacketAdapter {
             float yaw = (event.getPacket().getBytes().read(0) * 360.f) / 256.0f;
             float pitch = location.getPitch();
 
-            PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
-            moveLook.getIntegers().write(0, entityId);
-            moveLook.getBytes().write(0, event.getPacket().getBytes().read(0));
-            moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
-
             location.setYaw(yaw);
             location.setPitch(pitch);
 
-            if (!isSleeping) ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
+            boolean shakingHead = plugin.getConverter().getNPC((Villager) entity).get().isShakingHead();
+
+            if (!isSleeping && !shakingHead) {
+                PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
+                moveLook.getIntegers().write(0, entityId);
+                moveLook.getBytes().write(0, event.getPacket().getBytes().read(0));
+                moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
+
+                ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
+            }
         } else if (type == ENTITY_LOOK || type == REL_ENTITY_MOVE || type == REL_ENTITY_MOVE_LOOK) {
             double changeInX = event.getPacket().getShorts().read(0) / 4096.0d;
             double changeInY = event.getPacket().getShorts().read(1) / 4096.0d;

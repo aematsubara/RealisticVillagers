@@ -61,7 +61,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
             clearAttackTarget(villager);
         } else if (isCurrentTargetFarAway(villager)) {
             if (villager instanceof VillagerNPC npc && target instanceof ServerPlayer player) {
-                npc.getPlugin().getMessages().send(npc, player.getBukkitEntity(), Messages.Message.RAN_AWAY);
+                npc.getPlugin().getMessages().send(player.getBukkitEntity(), npc, Messages.Message.RAN_AWAY);
             }
             clearAttackTarget(villager);
         }

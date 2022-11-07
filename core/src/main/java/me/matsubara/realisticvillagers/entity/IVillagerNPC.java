@@ -30,6 +30,7 @@ public interface IVillagerNPC {
 
     UUID getMother();
 
+    @SuppressWarnings("unused")
     boolean isMotherVillager();
 
     List<UUID> getChildrens();
@@ -59,6 +60,9 @@ public interface IVillagerNPC {
     void setSkinTextureId(int skinTextureId);
 
     boolean isExpectingGift();
+
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    boolean isGiftDropped();
 
     void setGiftDropped(boolean giftDropped);
 
@@ -143,4 +147,10 @@ public interface IVillagerNPC {
     void sendSpawnPacket();
 
     void sendDestroyPacket();
+
+    boolean isShakingHead();
+
+    void shakeHead(Player at);
+
+    void convertToVanilla();
 }

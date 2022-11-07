@@ -94,19 +94,34 @@ interact-fail:
 
 reload: "&6The plugin has been reloaded!"
 no-permission: "&cYou don't have permission to execute this command!"
-wrong-command: "&cTry with /rvillagers reload."
+help:
+  - "&8----------------------------------------"
+  - "&6&lRealisticVillagers &f&oCommands"
+  - "&e/rv reload &f- &7Reload configuration files."
+  - "&e/rv ring &f- &7Get a wedding ring."
+  - "&8----------------------------------------"
 
 follow-me:
   start:
     - "I'll follow you!"
   stop:
     - "Ok, goodbye!"
+  low-reputation:
+    - "Who are you?"
+    - "I don't even know you!"
 
 stay-here:
   start:
     - "I'll stay here!"
   stop:
     - "Ok, I'll go!"
+  low-reputation:
+    - "And you are...?"
+    - "I don't like this place."
+
+no-trades:
+  - "I don't have anything to trade."
+  - "Nope!"
 
 procreate:
   fail:

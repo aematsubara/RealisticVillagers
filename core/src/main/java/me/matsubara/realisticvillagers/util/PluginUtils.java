@@ -141,4 +141,13 @@ public final class PluginUtils {
 
         return builder.toString();
     }
+
+    public static boolean spawnCustom() {
+        for (StackTraceElement stacktrace : new Throwable().getStackTrace()) {
+            String method = stacktrace.getMethodName();
+            if (method.equals("spawnLeprechaun")) return false;
+            if (method.equals("spawnShop")) return false;
+        }
+        return true;
+    }
 }

@@ -64,7 +64,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
             if (targetReason.isPresent() && targetReason.get() == TargetReason.HORN) return;
 
             if (villager instanceof VillagerNPC npc && target instanceof ServerPlayer player) {
-                npc.getPlugin().getMessages().send(npc, player.getBukkitEntity(), Messages.Message.RAN_AWAY);
+                npc.getPlugin().getMessages().send(player.getBukkitEntity(), npc, Messages.Message.RAN_AWAY);
             }
             clearAttackTarget(villager);
         }

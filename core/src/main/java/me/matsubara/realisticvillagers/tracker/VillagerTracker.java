@@ -195,7 +195,8 @@ public final class VillagerTracker implements Listener {
     @EventHandler
     public void onEntitiesUnload(EntitiesUnloadEvent event) {
         for (Entity entity : event.getEntities()) {
-            if (entity.getType() != EntityType.VILLAGER) continue;
+            if (!(entity instanceof Villager villager) || isInvalid(villager)) continue;
+
             VillagerInfo info = get(entity.getUniqueId());
             if (info != null && info.getId() != -1) {
                 removeNPC(entity.getEntityId());
@@ -222,6 +223,7 @@ public final class VillagerTracker implements Listener {
         boolean isInfection = reason == EntityTransformEvent.TransformReason.INFECTION;
         if (!isInfection && reason != EntityTransformEvent.TransformReason.CURED) return;
 
+        // If villager isn't a custom one, the tag will be null.
         transformations.put(transformed.getUniqueId(), plugin.getConverter().getNPCTag((LivingEntity) entity, isInfection));
     }
 
@@ -292,8 +294,10 @@ public final class VillagerTracker implements Listener {
     }
 
     public boolean isInvalid(Villager villager, boolean ignoreSkinsState) {
+        PersistentDataContainer container = villager.getPersistentDataContainer();
         return (!ignoreSkinsState && Config.DISABLE_SKINS.asBool())
                 || villager.hasMetadata("shopkeeper")
+                || container.has(plugin.getIgnoreVillagerKey(), PersistentDataType.INTEGER)
                 || !plugin.isEnabledIn(villager.getWorld())
                 || plugin.getConverter().getNPC(villager).isEmpty();
     }
@@ -368,19 +372,23 @@ public final class VillagerTracker implements Listener {
         ConfigurationSection section = config.getConfigurationSection(profession);
         if (section == null) return null;
 
-        int which = getSkinId(npc, section.getKeys(false).size());
+        int which = getSkinId(npc, section.getKeys(false));
 
         String texture = config.getString(profession + "." + which + ".texture");
         String signature = config.getString(profession + "." + which + ".signature");
         return texture != null && signature != null ? new WrappedSignedProperty("textures", texture, signature) : null;
     }
 
-    private int getSkinId(IVillagerNPC npc, int amount) {
-        if (npc.getSkinTextureId() == -1) {
-            int which = ThreadLocalRandom.current().nextInt(1, amount + 1);
+    private int getSkinId(IVillagerNPC npc, Set<String> ids) {
+        int id = npc.getSkinTextureId();
+
+        if (id == -1 || !ids.contains(id + "")) {
+            int which = ThreadLocalRandom.current().nextInt(1, ids.size() + 1);
             npc.setSkinTextureId(which);
+            return which;
         }
-        return npc.getSkinTextureId();
+
+        return id;
     }
 
     public boolean fixSleep() {

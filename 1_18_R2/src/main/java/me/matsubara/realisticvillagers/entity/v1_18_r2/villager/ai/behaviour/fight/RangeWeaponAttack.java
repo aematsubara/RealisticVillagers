@@ -54,6 +54,11 @@ public class RangeWeaponAttack extends Behavior<Villager> {
         weapon = villager.getMainHandItem();
         hand = ProjectileUtil.getWeaponHoldingHand(villager, weapon.getItem());
         isCrossbow = weapon.is(Items.CROSSBOW);
+
+        // Crossbow was already charged, attack.
+        if (CrossbowItem.isCharged(weapon)) {
+            state = CrossbowState.READY_TO_ATTACK;
+        }
     }
 
     @Override
@@ -76,6 +81,8 @@ public class RangeWeaponAttack extends Behavior<Villager> {
             ((VillagerNPC) villager).setChargingCrossbow(false);
             CrossbowItem.setCharged(weapon, false);
         }
+
+        state = CrossbowState.UNCHARGED;
     }
 
     @Override

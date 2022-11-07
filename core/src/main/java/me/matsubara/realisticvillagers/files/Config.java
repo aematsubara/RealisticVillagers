@@ -117,7 +117,9 @@ public enum Config {
     LOOT_CHEST_NITWIT_SHUFFLE_INVENTORY("loot-chest.nitwit-shuffle-inventory"),
     LOOT_CHEST_COOLDOWN("loot-chest.cooldown"),
     LOOT_CHEST_PER_CHEST_COOLDOWN("loot-chest.per-chest-cooldown"),
-    LOOT_CHEST_ALLOW_BABIES("loot-chest.allow-babies");
+    LOOT_CHEST_ALLOW_BABIES("loot-chest.allow-babies"),
+    REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW("reputation-required-to-ask-to-follow"),
+    REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

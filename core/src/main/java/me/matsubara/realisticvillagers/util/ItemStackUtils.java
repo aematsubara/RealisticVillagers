@@ -70,11 +70,11 @@ public final class ItemStackUtils {
     }
 
     public static boolean isBow(ItemStack item) {
-        return item.getType().name().contains("BOW");
+        return item.getType().name().endsWith("BOW");
     }
 
     public static boolean isAxe(ItemStack item) {
-        return item.getType().name().contains("AXE");
+        return item.getType().name().endsWith("_AXE");
     }
 
     public static boolean isWeapon(ItemStack item) {

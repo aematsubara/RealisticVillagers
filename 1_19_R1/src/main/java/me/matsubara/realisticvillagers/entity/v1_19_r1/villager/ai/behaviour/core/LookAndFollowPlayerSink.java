@@ -33,9 +33,10 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         if (!(villager instanceof VillagerNPC npc)) return false;
 
+        isFollowing = npc.isFollowing();
+
         Player player;
-        if (npc.isConversating() || npc.isFollowing()) {
-            isFollowing = npc.isFollowing();
+        if (npc.isConversating() || isFollowing) {
             player = level.getPlayerByUUID(npc.getInteractingWith());
         } else if (npc.isExpecting()) {
             player = level.getPlayerByUUID(npc.getExpectingFrom());
@@ -47,7 +48,7 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
 
         if (!isValid(npc, player)) {
             // If villager was following, stop.
-            if (npc.isFollowing()) npc.stopInteracting();
+            if (isFollowing) npc.stopInteracting();
             return false;
         }
 

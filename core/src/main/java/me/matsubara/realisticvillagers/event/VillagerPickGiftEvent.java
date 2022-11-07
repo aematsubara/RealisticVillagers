@@ -6,6 +6,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("unused")
 public class VillagerPickGiftEvent extends VillagerEvent {
 
     private final Player gifter;

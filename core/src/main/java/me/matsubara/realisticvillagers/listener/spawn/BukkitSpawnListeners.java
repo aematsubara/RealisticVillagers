@@ -1,6 +1,8 @@
 package me.matsubara.realisticvillagers.listener.spawn;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -12,7 +14,10 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.Optional;
 
 @SuppressWarnings("ClassCanBeRecord")
 public class BukkitSpawnListeners implements Listener {
@@ -67,9 +72,26 @@ public class BukkitSpawnListeners implements Listener {
     public void handleSpawn(Entity entity, boolean createData) {
         if (!(entity instanceof Villager villager)) return;
 
+        INMSConverter converter = plugin.getConverter();
+        PersistentDataContainer container = villager.getPersistentDataContainer();
+
+        Optional<IVillagerNPC> npc = converter.getNPC(villager);
+
+        // Isn't custom, ignore since we don't want to track vanilla villagers.
+        if (npc.isEmpty()) {
+            container.set(plugin.getIgnoreVillagerKey(), PersistentDataType.INTEGER, 1);
+            return;
+        }
+
+        // Is a custom one, but previously was marked as a vanilla one; we need to convert it back to vanilla.
+        if (container.has(plugin.getIgnoreVillagerKey(), PersistentDataType.INTEGER)) {
+            plugin.getServer().getScheduler().runTask(plugin, () -> npc.get().convertToVanilla());
+            return;
+        }
+
         // Villager#readAdditionalSaveData() isn't called when entity spawn from egg or by a plugin.
         if (createData) {
-            plugin.getConverter().loadDataFromTag(villager, "");
+            converter.loadDataFromTag(villager, "");
         }
 
         VillagerTracker tracker = plugin.getTracker();
@@ -77,7 +99,7 @@ public class BukkitSpawnListeners implements Listener {
 
         // If the zombie villager wasn't an infected villager, the tag will be empty.
         String tag = tracker.getTransformations().remove(villager.getUniqueId());
-        if (tag != null) plugin.getConverter().loadDataFromTag(villager, tag);
+        if (tag != null) converter.loadDataFromTag(villager, tag);
 
         tracker.spawnNPC(villager);
     }

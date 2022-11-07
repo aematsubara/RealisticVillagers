@@ -17,6 +17,7 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.DummyFishingHook;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.VillagerNPCGoalPackages;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core.LootChest;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.sensing.NearestItemSensor;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.sensing.VillagerHostilesSensor;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
@@ -77,6 +78,7 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.entity.schedule.Activity;
@@ -93,6 +95,7 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
+import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Particle;
 import org.bukkit.World;
@@ -107,6 +110,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
@@ -155,6 +159,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean isUsingBoneMeal;
     private boolean isLooting;
     private boolean wasInfected;
+    private boolean shakingHead;
+    private ServerPlayer shakingHeadAt;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -166,6 +172,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public static final MemoryModuleType<Boolean> HAS_LOOTED_RECENTLY = NMSConverter.registerMemoryType("has_looted_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
     public static final MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
+    public static final MemoryModuleType<ItemEntity> NEAREST_WANTED_ITEM = NMSConverter.registerMemoryType("nearest_wanted_item");
 
     public static final Activity STAY = NMSConverter.registerActivity("stay");
 
@@ -180,7 +187,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             MemoryModuleType.NEAREST_PLAYERS,
             MemoryModuleType.NEAREST_VISIBLE_PLAYER,
             MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-            MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM,
             MemoryModuleType.WALK_TARGET,
             MemoryModuleType.LOOK_TARGET,
             MemoryModuleType.INTERACTION_TARGET,
@@ -205,10 +211,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             HAS_LOOTED_RECENTLY,
             CELEBRATE_VICTORY,
             STAY_PLACE,
+            NEAREST_WANTED_ITEM,
             MemoryModuleType.ATTACK_TARGET,
             MemoryModuleType.ATTACK_COOLING_DOWN);
 
     private static final SensorType<VillagerHostilesSensor> NEAREST_HOSTILE = NMSConverter.registerSensor("nearest_hostile", VillagerHostilesSensor::new);
+    private static final SensorType<NearestItemSensor> NEAREST_ITEMS = NMSConverter.registerSensor("nearest_wanted_items", NearestItemSensor::new);
 
     private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSORS = ImmutableList.of(
             SensorType.NEAREST_LIVING_ENTITIES,
@@ -218,13 +226,15 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             SensorType.SECONDARY_POIS,
             SensorType.GOLEM_DETECTED,
             SensorType.NEAREST_PLAYERS,
-            SensorType.NEAREST_ITEMS,
+            NEAREST_ITEMS != null ? NEAREST_ITEMS : SensorType.NEAREST_ITEMS,
             NEAREST_HOSTILE != null ? NEAREST_HOSTILE : SensorType.VILLAGER_HOSTILES);
 
+    private static final int[] ROTATION = {-1, -3 - 5, -7, -7, -6, -4, -2, 1, 3, 5, 7, 7, 6, 4, 2, 2, 0};
     private static final EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(VillagerNPC.class, EntityDataSerializers.BOOLEAN);
     private static final ImmutableSet<Class<? extends Item>> DO_NOT_SAVE = ImmutableSet.of(
             SwordItem.class,
             AxeItem.class,
+            TridentItem.class,
             ProjectileWeaponItem.class,
             ShieldItem.class,
             ArmorItem.class);
@@ -538,35 +548,40 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         boolean isRocket = arrow.is(Items.FIREWORK_ROCKET);
 
-        ArrowItem arrowAsItem = (ArrowItem) (arrow.getItem() instanceof ArrowItem ? arrow.getItem() : Items.ARROW);
-
-        AbstractArrow projectile;
+        Projectile projectile;
         if (isBow) {
             projectile = ProjectileUtil.getMobArrow(this, arrow, force);
 
             float powerForTime = BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION);
             if (powerForTime == 1.0f) {
-                projectile.setCritArrow(true);
+                ((AbstractArrow) projectile).setCritArrow(true);
             }
         } else {
-            // TODO: Should spawn a firework instead of an arrow.
-            projectile = arrowAsItem.createArrow(level, arrow, this);
-            projectile.setSoundEvent(SoundEvents.CROSSBOW_HIT);
-            projectile.setShotFromCrossbow(true);
-            projectile.setCritArrow(true);
+            if (isRocket) {
+                projectile = new FireworkRocketEntity(level, arrow, this, getX(), getEyeY() - 0.15000000596046448d, getZ(), true);
+            } else {
+                projectile = ((ArrowItem) arrow.getItem()).createArrow(level, arrow, this);
+                if (projectile instanceof AbstractArrow abstractArrow) {
+                    abstractArrow.setSoundEvent(SoundEvents.CROSSBOW_HIT);
+                    abstractArrow.setShotFromCrossbow(true);
+                    abstractArrow.setCritArrow(true);
+                }
+            }
 
             int piercing = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.PIERCING, weapon);
-            if (piercing > 0) projectile.setPierceLevel((byte) piercing);
+            if (piercing > 0 && projectile instanceof AbstractArrow abstractArrow) {
+                abstractArrow.setPierceLevel((byte) piercing);
+            }
         }
 
         if (!isRocket) {
-            projectile.pickup = AbstractArrow.Pickup.ALLOWED;
+            ((AbstractArrow) projectile).pickup = AbstractArrow.Pickup.ALLOWED;
         }
 
         if (isBow) {
             shootBow(target, projectile);
         } else {
-            shootCrossbowProjectile(target, weapon, projectile, force);
+            shootCrossbowProjectile(target, weapon, projectile, isRocket ? 1.6f : force);
         }
 
         weapon.hurtAndBreak(arrow.is(Items.FIREWORK_ROCKET) ? 3 : 1, this, (npc) -> npc.broadcastBreakEvent(hand));
@@ -766,7 +781,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (!isPartner(entity.getUUID()) || !(entity instanceof ServerPlayer player)) return;
 
         if (getPlayerReputation(player) < Config.DIVORCE_IF_REPUTATION_IS_LESS_THAN.asInt()) {
-            plugin.getMessages().send(this, player.getBukkitEntity(), Messages.Message.MARRY_END);
+            plugin.getMessages().send(player.getBukkitEntity(), this, Messages.Message.MARRY_END);
 
             divorceAndDropRing(player);
         }
@@ -891,11 +906,63 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void setUnhappy() {
-        if (useVillagerSounds()) {
-            super.setUnhappy();
-        } else {
-            setUnhappyCounter(40);
+        setUnhappyCounter(40);
+        if (!level.isClientSide() && useVillagerSounds()) {
+            playSound(SoundEvents.VILLAGER_NO, getSoundVolume(), getVoicePitch());
         }
+    }
+
+    @Override
+    public void setUnhappyCounter(int ticks) {
+        if (Config.DISABLE_SKINS.asBool()) super.setUnhappyCounter(ticks);
+    }
+
+    @Override
+    public void shakeHead(org.bukkit.entity.Player at) {
+        if (shakingHead) return;
+
+        shakingHeadAt = ((CraftPlayer) at).getHandle();
+        getLookControl().setLookAt(shakingHeadAt);
+
+        new BukkitRunnable() {
+            int current;
+            int turns;
+
+            @Override
+            public void run() {
+                if (!getBukkitEntity().isValid()) {
+                    cancel();
+                    return;
+                }
+
+                if (current == ROTATION.length) {
+                    current = 0;
+                    turns++;
+                }
+
+                if (turns == 2) {
+                    shakingHead = false;
+
+                    if (shakingHeadAt.getBukkitEntity().isOnline()) {
+                        getLookControl().setLookAt(shakingHeadAt);
+                    }
+
+                    shakingHeadAt = null;
+                    cancel();
+                    return;
+                }
+
+                yHeadRot += ROTATION[current] * 3;
+                current++;
+            }
+        }.runTaskTimer(plugin, 4L, 1L);
+
+        shakingHead = true;
+    }
+
+    @Override
+    public void convertToVanilla() {
+
     }
 
     @Override
@@ -1031,9 +1098,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @SuppressWarnings("WhileLoopReplaceableByForEach")
     private void updateSpecialPrices(Player player) {
-        if (Config.DISABLE_SPECIAL_PRICES.asBool()) return;
-        if (Config.DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY.asBool()
-                && InventoryListeners.canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity())) {
+        if (Config.DISABLE_SPECIAL_PRICES.asBool() || (Config.DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY.asBool()
+                && InventoryListeners.canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity()))) {
             return;
         }
 
@@ -1140,13 +1206,29 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 && (type == null || !isChangingItem(type));
     }
 
-    public boolean isChangingItem(ChangeItemType ignore) {
-        return ignore.isEating(isEating)
-                || ignore.isShowingTrades(showingTrades)
-                || ignore.isTaming(isTaming)
-                || ignore.isHealingGolem(isHealingGolem)
-                || ignore.isUsingBoneMeal(isUsingBoneMeal)
-                || ignore.isLooting(isLooting);
+    public boolean isDoingNothing(ChangeItemType... types) {
+        for (ChangeItemType type : types) {
+            ChangeItemType changing = getChangingItem(type);
+            if (changing != null && !ArrayUtils.contains(types, changing)) {
+                return false;
+            }
+        }
+
+        return isDoingNothing((ChangeItemType) null);
+    }
+
+    private boolean isChangingItem(ChangeItemType ignore) {
+        return getChangingItem(ignore) != null;
+    }
+
+    private ChangeItemType getChangingItem(ChangeItemType ignore) {
+        if (ignore.isEating(isEating)) return ChangeItemType.EATING;
+        if (ignore.isShowingTrades(showingTrades)) return ChangeItemType.SHOWING_TRADES;
+        if (ignore.isTaming(isTaming)) return ChangeItemType.TAMING;
+        if (ignore.isHealingGolem(isHealingGolem)) return ChangeItemType.HEALING_GOLEM;
+        if (ignore.isUsingBoneMeal(isUsingBoneMeal)) return ChangeItemType.USING_BONE_MEAL;
+        if (ignore.isLooting(isLooting)) return ChangeItemType.LOOTING;
+        return null;
     }
 
     private void handleRemaining(ItemStack original, ItemStack remaining, ItemEntity itemEntity) {
@@ -1407,9 +1489,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             Player player = level.getPlayerByUUID(expectingFrom);
             if (player instanceof ServerPlayer serverPlayer) {
                 if (expectingType.isGift()) {
-                    plugin.getMessages().send(this, serverPlayer.getBukkitEntity(), Messages.Message.GIFT_EXPECTING_FAIL);
+                    plugin.getMessages().send(serverPlayer.getBukkitEntity(), this, Messages.Message.GIFT_EXPECTING_FAIL);
                 } else {
-                    plugin.getMessages().send(this, serverPlayer.getBukkitEntity(), Messages.Message.SET_HOME_FAIL);
+                    plugin.getMessages().send(serverPlayer.getBukkitEntity(), this, Messages.Message.SET_HOME_FAIL);
                 }
             }
 
