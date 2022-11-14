@@ -58,7 +58,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
-@SuppressWarnings({"ClassCanBeRecord", "unchecked"})
+@SuppressWarnings("unchecked")
 public class NMSConverter implements INMSConverter {
 
     private final RealisticVillagers plugin;
@@ -87,7 +87,7 @@ public class NMSConverter implements INMSConverter {
     public void registerEntity() {
         try {
             // "factory" field.
-            Field field = EntityType.class.getDeclaredField("bs");
+            Field field = EntityType.class.getDeclaredField("bn");
             Reflection.setFieldUsingUnsafe(
                     field,
                     EntityType.VILLAGER,
@@ -183,8 +183,8 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public void removePartnerFromPlayerNBT(File file) {
-        try {
-            CompoundTag tag = NbtIo.readCompressed(new FileInputStream(file));
+        try (FileInputStream stream = new FileInputStream(file)) {
+            CompoundTag tag = NbtIo.readCompressed(stream);
 
             CompoundTag bukkit = getOrCreateBukkitTag(tag);
             bukkit.remove(plugin.getMarriedWith().toString());

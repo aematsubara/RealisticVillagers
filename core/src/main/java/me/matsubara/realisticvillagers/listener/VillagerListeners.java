@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
-@SuppressWarnings("ClassCanBeRecord")
 public final class VillagerListeners implements Listener {
 
     private final RealisticVillagers plugin;

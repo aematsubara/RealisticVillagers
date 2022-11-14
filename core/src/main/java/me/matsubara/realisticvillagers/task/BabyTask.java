@@ -49,7 +49,7 @@ public class BabyTask extends BukkitRunnable {
                 .text(text)
                 .itemLeft(new ItemStack(Material.PAPER))
                 .onComplete((opener, result) -> {
-                    if (!result.matches("\\w{3,16}")) return AnvilGUI.Response.close();
+                    if (!plugin.getTracker().isValidName(result)) return AnvilGUI.Response.close();
 
                     long procreation = System.currentTimeMillis();
                     opener.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));

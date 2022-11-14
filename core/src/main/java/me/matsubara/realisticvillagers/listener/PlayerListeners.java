@@ -25,7 +25,6 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
-@SuppressWarnings("ClassCanBeRecord")
 public final class PlayerListeners implements Listener {
 
     private final RealisticVillagers plugin;

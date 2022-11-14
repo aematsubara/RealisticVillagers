@@ -19,7 +19,6 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Optional;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class BukkitSpawnListeners implements Listener {
 
     private final RealisticVillagers plugin;

@@ -180,6 +180,7 @@ public final class VillagerTracker implements Listener {
 
             // Player is offline, we need to modify the NBT file (if possible).
             plugin.getConverter().removePartnerFromPlayerNBT(playerFile);
+            break;
         }
     }
 
@@ -320,14 +321,16 @@ public final class VillagerTracker implements Listener {
         WrappedSignedProperty textures = getTextures(villager);
         Preconditions.checkArgument(textures != null, "Invalid textures!");
 
+        String defaultName = plugin.getConverter().getNPC(villager)
+                .map(IVillagerNPC::getVillagerName)
+                .orElse(villager.getName());
+
         String name;
-        if (Config.DISABLE_NAMETAGS.asBool()) {
+        if (Config.DISABLE_NAMETAGS.asBool() || defaultName.equals(HIDE_NAMETAG_NAME)) {
             name = HIDE_NAMETAG_NAME;
             checkNametagTeam();
         } else {
-            name = plugin.getConverter().getNPC(villager)
-                    .map(IVillagerNPC::getVillagerName)
-                    .orElse(villager.getName());
+            name = defaultName;
         }
 
         WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), name);
@@ -431,6 +434,18 @@ public final class VillagerTracker implements Listener {
         FileConfiguration config = pair.getSecond();
 
         List<String> names = config.getStringList(sex);
-        return names.get(ThreadLocalRandom.current().nextInt(names.size()));
+
+        String name = "";
+        do {
+            if (names.isEmpty()) break;
+            int index = ThreadLocalRandom.current().nextInt(names.size());
+            name = names.remove(index);
+        } while (!isValidName(name));
+
+        return isValidName(name) ? name : HIDE_NAMETAG_NAME;
+    }
+
+    public boolean isValidName(String name) {
+        return name.matches("\\w{3,16}");
     }
 }
