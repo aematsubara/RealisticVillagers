@@ -492,7 +492,8 @@ gui:
         # %partner% - partner of this villager.
         # %father% - father of this villager.
         # %mother% - mother of this villager.
-        # %childrens% - childrens of this villager.
+        # %childrens% - childrens of this villager (one line).
+        # %children% - childrens of this villager (displayed one below the other).
         lore:
           - "&7Name: &e%villager-name%"
           - "&7Sex: &e%sex%"
@@ -506,7 +507,7 @@ gui:
           - "&7Father: &e%father%"
           - "&7Mother: &e%mother%"
           - "&7Childrens:"
-          - "&8* &e%childrens%"
+          - "&8* &e%children%"
       trade:
         slot: 5, 4
         material: EMERALD

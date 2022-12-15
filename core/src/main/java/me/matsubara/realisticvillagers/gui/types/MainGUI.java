@@ -254,9 +254,9 @@ public final class MainGUI extends InteractGUI {
         if (lore.isEmpty()) return builder.build();
 
 
-        int indexOfChildrens = lore.indexOf("%childrens%");
+        int indexOfChildrens = -1;
         for (int i = 0; i < lore.size(); i++) {
-            if (lore.get(i).contains("%childrens%")) {
+            if (lore.get(i).contains("%children%")) {
                 indexOfChildrens = i;
                 break;
             }
@@ -273,10 +273,10 @@ public final class MainGUI extends InteractGUI {
             }
 
             if (childrens.isEmpty()) {
-                newLore.add(toReplace.replace("%childrens%", Config.NO_CHILDRENS.asString()));
+                newLore.add(toReplace.replace("%children%", Config.NO_CHILDRENS.asString()));
             } else {
                 for (String children : childrens) {
-                    newLore.add(toReplace.replace("%childrens%", children));
+                    newLore.add(toReplace.replace("%children%", children));
                 }
             }
 
