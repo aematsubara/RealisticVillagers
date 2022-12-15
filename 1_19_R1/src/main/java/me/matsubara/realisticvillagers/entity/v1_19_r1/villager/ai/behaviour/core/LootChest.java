@@ -5,6 +5,7 @@ import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.manager.ChestManager;
+import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -18,8 +19,9 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.SignBlock;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -31,6 +33,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.craftbukkit.v1_19_R1.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_19_R1.block.CraftChest;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -41,34 +44,42 @@ public class LootChest extends Behavior<Villager> {
 
     private Chest chest;
     private boolean chestOpen;
-    private final Map<String, Long> cooldown;
-    private final List<ItemStack> items;
+    private final Map<String, Long> cooldown = new HashMap<>();
+    private final List<ItemStack> items = new ArrayList<>();
 
     private boolean looted;
     private boolean addToCooldown;
     private int count;
     private int tryAgain;
 
-    private static final int SEARCH_RANGE = 16;
-    private static final int TRY_AGAIN_COOLDOWN = 600;
+    private static final int SEARCH_RANGE = 8;
+    private static final int TRY_AGAIN_COOLDOWN = 1200;
 
     @SuppressWarnings("ConstantConditions")
     public LootChest() {
-        super(ImmutableMap.of(VillagerNPC.HAS_LOOTED_RECENTLY, MemoryStatus.VALUE_ABSENT));
-        cooldown = new HashMap<>();
-        items = new ArrayList<>();
+        super(ImmutableMap.of(
+                MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT,
+                VillagerNPC.HAS_LOOTED_RECENTLY, MemoryStatus.VALUE_ABSENT));
     }
 
     @Override
-    protected boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        if (!Config.LOOT_CHEST_ENABLED.asBool()) return false;
-
-        if (villager.isSleeping()) return false;
-
+    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         if (tryAgain > 0) {
             tryAgain--;
             return false;
         }
+
+        boolean canStart = canStart(level, villager);
+        if (!canStart) {
+            // Try again in 15 seconds.
+            tryAgain = TRY_AGAIN_COOLDOWN / 4;
+        }
+        return canStart;
+    }
+
+    private boolean canStart(ServerLevel level, Villager villager) {
+        if (!Config.LOOT_CHEST_ENABLED.asBool()) return false;
+        if (villager.isSleeping()) return false;
 
         if (!(villager instanceof VillagerNPC npc)
                 || !npc.isDoingNothing(ChangeItemType.LOOTING)
@@ -77,6 +88,8 @@ public class LootChest extends Behavior<Villager> {
             if (chest != null) addToCooldown = true;
             return false;
         }
+
+        if (!npc.checkCurrentActivity(Activity.WORK, Activity.IDLE, Activity.PRE_RAID, Activity.RAID)) return false;
 
         if (!Config.LOOT_CHEST_ALLOW_BABIES.asBool() && villager.isBaby()) return false;
 
@@ -89,7 +102,7 @@ public class LootChest extends Behavior<Villager> {
 
         out:
         for (int x = -SEARCH_RANGE; x <= SEARCH_RANGE; x++) {
-            for (int y = -SEARCH_RANGE; y <= SEARCH_RANGE; y++) {
+            for (int y = -1; y <= 1; y++) {
                 for (int z = -SEARCH_RANGE; z <= SEARCH_RANGE; z++) {
                     mutable.set(villager.getX() + x, villager.getY() + y, villager.getZ() + z);
 
@@ -116,10 +129,9 @@ public class LootChest extends Behavior<Villager> {
                     for (Direction direction : Direction.values()) {
                         if (direction.getAxis().isVertical()) continue;
 
-                        BlockPos relative = mutable.relative(direction);
-                        if (!(level.getBlockState(relative).getBlock() instanceof SignBlock)) continue;
+                        state = level.getWorld().getBlockState(CraftBlock.at(level, mutable.relative(direction)).getLocation());
+                        if (!(state instanceof Sign sign)) continue;
 
-                        Sign sign = (Sign) level.getWorld().getBlockState(CraftBlock.at(level, relative).getLocation());
                         for (String line : sign.getLines()) {
                             if (line.contains(requiredLine)) break out;
                         }
@@ -130,14 +142,11 @@ public class LootChest extends Behavior<Villager> {
             }
         }
 
-        boolean canStart = chest != null;
-        if (!canStart) tryAgain = TRY_AGAIN_COOLDOWN;
-
-        return canStart;
+        return chest != null;
     }
 
     @Override
-    protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
+    public boolean canStillUse(ServerLevel level, Villager villager, long time) {
         UUID viewer;
         if (villager instanceof VillagerNPC npc) {
             viewer = npc.getPlugin().getChestManager().getVillagerChests().get(vector());
@@ -155,7 +164,7 @@ public class LootChest extends Behavior<Villager> {
     }
 
     @Override
-    protected void tick(ServerLevel level, Villager villager, long time) {
+    public void tick(ServerLevel level, Villager villager, long time) {
         BlockPos pos = ((CraftChest) chest).getPosition();
         if (chest.getLocation().distance(villager.getBukkitEntity().getLocation()) > 3 || !(villager instanceof VillagerNPC npc)) {
             BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, Villager.SPEED_MODIFIER, 1);
@@ -177,11 +186,16 @@ public class LootChest extends Behavior<Villager> {
         // Loot wanted items and add cooldown to selected chest.
         if (!looted) {
             for (ItemStack item : inventory.getContents()) {
-                if (item == null) continue;
-                if (!npc.getPlugin().isWantedItem(npc, item)) continue;
+                if (item == null || alreadyLooted(npc, item)) continue;
+
+                Gift gift = npc.getPlugin().getWantedItem(npc, item, false);
+                if (gift == null) continue;
 
                 ItemStack copy = item.clone();
-                copy.setAmount(1);
+                int takeAmount = gift.getAmount();
+                int currentAmount = copy.getAmount();
+
+                copy.setAmount(Math.min(takeAmount != -1 ? takeAmount : level.random.nextInt(1, currentAmount + 1), currentAmount));
 
                 if (villager.getInventory().canAddItem(CraftItemStack.asNMSCopy(copy))) {
                     items.add(copy);
@@ -214,7 +228,13 @@ public class LootChest extends Behavior<Villager> {
         // Return if item isn't in container inventory anymore.
         ItemStack item = items.remove(0);
         if (!inventory.containsAtLeast(item, 1)) return;
-        if (!inventory.removeItem(item).isEmpty()) return;
+        if (!inventory.removeItem(item).isEmpty()) {
+            if (item.getAmount() == 1) return;
+
+            // Try again, but only try to take 1 item.
+            item.setAmount(1);
+            if (!inventory.removeItem(item).isEmpty()) return;
+        }
 
         if (ItemStackUtils.isWeapon(item)
                 || ItemStackUtils.getSlotByItem(item) != null
@@ -241,7 +261,7 @@ public class LootChest extends Behavior<Villager> {
     }
 
     @Override
-    protected boolean timedOut(long time) {
+    public boolean timedOut(long time) {
         return false;
     }
 
@@ -252,7 +272,7 @@ public class LootChest extends Behavior<Villager> {
     }
 
     @Override
-    protected void stop(ServerLevel level, Villager villager, long time) {
+    public void stop(ServerLevel level, Villager villager, long time) {
         if (villager instanceof VillagerNPC npc) {
             npc.setLooting(false);
             if (chest != null && chestOpen) {
@@ -282,7 +302,7 @@ public class LootChest extends Behavior<Villager> {
         if (inventory.firstEmpty() != -1) return true;
 
         for (ItemStack item : inventory.getContents()) {
-            if (!npc.getPlugin().isWantedItem(npc, item)) continue;
+            if (npc.getPlugin().getWantedItem(npc, item, false) == null) continue;
             if (item.getAmount() < item.getMaxStackSize()) {
                 return true;
             }
@@ -361,6 +381,38 @@ public class LootChest extends Behavior<Villager> {
         if (chest != null) cooldown.put(
                 chest.getLocation().toString(),
                 System.currentTimeMillis() + Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong());
+    }
+
+    private boolean alreadyLooted(VillagerNPC npc, ItemStack check) {
+        EquipmentSlot checkItemSlot = ItemStackUtils.getSlotByItem(check);
+        boolean isCheckSword = ItemStackUtils.isSword(check);
+        boolean isCheckAxe = ItemStackUtils.isAxe(check);
+
+        Material checkType = check.getType();
+        boolean isCheckTrident = checkType == Material.TRIDENT;
+        boolean isCheckBow = checkType == Material.BOW;
+        boolean isCheckCrossbow = checkType == Material.CROSSBOW;
+
+        // Already has weapon, no need to pick more.
+        if ((npc.isHoldingWeapon() && (isCheckSword || isCheckAxe || isCheckTrident || isCheckBow || isCheckCrossbow))
+                || (npc.getOffhandItem().is(Items.SHIELD) && checkType == Material.SHIELD)) return true;
+
+        for (ItemStack item : items) {
+            Material type = item.getType();
+            if (type == checkType) return true;
+
+            if (checkItemSlot != null && checkItemSlot == ItemStackUtils.getSlotByItem(item)) return true;
+
+            boolean isSword = ItemStackUtils.isSword(item);
+            boolean isAxe = ItemStackUtils.isAxe(item);
+            boolean isTrident = type == Material.TRIDENT;
+            boolean isBow = type == Material.BOW;
+            boolean isCrossbow = type == Material.CROSSBOW;
+            if ((isCheckSword || isCheckAxe || isCheckTrident || isCheckBow || isCheckCrossbow)
+                    && (isSword || isAxe || isTrident || isBow || isCrossbow)) return true;
+        }
+
+        return false;
     }
 
     public static boolean canReach(Villager villager, long time) {

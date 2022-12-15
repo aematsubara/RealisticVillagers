@@ -32,6 +32,7 @@ public class CatTemptGoal extends Goal {
     private @Nullable LivingEntity c;
     private int calmDown;
     private boolean isRunning;
+    private int tryVillagerAgain;
 
     private static final double DISTANCE = 10.0d;
     private static final TargetingConditions TEMP_TARGETING = TargetingConditions.forNonCombat().range(10.0).ignoreLineOfSight();
@@ -45,40 +46,40 @@ public class CatTemptGoal extends Goal {
         this.targetingConditions = TEMP_TARGETING.copy().selector(this::shouldFollow);
     }
 
+    @Override
     public boolean canUse() {
         if (calmDown > 0) {
             --calmDown;
             return false;
         }
 
-        LivingEntity closestVillager = getNearestVillager();
         LivingEntity closestPlayer = cat.level.getNearestPlayer(targetingConditions, cat);
-
-        if (closestVillager != null && closestPlayer != null) {
-            b = cat.distanceTo(closestVillager) > cat.distanceTo(closestPlayer) ? closestPlayer : closestVillager;
-        } else if (closestVillager != null) {
-            b = closestVillager;
-        } else if (closestPlayer != null) {
+        if (closestPlayer != null) {
             b = closestPlayer;
+        } else if (--tryVillagerAgain <= 0 || b instanceof VillagerNPC) {
+            b = getNearestVillager();
+
+            // Try again in 5 seconds.
+            tryVillagerAgain = 100;
         }
 
-        if (b != null) {
-            EntityTargetLivingEntityEvent event = CraftEventFactory.callEntityTargetLivingEvent(
-                    cat,
-                    b,
-                    EntityTargetEvent.TargetReason.TEMPT);
-            if (event.isCancelled()) return false;
+        if (b == null) return false;
 
-            b = event.getTarget() == null ? null : ((CraftLivingEntity) event.getTarget()).getHandle();
-        }
+        EntityTargetLivingEntityEvent event = CraftEventFactory.callEntityTargetLivingEvent(
+                cat,
+                b,
+                EntityTargetEvent.TargetReason.TEMPT);
+        if (event.isCancelled()) return false;
 
+        b = event.getTarget() == null ? null : ((CraftLivingEntity) event.getTarget()).getHandle();
         return b != null && !cat.isTame();
     }
 
     private LivingEntity getNearestVillager() {
         return cat.level.getNearestEntity(
                 VillagerNPC.class,
-                targetingConditions, cat,
+                targetingConditions,
+                cat,
                 cat.getX(),
                 cat.getY(),
                 cat.getZ(),
@@ -89,6 +90,7 @@ public class CatTemptGoal extends Goal {
         return items.test(living.getMainHandItem()) || items.test(living.getOffhandItem());
     }
 
+    @Override
     public boolean canContinueToUse() {
         if (!canScare()) return canUse();
         if (b == null) return false;
@@ -117,6 +119,7 @@ public class CatTemptGoal extends Goal {
         return (c == null || !c.equals(b)) && canScare;
     }
 
+    @Override
     public void start() {
         if (b == null) return;
         px = b.getX();
@@ -125,6 +128,7 @@ public class CatTemptGoal extends Goal {
         isRunning = true;
     }
 
+    @Override
     public void stop() {
         b = null;
         cat.getNavigation().stop();
@@ -132,6 +136,7 @@ public class CatTemptGoal extends Goal {
         isRunning = false;
     }
 
+    @Override
     public void tick() {
         cat.getLookControl().setLookAt(b, (float) (cat.getMaxHeadYRot() + 20), (float) cat.getMaxHeadXRot());
         if (cat.distanceToSqr(b) < 6.25d) {

@@ -75,9 +75,13 @@ divorce:
   papers:
     - "Okay..."
 
-cleric-divorce-papers:
-  - "Here you go, bring these papers to your partner to confirm the divorce."
-  - "Good luck!"
+cleric:
+  divorce-papers:
+    - "Here you go, bring these papers to your partner to confirm the divorce."
+    - "Good luck!"
+  not-married:
+    - "You should get a partner first!"
+    - "I don't see any ring on your hand!"
 
 interact-fail:
   fighting-or-raid: "&cYou can't interact with this villager right now."
@@ -91,15 +95,15 @@ interact-fail:
   other-expecting-gift: "&cAnother villager is expecting a gift from you!"
   other-expecting-bed: "&cAnother villager is expecting a bed from you!"
   in-cooldown: "&cYou can't interact that fast!"
+  not-allowed: "&cYou can't perform this action with this villager."
 
 reload: "&6The plugin has been reloaded!"
 no-permission: "&cYou don't have permission to execute this command!"
-help:
-  - "&8----------------------------------------"
-  - "&6&lRealisticVillagers &f&oCommands"
-  - "&e/rv reload &f- &7Reload configuration files."
-  - "&e/rv ring &f- &7Get a wedding ring."
-  - "&8----------------------------------------"
+
+# %villager-name% - the name of the villager involved.
+whistle-teleported: "&a%villager-name% has been teleported."
+whistle-error: "&cIt wasn't possible to teleport %villager-name%."
+whistle-no-family: "&cYou should get a family first!"
 
 follow-me:
   start:

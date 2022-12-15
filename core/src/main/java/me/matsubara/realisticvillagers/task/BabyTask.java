@@ -54,7 +54,9 @@ public class BabyTask extends BukkitRunnable {
                     long procreation = System.currentTimeMillis();
                     opener.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
 
-                    villager.addMinorPositive(opener.getUniqueId(), Config.BABY_REPUTATION.asInt());
+
+                    int reputation = Config.BABY_REPUTATION.asInt();
+                    if (reputation > 1) villager.addMinorPositive(opener.getUniqueId(), reputation);
                     villager.setProcreatingWith(null);
                     villager.setLastProcreation(procreation);
 

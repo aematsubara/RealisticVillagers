@@ -18,7 +18,6 @@ public class MeleeAttack extends Behavior<Villager> {
 
     public MeleeAttack() {
         super(ImmutableMap.of(
-                MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED,
                 MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_PRESENT,
                 MemoryModuleType.ATTACK_COOLING_DOWN, MemoryStatus.VALUE_ABSENT));
     }
@@ -27,10 +26,11 @@ public class MeleeAttack extends Behavior<Villager> {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         LivingEntity target = getAttackTarget(villager);
         return villager instanceof VillagerNPC npc
+                && !npc.isAttackingWithTrident()
                 && npc.isHoldingMeleeWeapon()
-                && BlockAttackWithShield.notUsingShield(villager)
-                && BehaviorUtils.canSee(villager, target)
-                && BehaviorUtils.isWithinAttackRange(villager, target, 0);
+                && BlockAttackWithShield.notUsingShield(npc)
+                && BehaviorUtils.canSee(npc, target)
+                && BehaviorUtils.isWithinAttackRange(npc, target, 0);
     }
 
     @Override

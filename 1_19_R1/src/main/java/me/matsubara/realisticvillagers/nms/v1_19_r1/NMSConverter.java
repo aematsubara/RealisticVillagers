@@ -6,31 +6,37 @@ import com.mojang.serialization.Codec;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
+import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.TagParser;
+import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
+import net.minecraft.world.entity.ai.gossip.GossipContainer;
+import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Cat;
+import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.schedule.Activity;
@@ -38,8 +44,14 @@ import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Instruments;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.storage.RegionFile;
+import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Raid;
+import org.bukkit.craftbukkit.v1_19_R1.CraftRaid;
 import org.bukkit.craftbukkit.v1_19_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R1.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_19_R1.entity.CraftVillager;
@@ -52,6 +64,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -78,6 +91,8 @@ public class NMSConverter implements INMSConverter {
     private static final MethodHandle SENSOR_TYPE = Reflection.getConstructor(SensorType.class, Supplier.class);
     private static final MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
 
+    private static final RandomSource RANDOM = RandomSource.create();
+
     public NMSConverter(RealisticVillagers plugin) {
         this.plugin = plugin;
     }
@@ -103,8 +118,9 @@ public class NMSConverter implements INMSConverter {
                             return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
                         }
                     });
-            Reflection.setFieldUsingUnsafe(field, EntityType.WOLF, (EntityType.EntityFactory<Wolf>) PetWolf::new);
             Reflection.setFieldUsingUnsafe(field, EntityType.CAT, (EntityType.EntityFactory<Cat>) PetCat::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.PARROT, (EntityType.EntityFactory<Parrot>) PetParrot::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.WOLF, (EntityType.EntityFactory<Wolf>) PetWolf::new);
         } catch (ReflectiveOperationException exception) {
             exception.printStackTrace();
         }
@@ -155,19 +171,30 @@ public class NMSConverter implements INMSConverter {
         baby.setAge(-24000);
         baby.moveTo(location.getX(), location.getY(), location.getZ(), 0.0f, 0.0f);
 
-        Optional<Entity> optional;
-        optional = Optional.ofNullable(level.getEntity(motherUUID));
+        // Shouldn't be null unless the mother is dead.
+        IVillagerNPC mother = plugin.getTracker().getOffline(motherUUID);
+        if (mother != null) {
+            Villager bukkitMother = plugin.getUnloadedOffline(mother);
 
-        if (optional.isPresent()) {
-            if (optional.get().isAlive() && optional.get() instanceof VillagerNPC mother) {
-                mother.setAge(6000);
-                mother.getChildrens().add(baby.getUUID());
-                baby.setMother(mother.getUUID());
+            VillagerNPC nmsMother = bukkitMother != null ? ((VillagerNPC) ((CraftVillager) bukkitMother).getHandle()) : null;
+            if (nmsMother != null) {
+                nmsMother.setAge(6000);
+                nmsMother.getChildrens().add(baby.getOffline());
+                baby.setMother(nmsMother.getOffline());
             }
         }
 
-        baby.setFather(father.getUniqueId());
+        UUID fatherUUID = father.getUniqueId();
+        baby.setFather(VillagerNPC.dummyPlayerOffline(fatherUUID));
         baby.setFatherVillager(false);
+
+        GossipContainer gossips = baby.getGossips();
+        for (GossipType gossipType : GossipType.values()) {
+            gossips.remove(gossipType);
+        }
+
+        int reputation = Math.min(Config.INITIAL_REPUTATION_AT_BIRTH.asInt(), 75);
+        if (reputation > 1) gossips.add(fatherUUID, GossipType.MINOR_POSITIVE, reputation);
 
         level.addFreshEntityWithPassengers(baby, CreatureSpawnEvent.SpawnReason.BREEDING);
         level.broadcastEntityEvent(baby, (byte) 12);
@@ -204,6 +231,109 @@ public class NMSConverter implements INMSConverter {
             NbtIo.writeCompressed(tag, file);
         } catch (IOException exception) {
             plugin.getLogger().warning("Error loading player data!");
+        }
+    }
+
+    @Override
+    public void loadData() {
+        File root = plugin.getServer().getWorldContainer();
+
+        File[] worlds = root.listFiles(file -> {
+            String[] files;
+            return file.isDirectory()
+                    && (files = file.list()) != null
+                    && ArrayUtils.contains(files, "level.dat");
+        });
+
+        if (worlds == null) return;
+
+        for (File world : worlds) {
+            File entitiesFolder = new File(world, "entities");
+
+            File[] entitiesFiles = entitiesFolder.listFiles();
+            if (entitiesFiles == null) continue;
+
+            // Iterate through all .mca files in "entities" folder.
+            for (File entityFile : entitiesFiles) {
+                try {
+                    checkMCAFile(entityFile);
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public ItemStack randomVanillaEnchantments(Location location, ItemStack item) {
+        if (item == null || item.getType().isAir()) return item;
+        if (location.getWorld() == null) return item;
+
+        float multiplier = ((CraftWorld) location.getWorld()).getHandle()
+                .getCurrentDifficultyAt(new BlockPos(location.getX(), location.getY(), location.getZ()))
+                .getSpecialMultiplier();
+
+        double chance = ItemStackUtils.getSlotByItem(item) != null ? 0.5d : 0.25f;
+        if (Math.random() > chance * multiplier) return item;
+
+        return CraftItemStack.asBukkitCopy(EnchantmentHelper.enchantItem(
+                RANDOM,
+                CraftItemStack.asNMSCopy(item),
+                (int) (5.0f + multiplier * (float) RANDOM.nextInt(18)),
+                false));
+    }
+
+    @Override
+    public Raid getRaidAt(Location location) {
+        if (location.getWorld() == null) return null;
+
+        BlockPos pos = new BlockPos(location.getX(), location.getY(), location.getZ());
+        net.minecraft.world.entity.raid.Raid raid = ((CraftWorld) location.getWorld()).getHandle().getRaidAt(pos);
+
+        return raid != null ? new CraftRaid(raid) : null;
+    }
+
+    private void checkMCAFile(File entityFile) throws IOException {
+        RegionFile region = new RegionFile(entityFile.toPath(), entityFile.getParentFile().toPath(), false);
+        String world = entityFile.getParentFile().getParentFile().getName();
+
+        for (int x = 0; x < 32; x++) {
+            for (int z = 0; z < 32; z++) {
+                checkRegion(region, world, x, z);
+            }
+        }
+
+        region.close();
+    }
+
+    private void checkRegion(RegionFile region, String world, int x, int z) throws IOException {
+        ChunkPos chunkPos = new ChunkPos(x, z);
+        if (!region.hasChunk(chunkPos)) return;
+
+        DataInputStream stream = region.getChunkDataInputStream(chunkPos);
+        if (stream == null) return;
+
+        CompoundTag chunkTag = NbtIo.read(stream);
+
+        stream.close();
+
+        for (Tag tag : chunkTag.getList("Entities", 10)) {
+            if (!(tag instanceof CompoundTag compound)) continue;
+            if (!compound.getString("id").equals("minecraft:villager")) continue;
+            if (!compound.hasUUID("UUID")) continue;
+
+            CompoundTag bukkit = getOrCreateBukkitTag(compound);
+            CompoundTag data = bukkit.getCompound(plugin.getNpcValuesKey().toString());
+            if (data.isEmpty()) continue;
+
+            ListTag pos = compound.getList("Pos", 6);
+            double xc = pos.getDouble(0);
+            double yc = pos.getDouble(1);
+            double zc = pos.getDouble(2);
+
+            UUID uuid = compound.getUUID("UUID");
+            OfflineVillagerNPC npc = OfflineVillagerNPC.from(uuid, data, world, xc, yc, zc);
+            plugin.getTracker().getOfflineVillagers().add(npc);
         }
     }
 

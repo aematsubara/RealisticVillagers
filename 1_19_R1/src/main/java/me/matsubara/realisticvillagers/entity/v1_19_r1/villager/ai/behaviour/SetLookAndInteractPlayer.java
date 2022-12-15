@@ -10,7 +10,10 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.EntityTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.npc.Villager;
+
+import java.util.Optional;
 
 public class SetLookAndInteractPlayer extends Behavior<Villager> {
 
@@ -32,12 +35,16 @@ public class SetLookAndInteractPlayer extends Behavior<Villager> {
 
     public void start(ServerLevel level, Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
-        brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
-                .flatMap((entities) -> entities.findClosest((nearest) -> isMatchingTarget(villager, nearest)))
-                .ifPresent((nearest) -> {
-                    brain.setMemory(MemoryModuleType.INTERACTION_TARGET, nearest);
-                    brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(nearest, true));
-                });
+
+        Optional<NearestVisibleLivingEntities> nearestEntities = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+        if (nearestEntities.isEmpty()) return;
+
+        Optional<LivingEntity> closest = nearestEntities.get().findClosest((nearest) -> isMatchingTarget(villager, nearest));
+        if (closest.isEmpty()) return;
+
+        LivingEntity living = closest.get();
+        brain.setMemory(MemoryModuleType.INTERACTION_TARGET, living);
+        brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(living, true));
     }
 
     private boolean isMatchingTarget(Villager villager, LivingEntity target) {

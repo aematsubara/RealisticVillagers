@@ -6,16 +6,19 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class InteractCooldownManager implements Listener {
 
     private final RealisticVillagers plugin;
-    private final Set<InteractCooldown> cooldowns = new HashSet<>();
+    private final Set<InteractCooldown> cooldowns = ConcurrentHashMap.newKeySet();
+
+    private static final UUID WELCOME_MESSAGE_UUID = UUID.randomUUID();
 
     public InteractCooldownManager(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -36,10 +39,27 @@ public class InteractCooldownManager implements Listener {
     }
 
     public boolean canInteract(Player player, Villager villager, String type) {
-        InteractCooldown cooldown = getCooldown(player.getUniqueId(), villager.getUniqueId(), type);
+        return canInteract(player, villager, type, null);
+    }
+
+    public boolean canInteract(Player player, String type, Long finishTime) {
+        return canInteract(player, null, type, finishTime);
+    }
+
+    public boolean canInteract(Player player, @Nullable Villager villager, String type, @Nullable Long finishTime) {
+        InteractCooldown cooldown = getCooldown(
+                player.getUniqueId(),
+                villager != null ? villager.getUniqueId() : WELCOME_MESSAGE_UUID,
+                type);
 
         if (cooldown == null) {
-            addCooldown(player, villager, type);
+            if (finishTime != null) addCooldown(
+                    player.getUniqueId(),
+                    villager != null ? villager.getUniqueId() : WELCOME_MESSAGE_UUID,
+                    type,
+                    finishTime);
+            else if (villager != null) addCooldown(player, villager, type);
+            else throw new IllegalArgumentException("Only one of the two nullable values can be null!");
             return true;
         }
 
@@ -50,8 +70,23 @@ public class InteractCooldownManager implements Listener {
     }
 
     public void addCooldown(Player player, Villager villager, String type) {
-        long finish = System.currentTimeMillis() + plugin.getConfig().getLong("interact-cooldown." + type, 1L) * 1000L;
-        cooldowns.add(new InteractCooldown(player.getUniqueId(), villager.getUniqueId(), type, finish));
+        long finishType = plugin.getConfig().getLong("interact-cooldown." + type, 1L) * 1000L;
+        addCooldown(player.getUniqueId(), villager.getUniqueId(), type, finishType);
+    }
+
+    private void addCooldown(UUID playerUUID, UUID villagerUUID, String type, long finishTime) {
+        cooldowns.add(new InteractCooldown(playerUUID, villagerUUID, type, System.currentTimeMillis() + finishTime));
+    }
+
+    public void removeCooldown(Player player, String type) {
+        Iterator<InteractCooldown> iterator = cooldowns.iterator();
+
+        while (iterator.hasNext()) {
+            InteractCooldown cooldown = iterator.next();
+            if (!cooldown.player().equals(player.getUniqueId())) continue;
+            if (!cooldown.type().equalsIgnoreCase(type)) continue;
+            iterator.remove();
+        }
     }
 
     private InteractCooldown getCooldown(UUID player, UUID villager, String type) {

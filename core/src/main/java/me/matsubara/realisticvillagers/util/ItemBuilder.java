@@ -14,10 +14,11 @@ import org.bukkit.potion.PotionType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "UnusedReturnValue"})
 public final class ItemBuilder {
 
     private final ItemStack item;
@@ -35,7 +36,6 @@ public final class ItemBuilder {
         return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public ItemBuilder setHead(String texture, boolean isUrl) {
         if (item.getType() != Material.PLAYER_HEAD) {
             setType(Material.PLAYER_HEAD);
@@ -52,7 +52,6 @@ public final class ItemBuilder {
         return this;
     }
 
-    @SuppressWarnings("UnusedReturnValue")
     public ItemBuilder setCustomModelData(int data) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return this;
@@ -64,8 +63,8 @@ public final class ItemBuilder {
 
     public ItemBuilder setDamage(int damage) {
         ItemMeta meta = item.getItemMeta();
-        if (!(meta instanceof Damageable)) return this;
-        ((Damageable) meta).setDamage(damage);
+        if (!(meta instanceof Damageable damageable)) return this;
+        damageable.setDamage(damage);
         item.setItemMeta(meta);
         return this;
     }
@@ -75,14 +74,10 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder setOwningPlayer(OfflinePlayer player) {
-        if (!(item.getItemMeta() instanceof SkullMeta)) return this;
+        if (!(item.getItemMeta() instanceof SkullMeta meta)) return this;
 
-        try {
-            SkullMeta meta = (SkullMeta) item.getItemMeta();
-            meta.setOwningPlayer(player);
-            item.setItemMeta(meta);
-        } catch (ClassCastException ignore) {
-        }
+        meta.setOwningPlayer(player);
+        item.setItemMeta(meta);
         return this;
     }
 
@@ -117,15 +112,32 @@ public final class ItemBuilder {
         return this;
     }
 
-    public ItemBuilder setLeatherArmorMetaColor(Color color) {
-        if (!(item.getItemMeta() instanceof LeatherArmorMeta)) return this;
+    public ItemBuilder addLore(String... lore) {
+        return addLore(Arrays.asList(lore));
+    }
 
-        try {
-            LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
-            meta.setColor(color);
-            item.setItemMeta(meta);
-        } catch (ClassCastException ignore) {
-        }
+    public ItemBuilder addLore(List<String> lore) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return this;
+
+        List<String> actual = meta.getLore();
+        if (actual == null) return setLore(lore);
+
+        actual.addAll(PluginUtils.translate(lore));
+        return setLore(lore);
+    }
+
+    public List<String> getLore() {
+        ItemMeta meta = item.getItemMeta();
+        List<String> lore;
+        return meta != null && (lore = meta.getLore()) != null ? lore : Collections.emptyList();
+    }
+
+    public ItemBuilder setLeatherArmorMetaColor(Color color) {
+        if (!(item.getItemMeta() instanceof LeatherArmorMeta meta)) return this;
+
+        meta.setColor(color);
+        item.setItemMeta(meta);
         return this;
     }
 
@@ -158,17 +170,10 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder setBasePotionData(PotionType type) {
-        if (!(item.getItemMeta() instanceof PotionMeta)) return this;
+        if (!(item.getItemMeta() instanceof PotionMeta meta)) return this;
 
-        try {
-            PotionMeta meta = (PotionMeta) item.getItemMeta();
-            if (meta == null) return this;
-
-            meta.setBasePotionData(new PotionData(type));
-            item.setItemMeta(meta);
-        } catch (ClassCastException ignore) {
-
-        }
+        meta.setBasePotionData(new PotionData(type));
+        item.setItemMeta(meta);
         return this;
     }
 
@@ -181,32 +186,27 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder addPattern(Pattern pattern) {
-        if (!(item.getItemMeta() instanceof BannerMeta)) return this;
+        if (!(item.getItemMeta() instanceof BannerMeta meta)) return this;
 
-        try {
-            BannerMeta meta = (BannerMeta) item.getItemMeta();
-            if (meta == null) return this;
-
-            meta.addPattern(pattern);
-            item.setItemMeta(meta);
-        } catch (ClassCastException ignore) {
-
-        }
+        meta.addPattern(pattern);
+        item.setItemMeta(meta);
         return this;
     }
 
     public ItemBuilder setBannerColor(DyeColor color) {
-        if (!(item.getItemMeta() instanceof BannerMeta)) return this;
+        if (!(item.getItemMeta() instanceof BannerMeta meta)) return this;
 
-        try {
-            BannerMeta meta = (BannerMeta) item.getItemMeta();
-            if (meta == null) return this;
+        meta.addPattern(new Pattern(color, PatternType.BASE));
+        item.setItemMeta(meta);
+        return this;
+    }
 
-            meta.addPattern(new Pattern(color, PatternType.BASE));
-            item.setItemMeta(meta);
-        } catch (ClassCastException ignore) {
+    public ItemBuilder initializeFirework(int power, FireworkEffect... effects) {
+        if (!(item.getItemMeta() instanceof FireworkMeta meta)) return this;
 
-        }
+        meta.setPower(power);
+        meta.addEffects(effects);
+        item.setItemMeta(meta);
         return this;
     }
 
@@ -253,7 +253,9 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder glow() {
-        item.addUnsafeEnchantment(Enchantment.ARROW_DAMAGE, 1);
+        item.addUnsafeEnchantment(item.getType() == Material.BOW ?
+                Enchantment.DURABILITY :
+                Enchantment.ARROW_DAMAGE, 1);
         return addItemFlags(ItemFlag.HIDE_ENCHANTS);
     }
 

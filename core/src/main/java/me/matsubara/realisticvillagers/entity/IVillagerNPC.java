@@ -2,6 +2,8 @@ package me.matsubara.realisticvillagers.entity;
 
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.InteractType;
+import me.matsubara.realisticvillagers.data.LastKnownPosition;
+import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
@@ -14,26 +16,28 @@ import java.util.UUID;
 
 public interface IVillagerNPC {
 
+    UUID getUniqueId();
+
     String getVillagerName();
 
     void setVillagerName(String name);
 
     int getReputation(UUID uuid);
 
-    UUID getPartner();
+    IVillagerNPC getPartner();
 
     boolean isPartnerVillager();
 
-    UUID getFather();
+    IVillagerNPC getFather();
 
     boolean isFatherVillager();
 
-    UUID getMother();
+    IVillagerNPC getMother();
 
     @SuppressWarnings("unused")
     boolean isMotherVillager();
 
-    List<UUID> getChildrens();
+    List<IVillagerNPC> getChildrens();
 
     Villager bukkit();
 
@@ -76,10 +80,13 @@ public interface IVillagerNPC {
 
     boolean isConversating();
 
+    boolean isFemale();
+
     boolean isMale();
 
     boolean is(Villager.Profession... professions);
 
+    @SuppressWarnings("unused")
     boolean isFamily(UUID uuid);
 
     boolean isFamily(UUID uuid, boolean checkPartner);
@@ -153,4 +160,20 @@ public interface IVillagerNPC {
     void shakeHead(Player at);
 
     void convertToVanilla();
+
+    IVillagerNPC getOffline();
+
+    LastKnownPosition getLastKnownPosition();
+
+    boolean isEquipped();
+
+    void setEquipped(boolean equipped);
+
+    Object getShoulderEntityLeft();
+
+    Object getShoulderEntityRight();
+
+    void causeFoodExhaustion(float exhaustion, VillagerExhaustionEvent.ExhaustionReason reason);
+
+    boolean isWasInfected();
 }

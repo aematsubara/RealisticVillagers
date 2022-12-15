@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_18_r2.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.GiveGiftToHero;
@@ -46,9 +47,11 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -64,7 +67,7 @@ public class VillagerNPCGoalPackages {
     private static final Predicate<LivingEntity> DUMMY = living -> true;
     private static final Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
     private static final Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
-            (int) npc.getMeleeAttackRangeSqr(null) :
+            (npc.isAttackingWithTrident() ? TridentAttack.TRIDENT_DISTANCE_ATTACK : (int) npc.getMeleeAttackRangeSqr(null)) :
             MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW;
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getCorePackage(VillagerProfession profession) {
@@ -82,7 +85,7 @@ public class VillagerNPCGoalPackages {
                 Pair.of(1, new EatCake()),
                 Pair.of(1, new MoveToTargetSink()),
                 Pair.of(2, new PoiCompetitorScan(profession)),
-                Pair.of(3, new LookAndFollowPlayerSink(Villager.SPEED_MODIFIER)),
+                Pair.of(3, new LookAndFollowPlayerSink()),
                 Pair.of(5, new GoToWantedItem(Villager.SPEED_MODIFIER, GO_TO_WANTED_ITEM_DISTANCE)),
                 Pair.of(5, new LootChest()),
                 Pair.of(6, new AcquirePoi(
@@ -98,17 +101,24 @@ public class VillagerNPCGoalPackages {
                 Pair.of(10, new AssignProfessionFromJobSite()),
                 Pair.of(10, new ResetProfession()),
                 Pair.of(10, new BackToStay()),
-                Pair.of(10, new TamePet(
-                        2,
-                        Villager.SPEED_MODIFIER,
-                        living -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
-                        ImmutableSet.of(Items.BONE))),
-                Pair.of(10, new TamePet(
-                        2,
-                        Villager.SPEED_MODIFIER,
+                Pair.of(10, new CheckInventory()),
+                Pair.of(10, createTameOrFeedPet(
+                        3,
                         living -> living instanceof PetCat cat && !cat.isTame(),
                         ImmutableSet.of(Items.COD, Items.SALMON))),
+                Pair.of(10, createTameOrFeedPet(
+                        10,
+                        living -> living instanceof PetParrot parrot && !parrot.isTame(),
+                        ImmutableSet.of(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS))),
+                Pair.of(10, createTameOrFeedPet(
+                        3,
+                        living -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
+                        ImmutableSet.of(Items.BONE))),
                 Pair.of(10, new HealGolem(100, VillagerNPC.SPEED_MODIFIER)));
+    }
+
+    private static TameOrFeedPet createTameOrFeedPet(int tameChance, Predicate<LivingEntity> tameFilter, Set<Item> tameItems) {
+        return new TameOrFeedPet(2, tameChance, Villager.SPEED_MODIFIER, tameFilter, tameItems);
     }
 
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getWorkPackage(VillagerProfession profession) {
@@ -176,31 +186,11 @@ public class VillagerNPCGoalPackages {
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getIdlePackage() {
         return ImmutableList.of(
                 Pair.of(2, new RunOne<>(ImmutableList.of(
-                        Pair.of(new InteractWith<>(
-                                EntityType.VILLAGER,
-                                8,
-                                IS_DOING_NOTHING,
-                                DUMMY,
-                                MemoryModuleType.INTERACTION_TARGET,
-                                Villager.SPEED_MODIFIER,
-                                2), 2),
+                        Pair.of(createInteractWith(EntityType.VILLAGER), 2),
                         Pair.of(new InteractWithBreed(8, Villager.SPEED_MODIFIER, 2), 1),
-                        Pair.of(new InteractWith<>(
-                                EntityType.CAT,
-                                8,
-                                IS_DOING_NOTHING,
-                                DUMMY,
-                                MemoryModuleType.INTERACTION_TARGET,
-                                Villager.SPEED_MODIFIER,
-                                2), 1),
-                        Pair.of(new InteractWith<>(
-                                EntityType.WOLF,
-                                8,
-                                IS_DOING_NOTHING,
-                                DUMMY,
-                                MemoryModuleType.INTERACTION_TARGET,
-                                Villager.SPEED_MODIFIER,
-                                2), 1),
+                        Pair.of(createInteractWith(EntityType.CAT), 1),
+                        Pair.of(createInteractWith(EntityType.PARROT), 1),
+                        Pair.of(createInteractWith(EntityType.WOLF), 1),
                         Pair.of(new VillageBoundRandomStroll(Villager.SPEED_MODIFIER), 1),
                         Pair.of(new SetWalkTargetFromLookTarget(Villager.SPEED_MODIFIER, 2), 1),
                         Pair.of(new JumpOnBed(Villager.SPEED_MODIFIER), 1),
@@ -222,14 +212,25 @@ public class VillagerNPCGoalPackages {
                 Pair.of(99, new UpdateActivityFromSchedule()));
     }
 
+    private static InteractWith<LivingEntity, LivingEntity> createInteractWith(EntityType<? extends LivingEntity> type) {
+        return new InteractWith<>(
+                type,
+                8,
+                IS_DOING_NOTHING,
+                DUMMY,
+                MemoryModuleType.INTERACTION_TARGET,
+                Villager.SPEED_MODIFIER,
+                2);
+    }
+
     public static ImmutableList<Pair<Integer, ? extends Behavior<? super Villager>>> getRaidPackage() {
         return ImmutableList.of(
                 Pair.of(0, new RunOne<>(ImmutableList.of(
                         Pair.of(new GoOutsideToCelebrate(Villager.SPEED_MODIFIER), 5),
-                        Pair.of(new VictoryStroll(Villager.SPEED_MODIFIER * 1.1f), 2)))),
+                        Pair.of(new VictoryStroll(VillagerNPC.SPRINT_SPEED_MODIFIER), 2)))),
                 Pair.of(0, new CelebrateVillagersSurvivedRaid(600, 600)),
-                Pair.of(0, runIfShouldNotHide(new VillageBoundRandomStroll(Villager.SPEED_MODIFIER * 1.5f))),
-                Pair.of(1, runIfShouldHide(new LocateHidingPlaceDuringRaid(24, Villager.SPEED_MODIFIER * 1.4f))),
+                Pair.of(0, runIfShouldNotHide(new VillageBoundRandomStroll(VillagerNPC.SPRINT_SPEED_MODIFIER))),
+                Pair.of(1, runIfShouldHide(new LocateHidingPlaceDuringRaid(24, VillagerNPC.SPRINT_SPEED_MODIFIER))),
                 getMinimalLookBehavior(),
                 Pair.of(99, new ResetRaidStatus()));
     }
@@ -238,10 +239,12 @@ public class VillagerNPCGoalPackages {
         return ImmutableList.of(
                 Pair.of(0, new MeleeAttack()),
                 Pair.of(0, new RangeWeaponAttack()),
+                Pair.of(0, new TridentAttack()),
                 Pair.of(0, new BlockAttackWithShield()),
                 Pair.of(1, runIf(
-                        BlockAttackWithShield::notUsingShield,
-                        new SetWalkTargetFromAttackTargetIfTargetOutOfReach(living -> Villager.SPEED_MODIFIER * 1.5f))),
+                        villager -> BlockAttackWithShield.notUsingShield(villager)
+                                && (!(villager instanceof VillagerNPC npc) || !npc.isAttackingWithTrident()),
+                        new SetWalkTargetFromAttackTargetIfTargetOutOfReach(living -> VillagerNPC.SPRINT_SPEED_MODIFIER))),
                 Pair.of(1, new BackUpIfTooClose(BACK_UP_FUNCTION, SPEED_WHEN_STRAFING_BACK_FROM_TARGET)),
                 Pair.of(2, new StopAttackingIfTargetInvalid()));
     }
@@ -260,6 +263,7 @@ public class VillagerNPCGoalPackages {
     private static Pair<Integer, Behavior<LivingEntity>> getFullLookBehavior() {
         return Pair.of(5, new RunOne<>(ImmutableList.of(
                 Pair.of(new SetEntityLookTarget(EntityType.CAT, 8.0f), 8),
+                Pair.of(new SetEntityLookTarget(EntityType.PARROT, 8.0f), 8),
                 Pair.of(new SetEntityLookTarget(EntityType.WOLF, 8.0f), 8),
                 Pair.of(new SetEntityLookTarget(EntityType.VILLAGER, 8.0f), 2),
                 Pair.of(new SetEntityLookTarget(EntityType.PLAYER, 8.0f), 2),

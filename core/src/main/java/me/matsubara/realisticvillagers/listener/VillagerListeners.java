@@ -7,14 +7,10 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.IronGolem;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -25,6 +21,8 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.lang.invoke.MethodHandle;
 import java.util.List;
@@ -88,7 +86,7 @@ public final class VillagerListeners implements Listener {
                 if (ThreadLocalRandom.current().nextFloat() >= Config.FISHING_ROD_CHANCE.asFloat()) return;
 
                 ItemStack previous = equipment.getItemInMainHand();
-                if (ItemStackUtils.isWeapon(previous)) villager.getInventory().addItem(previous);
+                if (!previous.getType().isAir()) villager.getInventory().addItem(previous);
 
                 equipment.setItemInMainHand(new ItemStack(Material.FISHING_ROD));
             }
@@ -112,7 +110,8 @@ public final class VillagerListeners implements Listener {
             Inventory open = player.getOpenInventory().getTopInventory();
             if (!(open.getHolder() instanceof InteractGUI interact)) continue;
 
-            if (interact.getNPC().bukkit().equals(villager)) player.closeInventory();
+            IVillagerNPC npc = interact.getNPC();
+            if (npc != null && npc.bukkit().equals(villager)) player.closeInventory();
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;
@@ -182,6 +181,14 @@ public final class VillagerListeners implements Listener {
         Player player = event.getPlayer();
         Messages messages = plugin.getMessages();
 
+        // Don't open GUI if using the whistle.
+        ItemStack item;
+        ItemMeta meta;
+        if ((item = player.getInventory().getItem(event.getHand())) != null
+                && (meta = item.getItemMeta()) != null) {
+            if (meta.getPersistentDataContainer().has(plugin.getIsWhistleKey(), PersistentDataType.INTEGER)) return;
+        }
+
         // Prevent interacting with villager if it's fighting.
         if (npc.isFighting() || npc.isInsideRaid()) {
             messages.send(player, Messages.Message.INTERACT_FAIL_FIGHTING_OR_RAID);
@@ -232,7 +239,7 @@ public final class VillagerListeners implements Listener {
         }
 
         // Open custom GUI.
-        new MainGUI(plugin, player, npc);
+        new MainGUI(plugin, npc, player);
 
         // Set interacting with id.
         npc.setInteractingWithAndType(player.getUniqueId(), InteractType.GUI);
@@ -250,6 +257,13 @@ public final class VillagerListeners implements Listener {
         if (npc.isFishing()) npc.toggleFishing();
 
         if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;
+
+        if (byEntity.getDamager() instanceof Firework firework
+                && firework.getShooter() instanceof Villager
+                && !Config.VILLAGER_CROSSBOW_FIREWORK_DAMAGES_OTHER_VILLAGERS.asBool()) {
+            event.setCancelled(true);
+            return;
+        }
 
         if (villager.getTarget() == null && byEntity.getDamager() instanceof Player player) {
             plugin.getMessages().send(player, npc, Messages.Message.ON_HIT);

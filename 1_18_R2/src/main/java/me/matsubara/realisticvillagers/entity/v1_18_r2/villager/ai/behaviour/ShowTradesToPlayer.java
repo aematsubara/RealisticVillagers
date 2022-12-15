@@ -48,12 +48,22 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
         if (brain.getMemory(MemoryModuleType.INTERACTION_TARGET).isEmpty()) return false;
 
         LivingEntity target = brain.getMemory(MemoryModuleType.INTERACTION_TARGET).get();
-        return target.getType() == EntityType.PLAYER
+        if (target.getMainHandItem().isEmpty()) return false;
+
+        boolean canShow = target.getType() == EntityType.PLAYER
                 && villager.isAlive()
                 && target.isAlive()
                 && !villager.isBaby()
                 && villager.distanceToSqr(target) <= 17.0d
                 && (!(villager instanceof VillagerNPC npc) || npc.isDoingNothing(ChangeItemType.SHOWING_TRADES));
+        if (!canShow) return false;
+
+        for (MerchantOffer offer : villager.getOffers()) {
+            if (!offer.isOutOfStock() && playerItemStackMatchesCostOfOffer(offer, target.getMainHandItem())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -139,7 +149,11 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
     }
 
     private boolean playerItemStackMatchesCostOfOffer(MerchantOffer offer) {
-        return ItemStack.isSame(playerItemStack, offer.getCostA()) || ItemStack.isSame(playerItemStack, offer.getCostB());
+        return playerItemStackMatchesCostOfOffer(offer, playerItemStack);
+    }
+
+    private boolean playerItemStackMatchesCostOfOffer(MerchantOffer offer, ItemStack item) {
+        return ItemStack.isSame(item, offer.getCostA()) || ItemStack.isSame(item, offer.getCostB());
     }
 
     private void clearHeldItem(Villager villager) {

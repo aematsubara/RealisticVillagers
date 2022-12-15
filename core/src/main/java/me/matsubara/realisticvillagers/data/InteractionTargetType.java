@@ -18,7 +18,7 @@ public enum InteractionTargetType {
     public static InteractionTargetType getInteractionTarget(IVillagerNPC npc, Player player) {
         UUID playerUUID = player.getUniqueId();
         if (npc.isPartner(playerUUID)) return PARTNER;
-        else if (playerUUID.equals(npc.getFather())) return CHILD_OFFSPRING;
+        else if (npc.getFather() != null && playerUUID.equals(npc.getFather().getUniqueId())) return CHILD_OFFSPRING;
         else if (npc.bukkit().isAdult()) return ADULT;
         return CHILD;
     }

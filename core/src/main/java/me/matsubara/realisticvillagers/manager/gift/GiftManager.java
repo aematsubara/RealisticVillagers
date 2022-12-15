@@ -3,6 +3,8 @@ package me.matsubara.realisticvillagers.manager.gift;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.util.ExtraTags;
+import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -49,61 +51,88 @@ public final class GiftManager {
             Predicate<IVillagerNPC> predicate;
             if (materialOrTag.startsWith("?")) {
                 String[] data = materialOrTag.substring(1).split(":");
-                if (data.length != 2) continue;
+                if (data.length != 2) {
+                    log(path, materialOrTag);
+                    continue;
+                }
 
-                try {
-                    Villager.Profession profession = Villager.Profession.valueOf(data[0].toUpperCase());
+                Villager.Profession profession = PluginUtils.getOrNull(Villager.Profession.class, data[0].toUpperCase());
+                if (profession != null) {
                     predicate = npc -> npc.bukkit().getProfession() == profession;
-                } catch (IllegalArgumentException exception) {
-                    exception.printStackTrace();
+                } else {
+                    log(path, materialOrTag);
                     continue;
                 }
             } else {
                 predicate = null;
             }
 
+            boolean inventoryLootOnly = materialOrTag.endsWith("*");
+
+            int amount = 1;
+            String amountString = StringUtils.substringBetween(materialOrTag, "(", ")");
+            if (amountString != null) {
+                materialOrTag = materialOrTag.replace("(" + amountString + ")", "");
+                amount = amountString.equalsIgnoreCase("$RANDOM") ? -1 : PluginUtils.getRangedAmount(amountString);
+            }
+
             int indexOf = predicate != null ? materialOrTag.indexOf(":") : -1;
             if (materialOrTag.startsWith("$") || (indexOf != -1 && materialOrTag.substring(indexOf + 1).startsWith("$"))) {
-                String tagName = indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1);
-
-                addMaterialsFromRegistry(tags, predicate, tagName.toLowerCase(), Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS);
+                String tagName = (indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1)).replace("*", "");
 
                 Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase());
                 if (extra != null && !extra.isEmpty()) {
                     for (Material material : extra) {
-                        addAndOverride(tags, createGift(material, predicate));
+                        addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
                     }
+                } else if (!addMaterialsFromRegistry(
+                        tags,
+                        predicate,
+                        tagName.toLowerCase(),
+                        inventoryLootOnly,
+                        amount,
+                        Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS)) {
+                    log(path, materialOrTag);
                 }
                 continue;
             }
 
-            try {
-                String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0);
-                Material material = Material.valueOf(materialName.toUpperCase());
-                addAndOverride(tags, createGift(material, predicate));
-            } catch (IllegalArgumentException ignored) {
+            String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0).replace("*", "");
+            Material material = PluginUtils.getOrNull(Material.class, materialName.toUpperCase());
+            if (material != null) {
+                addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
+            } else {
+                log(path, materialOrTag);
             }
         }
         return tags;
     }
 
-    private Gift createGift(Material material, @Nullable Predicate<IVillagerNPC> predicate) {
-        return predicate != null ? new Gift.GiftWithCondition(material, predicate) : new Gift(material);
+    private void log(String path, String materialOrTag) {
+        boolean isWantedItems = path.equals("default-wanted-items");
+        String[] data;
+        String categoryName = isWantedItems ? path : (data = path.split("\\.")).length == 3 ? data[1] : path;
+        plugin.getLogger().info("Invalid material for " + (isWantedItems ? "" : "gift category ") + "{" + categoryName + "}! " + materialOrTag);
     }
 
-    private void addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, String... registries) {
+    private Gift createGift(int amount, Material material, boolean inventoryLootOnly, @Nullable Predicate<IVillagerNPC> predicate) {
+        return predicate != null ?
+                new Gift.GiftWithCondition(amount, material, inventoryLootOnly, predicate) :
+                new Gift(amount, material, inventoryLootOnly);
+    }
+
+    private boolean addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, boolean inventoryLootOnly, int amount, String... registries) {
+        boolean found = false;
         for (String registry : registries) {
-            addMaterials(gifts, predicate, registry, tagName);
-        }
-    }
+            Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase()), Material.class);
+            if (tag == null) continue;
 
-    private void addMaterials(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String registry, String tagName) {
-        Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase()), Material.class);
-        if (tag == null) return;
-
-        for (Material material : tag.getValues()) {
-            addAndOverride(gifts, createGift(material, predicate));
+            for (Material material : tag.getValues()) {
+                addAndOverride(gifts, createGift(amount, material, inventoryLootOnly, predicate));
+            }
+            found = true;
         }
+        return found;
     }
 
     public GiftCategory getCategory(IVillagerNPC npc, ItemStack item) {

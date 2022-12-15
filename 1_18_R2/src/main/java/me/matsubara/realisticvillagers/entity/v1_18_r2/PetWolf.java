@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2;
 
+import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -34,8 +35,8 @@ public class PetWolf extends Wolf implements Pet {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Setter
-    private boolean tamedByPlayer;
+    @Getter
+    private @Setter boolean tamedByPlayer;
 
     public PetWolf(EntityType<? extends Wolf> type, Level level) {
         super(type, level);
@@ -74,8 +75,12 @@ public class PetWolf extends Wolf implements Pet {
         setTamedByPlayer(false);
         getNavigation().stop();
         setTarget(null);
-        level.broadcastEntityEvent(this, (byte) 7);
         setPersistenceRequired();
+    }
+
+    @Override
+    public UUID getOwnerUniqueId() {
+        return super.getOwnerUUID();
     }
 
     @Override
@@ -118,6 +123,7 @@ public class PetWolf extends Wolf implements Pet {
             this.wolf = wolf;
         }
 
+        @Override
         public boolean canUse() {
             return super.canUse() && toAvoid instanceof Llama && !wolf.isTame() && avoidLlama((Llama) toAvoid);
         }
@@ -126,11 +132,13 @@ public class PetWolf extends Wolf implements Pet {
             return llama.getStrength() >= wolf.getRandom().nextInt(5);
         }
 
+        @Override
         public void start() {
             wolf.setTarget(null);
             super.start();
         }
 
+        @Override
         public void tick() {
             wolf.setTarget(null);
             super.tick();
@@ -143,6 +151,7 @@ public class PetWolf extends Wolf implements Pet {
             super(wolf, speedModifier);
         }
 
+        @Override
         protected boolean shouldPanic() {
             return mob.isFreezing() || mob.isOnFire();
         }
@@ -156,6 +165,7 @@ public class PetWolf extends Wolf implements Pet {
         private final float lookDistance;
         private int lookTime;
         private final TargetingConditions begTargeting;
+        private int tryVillagerAgain;
 
         public BegGoal(Wolf wolf, float lookDistance) {
             this.wolf = wolf;
@@ -165,16 +175,16 @@ public class PetWolf extends Wolf implements Pet {
             setFlags(EnumSet.of(Flag.LOOK));
         }
 
+        @Override
         public boolean canUse() {
-            LivingEntity closestVillager = getNearestVillager();
             LivingEntity closestPlayer = level.getNearestPlayer(begTargeting, wolf);
-
-            if (closestVillager != null && closestPlayer != null) {
-                living = wolf.distanceTo(closestVillager) > wolf.distanceTo(closestPlayer) ? closestPlayer : closestVillager;
-            } else if (closestVillager != null) {
-                living = closestVillager;
-            } else if (closestPlayer != null) {
+            if (closestPlayer != null) {
                 living = closestPlayer;
+            } else if (--tryVillagerAgain <= 0) {
+                living = getNearestVillager();
+
+                // Try again in 5 seconds.
+                tryVillagerAgain = 100;
             }
 
             return living != null && holdingInteresting(living);
@@ -183,13 +193,15 @@ public class PetWolf extends Wolf implements Pet {
         private LivingEntity getNearestVillager() {
             return level.getNearestEntity(
                     VillagerNPC.class,
-                    begTargeting, wolf,
+                    begTargeting,
+                    wolf,
                     wolf.getX(),
                     wolf.getY(),
                     wolf.getZ(),
                     wolf.getBoundingBox().inflate(lookDistance, lookDistance, lookDistance));
         }
 
+        @Override
         public boolean canContinueToUse() {
             if (living == null || !living.isAlive()) return false;
             if (wolf.distanceToSqr(living) > lookDistance * lookDistance) return false;
@@ -197,16 +209,19 @@ public class PetWolf extends Wolf implements Pet {
             return lookTime > 0 && holdingInteresting(living);
         }
 
+        @Override
         public void start() {
             wolf.setIsInterested(true);
             lookTime = adjustedTickDelay(40 + wolf.getRandom().nextInt(40));
         }
 
+        @Override
         public void stop() {
             wolf.setIsInterested(false);
             living = null;
         }
 
+        @Override
         public void tick() {
             if (living != null) wolf.getLookControl().setLookAt(
                     living.getX(),

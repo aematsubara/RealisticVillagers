@@ -21,6 +21,7 @@ public enum Config {
 
     ZOMBIE_INFECTION("zombie-infection"),
     WITCH_CONVERTION("witch-convertion"),
+    WITCH_CONVERTION_FROM_VILLAGER_TRIDENT("witch-convertion-from-villager-trident"),
 
     BABY_GROW_COOLDOWN("baby-grow-cooldown"),
     PROCREATION_COOLDOWN("procreation-cooldown"),
@@ -41,6 +42,7 @@ public enum Config {
 
     WHO_CAN_MODIFY_VILLAGER_COMBAT("who-can-modify-villager-combat"),
 
+    DEAD("variable-text.dead"),
     NONE("variable-text.none"),
     UNKNOWN("variable-text.unknown"),
     VILLAGER("variable-text.villager"),
@@ -58,15 +60,9 @@ public enum Config {
     DROP_WHOLE_INVENTORY("drop-whole-inventory"),
 
     ATTACK_DAMAGE("attack-damage"),
-    CHANCE_OF_WEARING_WEAPON("chance-of-wearing-weapon"),
-    CHANCE_OF_WEARING_EACH_ARMOUR_ITEM("chance-of-wearing-each-armour-item"),
-    CHANCE_OF_WEARING_SHIELD("chance-of-wearing-shield"),
     CHANCE_OF_WEARING_HALLOWEEN_MASK("chance-of-wearing-halloween-mask"),
     RANGE_WEAPON_POWER("range-weapon-power"),
     VILLAGER_INVENTORY_SIZE("villager-inventory-size"),
-
-    MIN_AMOUNT_OF_ARROWS("min-amount-of-arrows"),
-    MAX_AMOUNT_OF_ARROWS("max-amount-of-arrows"),
 
     DIVORCE_IF_REPUTATION_IS_LESS_THAN("divorce-if-reputation-is-less-than"),
 
@@ -74,9 +70,11 @@ public enum Config {
     SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE("show-title-in-villager-chat-message"),
 
     VILLAGER_ATTACK_PLAYER_DURING_RAID("villager-attack-player-during-raid"),
+    IRON_GOLEM_ATTACK_PLAYER_DURING_RAID("iron-golem-attack-player-during-raid"),
 
     VILLAGER_DEFEND_FAMILY_MEMBER("villager-defend-family-member"),
     VILLAGER_DEFEND_HERO_OF_THE_VILLAGE("villager-defend-hero-of-the-village"),
+    VILLAGER_DEFEND_FOLLOWING_PLAYER("villager-defend-following-player"),
 
     REPUTATION_REQUIRED_TO_MARRY("reputation-required-to-marry"),
     REPUTATION_REQUIRED_TO_PROCREATE("reputation-required-to-procreate"),
@@ -92,6 +90,9 @@ public enum Config {
     BABY_TITLE("input-gui.baby.title"),
     BABY_TEXT("input-gui.baby.text"),
     BABY_INVALID_NAME("input-gui.baby.invalid-name"),
+
+    WHISTLE_SEARCH_TITLE("input-gui.whistle-search.title"),
+    WHISTLE_SEARCH_TEXT("input-gui.whistle-search.text"),
 
     FISHING_ROD_CHANCE("fishing-rod-chance"),
     FISHING_COOLDOWN("fishing-cooldown"),
@@ -119,7 +120,18 @@ public enum Config {
     LOOT_CHEST_PER_CHEST_COOLDOWN("loot-chest.per-chest-cooldown"),
     LOOT_CHEST_ALLOW_BABIES("loot-chest.allow-babies"),
     REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW("reputation-required-to-ask-to-follow"),
-    REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay");
+    REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay"),
+    INITIAL_REPUTATION_AT_BIRTH("initial-reputation-at-birth"),
+    SPAWN_LOOT_FORCE_EQUIP("spawn-loot.force-equip"),
+    GUI_MAIN_FRAME_ENABLED("gui.main.frame.enabled"),
+    VILLAGER_ADOPTS_ABANDONED_PET("villager-adopts-abandoned-pet"),
+    VILLAGER_CROSSBOW_FIREWORK_DAMAGES_OTHER_VILLAGERS("villager-crossbow-firework-damages-other-villagers"),
+    GREET_MESSAGES_ENABLED("greet-messages.enabled"),
+    GREET_MESSAGES_RANGE("greet-messages.range"),
+    GREET_MESSAGES_COOLDOWN("greet-messages.cooldown"),
+    GREET_MESSAGES_PER_TYPE_COOLDOWN("greet-messages.per-type-cooldown"),
+    GREET_MESSAGES_REQUIRED_REPUTATION("greet-messages.required-reputation"),
+    RIPTIDE_ONLY_IN_WATER_OR_RAIN("riptide-only-in-water-or-rain");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);

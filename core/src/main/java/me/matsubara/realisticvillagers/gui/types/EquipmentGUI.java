@@ -23,7 +23,6 @@ public final class EquipmentGUI extends InteractGUI {
     private final ItemStack head;
 
     private static final ItemStack EMPTY = new ItemStack(Material.AIR);
-    private static final String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
     public static final EquipmentSlot[] ARMOR_SLOTS_ORDER = {
             EquipmentSlot.HEAD,
             EquipmentSlot.CHEST,
@@ -32,8 +31,8 @@ public final class EquipmentGUI extends InteractGUI {
             EquipmentSlot.HAND,
             EquipmentSlot.OFF_HAND};
 
-    public EquipmentGUI(RealisticVillagers plugin, Player player, IVillagerNPC npc) {
-        super("equipment", plugin, npc, npc.bukkit().getInventory().getSize() + 18, null);
+    public EquipmentGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player) {
+        super(plugin, npc, "equipment", npc.bukkit().getInventory().getSize() + 18, null);
         this.close = getGUIItem("close");
         this.border = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
                 .setDisplayName("&7")

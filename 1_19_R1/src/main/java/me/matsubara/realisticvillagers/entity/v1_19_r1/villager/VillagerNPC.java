@@ -10,14 +10,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.data.ChangeItemType;
-import me.matsubara.realisticvillagers.data.ExpectingType;
-import me.matsubara.realisticvillagers.data.InteractType;
-import me.matsubara.realisticvillagers.data.TargetReason;
+import me.matsubara.realisticvillagers.data.*;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.DummyFishingHook;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.VillagerNPCGoalPackages;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.core.LootChest;
+import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.sensing.NearestItemSensor;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.sensing.VillagerHostilesSensor;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
@@ -26,11 +25,17 @@ import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.listener.InventoryListeners;
+import me.matsubara.realisticvillagers.nms.v1_19_r1.CustomGossipContainer;
 import me.matsubara.realisticvillagers.nms.v1_19_r1.NMSConverter;
 import me.matsubara.realisticvillagers.nms.v1_19_r1.VillagerFoodData;
+import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import net.minecraft.Util;
-import net.minecraft.core.*;
+import me.matsubara.realisticvillagers.util.npc.NPC;
+import me.matsubara.realisticvillagers.util.npc.modifier.MetadataModifier;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -41,13 +46,13 @@ import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
@@ -65,22 +70,21 @@ import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
 import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.ReputationEventType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.projectile.*;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.vehicle.Boat;
@@ -95,8 +99,10 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -107,7 +113,9 @@ import org.bukkit.craftbukkit.v1_19_R1.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_19_R1.inventory.CraftItemStack;
 import org.bukkit.entity.FishHook;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -129,7 +137,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     private String villagerName;
     private String sex;
-    private UUID partner;
+    private IVillagerNPC partner;
     private boolean isPartnerVillager;
     private long lastProcreation;
     private int skinTextureId = -1;
@@ -140,15 +148,16 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private int expectingTicks;
     private boolean giftDropped;
     private UUID procreatingWith;
-    private UUID father;
+    private IVillagerNPC father;
     private boolean isFatherVillager;
-    private UUID mother;
-    private boolean isMotherVillager;
-    private List<UUID> childrens = new ArrayList<>();
+    private IVillagerNPC mother;
+    private boolean isMotherVillager = true;
+    private List<IVillagerNPC> childrens = new ArrayList<>();
     private UUID bedHomeWorld;
     private BlockPos bedHome;
     private Set<EntityType<?>> targetEntities = getDefaultTargets();
     private long lastGossipTime;
+    private long lastGossipDecayTime;
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private DamageSource lastDamageSource;
@@ -161,11 +170,19 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean isLooting;
     private boolean wasInfected;
     private boolean shakingHead;
+    private boolean equipped;
+    private boolean isAttackingWithTrident;
+    private ThrownTrident thrownTrident;
     private ServerPlayer shakingHeadAt;
+    private long timeEntitySatOnShoulder;
+    private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
+    private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
+    private double previousSpeedModifier;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
     private final VillagerFoodData foodData = new VillagerFoodData(this);
+    private final @Setter(AccessLevel.NONE) CustomGossipContainer gossips = new CustomGossipContainer();
 
     public static final MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
@@ -236,6 +253,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             NEAREST_ITEMS != null ? NEAREST_ITEMS : SensorType.NEAREST_ITEMS,
             NEAREST_HOSTILE != null ? NEAREST_HOSTILE : SensorType.VILLAGER_HOSTILES);
 
+    public static final float SWIMMING_SPEED_MODIFIER = SPEED_MODIFIER * 2.0f;
+    public static final float SPRINT_SPEED_MODIFIER = SPEED_MODIFIER * 1.5f;
+    private static final int GOSSIP_DECAY_INTERVAL = 24000;
     private static final Vec3i ITEM_PICKUP_REACH = new Vec3i(1, 1, 1);
     private static final int[] ROTATION = {-1, -3 - 5, -7, -7, -6, -4, -2, 1, 3, 5, 7, 7, 6, 4, 2, 2, 0};
     private static final EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(VillagerNPC.class, EntityDataSerializers.BOOLEAN);
@@ -249,12 +269,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     private static final MethodHandle BUKKIT_ENTITY = Reflection.getFieldSetter(Entity.class, "bukkitEntity");
 
-    public VillagerNPC(EntityType<? extends Villager> type, Level world) {
-        this(type, world, VillagerType.PLAINS);
+    public VillagerNPC(EntityType<? extends Villager> type, Level level) {
+        this(type, level, VillagerType.PLAINS);
     }
 
-    public VillagerNPC(EntityType<? extends Villager> type, Level world, VillagerType villagerType) {
-        super(type, world, villagerType);
+    public VillagerNPC(EntityType<? extends Villager> type, Level level, VillagerType villagerType) {
+        super(type, level, villagerType);
 
         refreshBrain((ServerLevel) level);
 
@@ -319,8 +339,25 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public CustomGossipContainer getGossips() {
+        return gossips;
+    }
+
+    @Override
+    public int getPlayerReputation(Player player) {
+        return gossips.getReputation(player.getUUID(), (type) -> true);
+    }
+
+    @Override
+    public void setGossips(Tag tag) {
+        gossips.update(new Dynamic<>(NbtOps.INSTANCE, tag));
+    }
+
+    @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+
+        tag.putLong("LastGossipDecay", lastGossipDecayTime);
 
         // Save the previous (vanilla) custom name.
         Component customName = getCustomName(true);
@@ -340,27 +377,39 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public void savePluginData(CompoundTag tag) {
         CompoundTag villagerTag = new CompoundTag();
-        villagerTag.put("Inventory", inventory.createTag());
-        villagerTag.putString("Name", villagerName);
-        villagerTag.putString("Sex", sex);
-        if (partner != null) villagerTag.putUUID("Partner", partner);
-        villagerTag.putBoolean("IsPartnerVillager", isPartnerVillager);
-        villagerTag.putLong("LastProcreation", lastProcreation);
-        villagerTag.putInt("SkinTextureId", skinTextureId);
-        if (father != null) villagerTag.putUUID("Father", father);
-        if (mother != null) villagerTag.putUUID("Mother", mother);
-        villagerTag.putBoolean("IsFatherVillager", isFatherVillager);
-        villagerTag.putBoolean("WasInfected", wasInfected);
-        saveCollection(childrens, NbtUtils::createUUID, "Childrens", villagerTag);
-        saveCollection(targetEntities, type -> StringTag.valueOf(type.toShortString()), "TargetEntities", villagerTag);
+        villagerTag.put(OfflineVillagerNPC.INVENTORY, inventory.createTag());
+        villagerTag.putString(OfflineVillagerNPC.NAME, villagerName);
+        villagerTag.putString(OfflineVillagerNPC.SEX, sex);
+        if (partner != null) villagerTag.put(OfflineVillagerNPC.PARTNER, fromOffline(partner));
+        villagerTag.putBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER, isPartnerVillager);
+        villagerTag.putLong(OfflineVillagerNPC.LAST_PROCREATION, lastProcreation);
+        villagerTag.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
+        if (father != null) villagerTag.put(OfflineVillagerNPC.FATHER, fromOffline(father));
+        if (mother != null) villagerTag.put(OfflineVillagerNPC.MOTHER, fromOffline(mother));
+        villagerTag.putBoolean(OfflineVillagerNPC.IS_FATHER_VILLAGER, isFatherVillager);
+        villagerTag.putBoolean(OfflineVillagerNPC.WAS_INFECTED, wasInfected);
+        villagerTag.putBoolean(OfflineVillagerNPC.EQUIPPED, equipped);
+        if (!shoulderEntityLeft.isEmpty()) {
+            villagerTag.put(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT, shoulderEntityLeft);
+        }
+        if (!shoulderEntityRight.isEmpty()) {
+            villagerTag.put(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT, shoulderEntityRight);
+        }
+        villagerTag.put(OfflineVillagerNPC.GOSSIPS, gossips.store(NbtOps.INSTANCE).getValue());
+        saveCollection(childrens, this::fromOffline, OfflineVillagerNPC.CHILDRENS, villagerTag);
+        saveCollection(targetEntities, type -> StringTag.valueOf(type.toShortString()), OfflineVillagerNPC.TARGET_ENTITIES, villagerTag);
         if (bedHome != null && bedHomeWorld != null) {
             CompoundTag bedHomeTag = new CompoundTag();
-            bedHomeTag.putUUID("BedHomeWorld", bedHomeWorld);
-            bedHomeTag.put("BedHomePos", newDoubleList(bedHome.getX(), bedHome.getY(), bedHome.getZ()));
-            villagerTag.put("BedHome", bedHomeTag);
+            bedHomeTag.putUUID(OfflineVillagerNPC.BED_HOME_WORLD, bedHomeWorld);
+            bedHomeTag.put(OfflineVillagerNPC.BED_HOME_POS, newDoubleList(bedHome.getX(), bedHome.getY(), bedHome.getZ()));
+            villagerTag.put(OfflineVillagerNPC.BED_HOME, bedHomeTag);
         }
         foodData.addAdditionalSaveData(villagerTag);
         tag.put(plugin.getNpcValuesKey().toString(), villagerTag);
+    }
+
+    private CompoundTag fromOffline(IVillagerNPC villager) {
+        return villager instanceof OfflineVillagerNPC offline ? offline.getTag() : null;
     }
 
     private <T> void saveCollection(Collection<T> collection, Function<T, Tag> mapper, String name, CompoundTag tag) {
@@ -375,6 +424,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
 
+        // Load gossips from vanilla. If our custom gossips isn't in our custom tag, we use vanilla ones.
+        gossips.update(new Dynamic<>(NbtOps.INSTANCE, tag.getList("Gossips", 10)));
+        lastGossipDecayTime = tag.getLong("LastGossipDecay");
+
         CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
 
         Tag base = bukkit.get(plugin.getNpcValuesKey().toString());
@@ -388,35 +441,81 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public void loadPluginData(CompoundTag villagerTag) {
-        inventory.fromTag(villagerTag.getList("Inventory", 10));
-        villagerName = villagerTag.getString("Name");
-        sex = villagerTag.getString("Sex");
+        inventory.fromTag(villagerTag.getList(OfflineVillagerNPC.INVENTORY, 10));
+        villagerName = villagerTag.getString(OfflineVillagerNPC.NAME);
+        sex = villagerTag.getString(OfflineVillagerNPC.SEX);
         if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
         if (villagerName.isEmpty()) setVillagerName(plugin.getTracker().getRandomNameBySex(sex));
-        if (villagerTag.contains("Partner")) partner = villagerTag.getUUID("Partner");
-        isPartnerVillager = villagerTag.getBoolean("IsPartnerVillager");
-        lastProcreation = villagerTag.getLong("LastProcreation");
-        skinTextureId = villagerTag.contains("SkinTextureId") ? villagerTag.getInt("SkinTextureId") : -1;
-        if (villagerTag.contains("Father")) father = villagerTag.getUUID("Father");
-        if (villagerTag.contains("Mother")) mother = villagerTag.getUUID("Mother");
-        isFatherVillager = villagerTag.getBoolean("IsFatherVillager");
-        wasInfected = villagerTag.getBoolean("WasInfected");
-        fillCollection(childrens, NbtUtils::loadUUID, "Childrens", villagerTag);
-        fillCollection(targetEntities, input -> EntityType.byString(input.getAsString()).orElse(null), "TargetEntities", villagerTag);
+        isPartnerVillager = villagerTag.getBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER);
+        partner = getFamily(villagerTag, OfflineVillagerNPC.PARTNER, isPartnerVillager);
+        lastProcreation = villagerTag.getLong(OfflineVillagerNPC.LAST_PROCREATION);
+        skinTextureId = villagerTag.contains(OfflineVillagerNPC.SKIN_TEXTURE_ID) ?
+                villagerTag.getInt(OfflineVillagerNPC.SKIN_TEXTURE_ID) :
+                -1;
+        isFatherVillager = villagerTag.getBoolean(OfflineVillagerNPC.IS_FATHER_VILLAGER);
+        father = getFamily(villagerTag, OfflineVillagerNPC.FATHER, isFatherVillager);
+        mother = getFamily(villagerTag, OfflineVillagerNPC.MOTHER, true);
+        wasInfected = villagerTag.getBoolean(OfflineVillagerNPC.WAS_INFECTED);
+        equipped = villagerTag.getBoolean(OfflineVillagerNPC.EQUIPPED);
+        if (villagerTag.contains(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT, 10)) {
+            setShoulderEntityLeft(villagerTag.getCompound(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT));
+        }
+        if (villagerTag.contains(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT, 10)) {
+            setShoulderEntityRight(villagerTag.getCompound(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT));
+        }
+        ListTag gossips = villagerTag.getList(OfflineVillagerNPC.GOSSIPS, 10);
+        if (!gossips.isEmpty()) {
+            this.gossips.clear();
+            this.gossips.update(new Dynamic<>(NbtOps.INSTANCE, gossips));
+        }
+        fillCollection(
+                childrens,
+                input -> {
+                    if (input instanceof CompoundTag compound) {
+                        return OfflineVillagerNPC.from(compound);
+                    } else {
+                        UUID uuid = NbtUtils.loadUUID(input);
+                        return plugin.getTracker().getOffline(uuid);
+                    }
+                },
+                OfflineVillagerNPC.CHILDRENS,
+                villagerTag);
+        fillCollection(
+                targetEntities,
+                input -> EntityType.byString(input.getAsString()).orElse(null),
+                OfflineVillagerNPC.TARGET_ENTITIES,
+                villagerTag);
         loadBedHomePosition(villagerTag);
         foodData.readAdditionalSaveData(villagerTag);
     }
 
-    private void loadBedHomePosition(CompoundTag tag) {
-        if (!tag.contains("BedHome")) return;
+    @Override
+    public float getScale() {
+        // For babies is 0.5, but that would suffocate villagers.
+        return 1.0f;
+    }
 
-        CompoundTag bedHomeTag = (CompoundTag) tag.get("BedHome");
+    private IVillagerNPC getFamily(CompoundTag tag, String who, boolean isVillager) {
+        if (!tag.contains(who)) return null;
+
+        if (tag.hasUUID(who)) {
+            UUID uuid = tag.getUUID(who);
+            return isVillager ? plugin.getTracker().getOffline(uuid) : dummyPlayerOffline(uuid);
+        } else {
+            return OfflineVillagerNPC.from(tag.getCompound(who));
+        }
+    }
+
+    private void loadBedHomePosition(CompoundTag tag) {
+        if (!tag.contains(OfflineVillagerNPC.BED_HOME)) return;
+
+        CompoundTag bedHomeTag = (CompoundTag) tag.get(OfflineVillagerNPC.BED_HOME);
         if (bedHomeTag == null) return;
 
-        World world = Bukkit.getServer().getWorld(bedHomeTag.getUUID("BedHomeWorld"));
+        World world = Bukkit.getServer().getWorld(bedHomeTag.getUUID(OfflineVillagerNPC.BED_HOME_WORLD));
         if (world == null) return;
 
-        ListTag coords = bedHomeTag.getList("BedHomePos", 6);
+        ListTag coords = bedHomeTag.getList(OfflineVillagerNPC.BED_HOME_POS, 6);
         double x = coords.getDouble(0);
         double y = coords.getDouble(1);
         double z = coords.getDouble(2);
@@ -442,7 +541,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @SuppressWarnings({"Guava"})
-    private <T> void fillCollection(Collection<T> collection, Function<Tag, T> mapper, String name, CompoundTag tag) {
+    public static <T> void fillCollection(Collection<T> collection, Function<Tag, T> mapper, String name, CompoundTag tag) {
         if (!tag.contains(name)) return;
         collection.clear();
 
@@ -583,10 +682,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             }
         }
 
-        if (!isRocket) {
-            ((AbstractArrow) projectile).pickup = AbstractArrow.Pickup.ALLOWED;
-        }
-
         if (isBow) {
             shootBow(target, projectile);
         } else {
@@ -655,36 +750,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         entityData.define(DATA_IS_CHARGING, false);
     }
 
-    private void maybeWearWeaponAndShield() {
-        if (random.nextFloat() >= Config.CHANCE_OF_WEARING_WEAPON.asFloat()) return;
-
-        ItemStack weapon = createSpawnWeapon();
-        if (!weapon.isEmpty()) {
-            setItemSlot(EquipmentSlot.MAINHAND, weapon);
-            if (random.nextFloat() < Config.CHANCE_OF_WEARING_SHIELD.asFloat()) {
-                setItemSlot(EquipmentSlot.OFFHAND, Items.SHIELD.getDefaultInstance());
-            }
-        }
-
-        if (weapon.getItem() instanceof ProjectileWeaponItem) {
-            int min = Config.MIN_AMOUNT_OF_ARROWS.asInt();
-            int max = Config.MAX_AMOUNT_OF_ARROWS.asInt();
-            inventory.addItem(new ItemStack(Items.ARROW, random.nextInt(min, max)));
-        }
-    }
-
-    private void maybeWearArmor(EquipmentSlot slot) {
-        if (!getItemBySlot(slot).isEmpty()) return;
-        if (random.nextFloat() >= Config.CHANCE_OF_WEARING_EACH_ARMOUR_ITEM.asFloat()) return;
-
-        Optional<Item> item = getItemByNameFromConfig("armor-items." + slot.name().toLowerCase());
-        item.ifPresent(value -> setItemSlot(slot, value.getDefaultInstance()));
-    }
-
     @SuppressWarnings("deprecation")
     @Override
     public void die(DamageSource source) {
         super.die(source);
+
+        tellFamilyThatIWasMurdered(source);
 
         // Stop all behaviors.
         for (Behavior<? super Villager> behavior : getBrain().getRunningBehaviors()) {
@@ -694,50 +765,39 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
 
         if (!level.isClientSide && hasPartner() && !isPartnerVillager) {
-            Player player = level.getPlayerByUUID(getPartner());
+            Player player = level.getPlayerByUUID(getPartner().getUniqueId());
             if (player != null) player.sendSystemMessage(getCombatTracker().getDeathMessage());
         }
+
+        if (!isRemoved()) removeEntitiesOnShoulder();
     }
 
-    private ItemStack createSpawnWeapon() {
-        List<String> weapons = plugin.getConfig().getStringList("random-weapon");
-        if (weapons.isEmpty()) return ItemStack.EMPTY;
+    private void tellFamilyThatIWasMurdered(DamageSource source) {
+        if (isInsideRaid()) return;
 
-        Optional<Item> item = Registry.ITEM.getOptional(new ResourceLocation(Util.getRandom(weapons, random).toLowerCase()));
-        if (item.isPresent()) return item.get().getDefaultInstance();
+        Entity entity = source.getEntity();
+        if (!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)) return;
 
-        return ItemStack.EMPTY;
-    }
+        Optional<NearestVisibleLivingEntities> optional = getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+        if (optional.isEmpty()) return;
 
-    private Optional<Item> getItemByNameFromConfig(String path) {
-        String item = plugin.getConfig().getString(path);
-        if (item != null) return Registry.ITEM.getOptional(new ResourceLocation(item.toLowerCase()));
-        return Optional.empty();
+        optional.get()
+                .findAll(living -> living instanceof VillagerNPC npc && npc.isFamily(getUUID(), true))
+                .forEach(living -> VillagerPanicTrigger.handleFightReaction(
+                        ((Villager) living).getBrain(),
+                        (LivingEntity) entity,
+                        TargetReason.DEFEND));
     }
 
     @SuppressWarnings("unused")
-    private boolean isCharging() {
+    public boolean isCharging() {
         return entityData.get(DATA_IS_CHARGING);
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType, @Nullable SpawnGroupData groupData, @Nullable CompoundTag tag) {
-        if (!isBaby() && spawnType != MobSpawnType.BREEDING && !wasInfected) {
-
-            maybeWearWeaponAndShield();
-
-            maybeWearArmor(EquipmentSlot.HEAD);
-            maybeWearArmor(EquipmentSlot.CHEST);
-            maybeWearArmor(EquipmentSlot.LEGS);
-            maybeWearArmor(EquipmentSlot.FEET);
-
-            enchantItemBySlot(EquipmentSlot.MAINHAND, 0.25f);
-            enchantItemBySlot(EquipmentSlot.OFFHAND, 0.25f);
-
-            for (EquipmentSlot slot : EquipmentSlot.values()) {
-                if (slot.getType() != EquipmentSlot.Type.ARMOR) continue;
-                enchantItemBySlot(slot, 0.5f);
-            }
+        if (!wasInfected && !equipped && !isBaby() && spawnType != MobSpawnType.BREEDING) {
+            plugin.equipVillager(getBukkitEntity(), true);
         }
 
         if (wasInfected) wasInfected = false;
@@ -762,15 +822,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         setDropChance(slot, chance);
     }
 
-    private void enchantItemBySlot(EquipmentSlot slot, float chance) {
-        float multiplier = getLevel().getCurrentDifficultyAt(blockPosition()).getSpecialMultiplier();
-
-        ItemStack item = getItemBySlot(slot);
-        if (!item.isEmpty() && random.nextFloat() < chance * multiplier) {
-            setItemSlot(slot, EnchantmentHelper.enchantItem(random, item, (int) (5.0f + multiplier * (float) random.nextInt(18)), false));
-        }
-    }
-
     @Override
     public void setDropChance(EquipmentSlot slot, float chance) {
         (slot.getType() == EquipmentSlot.Type.HAND ? handDropChances : armorDropChances)[slot.getIndex()] = chance;
@@ -790,7 +841,16 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 || (EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)
                 && raidCheck
                 && thornsCheck)) {
-            super.onReputationEventFrom(type, entity);
+            if (type == ReputationEventType.ZOMBIE_VILLAGER_CURED) {
+                gossips.add(entity.getUUID(), GossipType.MAJOR_POSITIVE, 20);
+                gossips.add(entity.getUUID(), GossipType.MINOR_POSITIVE, 25);
+            } else if (type == ReputationEventType.TRADE) {
+                gossips.add(entity.getUUID(), GossipType.TRADING, 2);
+            } else if (type == ReputationEventType.VILLAGER_HURT) {
+                gossips.add(entity.getUUID(), GossipType.MINOR_NEGATIVE, 25);
+            } else if (type == ReputationEventType.VILLAGER_KILLED) {
+                gossips.add(entity.getUUID(), GossipType.MAJOR_NEGATIVE, 25);
+            }
         }
 
         if (!isPartner(entity.getUUID()) || !(entity instanceof ServerPlayer player)) return;
@@ -803,7 +863,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public void divorceAndDropRing(Player player) {
-        org.bukkit.inventory.ItemStack ring = plugin.getRing().getRecipe().getResult();
+        org.bukkit.inventory.ItemStack ring = plugin.getRing().getResult();
         getBukkitEntity().getInventory().removeItem(ring);
         drop(CraftItemStack.asNMSCopy(ring));
 
@@ -811,8 +871,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
     }
 
+    @Override
     public boolean isPartner(UUID uuid) {
-        return partner != null && partner.equals(uuid);
+        return partner != null && partner.getUniqueId().equals(uuid);
     }
 
     @Override
@@ -861,18 +922,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return super.eat(level, item);
     }
 
-    public boolean canEat(boolean flag) {
-        return flag || foodData.needsFood();
-    }
-
     public boolean isHurt() {
         return getHealth() > 0.0f && getHealth() < getMaxHealth();
     }
 
-    public void causeFoodExhaustion(float exhaustion) {
-        causeFoodExhaustion(exhaustion, VillagerExhaustionEvent.ExhaustionReason.UNKNOWN);
-    }
-
+    @Override
     public void causeFoodExhaustion(float exhaustion, VillagerExhaustionEvent.ExhaustionReason reason) {
         if (!level.isClientSide) {
             VillagerExhaustionEvent event = new VillagerExhaustionEvent(this, reason, exhaustion);
@@ -1005,6 +1059,25 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public IVillagerNPC getOffline() {
+        CompoundTag tag = new CompoundTag();
+        savePluginData(tag);
+
+        return OfflineVillagerNPC.from(uuid,
+                (CompoundTag) tag.get(plugin.getNpcValuesKey().toString()),
+                level.getWorld().getName(),
+                getX(),
+                getY(),
+                getZ());
+    }
+
+    @Override
+    public LastKnownPosition getLastKnownPosition() {
+        // Only needed for offlines.
+        return null;
+    }
+
+    @Override
     protected @Nullable SoundEvent getAmbientSound() {
         return useVillagerSounds() ? super.getAmbientSound() : null;
     }
@@ -1061,8 +1134,21 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public void setPartner(UUID partner, boolean isPartnerVillager) {
-        this.partner = partner;
+        if (isPartnerVillager) {
+            IVillagerNPC partnerNPC = plugin.getTracker().getOffline(partner);
+            if (partnerNPC != null) this.partner = partnerNPC;
+        } else {
+            this.partner = dummyPlayerOffline(partner);
+        }
         this.isPartnerVillager = isPartnerVillager;
+    }
+
+    public static OfflineVillagerNPC dummyPlayerOffline(UUID uuid) {
+        OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
+        CompoundTag tag = new CompoundTag();
+        String name = player.getName();
+        tag.putString("Name", name != null ? name : "???");
+        return new OfflineVillagerNPC(uuid, tag, LastKnownPosition.ZERO);
     }
 
     @Override
@@ -1164,10 +1250,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
+    @Override
     public boolean isFemale() {
         return sex.equalsIgnoreCase("female");
     }
 
+    @Override
     public boolean isMale() {
         return sex.equalsIgnoreCase("male");
     }
@@ -1211,8 +1299,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         ItemStack fakeRemaining = new SimpleContainer(container).addItem(stack);
 
+        UUID thrower = getThrower(stack);
+        boolean wasFromGift = isExpectingGiftFrom(thrower);
+
         EntityPickupItemEvent event = CraftEventFactory.callEntityPickupItemEvent(this, entity, fakeRemaining.getCount(), false);
-        // TODO if (event.isCancelled()) return;
 
         stack = CraftItemStack.asNMSCopy(event.getItem().getItemStack());
 
@@ -1223,6 +1313,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         for (Class<? extends Item> clazz : DO_NOT_SAVE) {
             if (clazz.isAssignableFrom(item.getClass())) {
                 handleRemaining(stack, fakeRemaining, entity);
+                if (!wasFromGift) {
+                    ItemStackUtils.setBetterWeaponInMaindHand(getBukkitEntity(), event.getItem().getItemStack(), true, true);
+                    ItemStackUtils.setArmorItem(getBukkitEntity(), event.getItem().getItemStack());
+                }
                 return;
             }
         }
@@ -1256,7 +1350,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return isDoingNothing((ChangeItemType) null);
     }
 
-    private boolean isChangingItem(ChangeItemType ignore) {
+    public boolean isChangingItem(ChangeItemType ignore) {
         return getChangingItem(ignore) != null;
     }
 
@@ -1301,7 +1395,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (isExpectingGiftFrom(thrower)) return true;
         if (fished(stack)) return true;
 
-        return thrower == null && plugin.isWantedItem(this, CraftItemStack.asBukkitCopy(stack));
+        return thrower == null && plugin.getWantedItem(this, CraftItemStack.asBukkitCopy(stack), true) != null;
     }
 
     public boolean fished(ItemStack item) {
@@ -1353,12 +1447,85 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void thunderHit(ServerLevel level, LightningBolt lightning) {
-        if (Config.WITCH_CONVERTION.asBool()) super.thunderHit(level, lightning);
+        if (Config.WITCH_CONVERTION.asBool() && fromTrident(lightning)) {
+            super.thunderHit(level, lightning);
+        }
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private boolean fromTrident(LightningBolt lightning) {
+        // If the cause is a player, then it's from a player trident.
+        if (lightning.getCause() != null) return true;
+
+        for (MetadataValue meta : lightning.getBukkitEntity().getMetadata("Cause")) {
+            if (!plugin.equals(meta.getOwningPlugin())) continue;
+            if (!(meta.value() instanceof LightningStrikeEvent.Cause cause)) continue;
+
+            // 100% chance that this lightning is from a trident thrown by a villager.
+            if (cause == LightningStrikeEvent.Cause.TRIDENT) {
+                return Config.WITCH_CONVERTION_FROM_VILLAGER_TRIDENT.asBool();
+            }
+        }
+
+        // Probably it's a natural lightning.
+        return true;
     }
 
     @Override
     public double getMeleeAttackRangeSqr(@Nullable LivingEntity living) {
         return Config.MELEE_ATTACK_RANGE.asDouble();
+    }
+
+    public void startAutoSpinAttack(int autoSpinAttackTicks) {
+        this.autoSpinAttackTicks = autoSpinAttackTicks;
+        if (!level.isClientSide) {
+            removeEntitiesOnShoulder();
+            setLivingEntityFlag(4, true);
+            setPose(Pose.SPIN_ATTACK);
+        }
+    }
+
+    @Override
+    public float getStandingEyeHeight(Pose pose, EntityDimensions dimensions) {
+        return switch (pose) {
+            case FALL_FLYING, SWIMMING, SPIN_ATTACK -> 0.4f;
+            case CROUCHING -> 1.27f;
+            default -> 1.62f;
+        };
+    }
+
+    @Override
+    public void checkAutoSpinAttack(AABB first, AABB second) {
+        // super.checkAutoSpinAttack(first, second);
+
+        List<Entity> list = level.getEntities(
+                this,
+                first.minmax(second),
+                entity -> entity instanceof LivingEntity living && !(living instanceof VillagerNPC));
+
+        if (!list.isEmpty()) {
+            for (Entity entity : list) {
+                doAutoAttackOnTouch((LivingEntity) entity);
+                autoSpinAttackTicks = 0;
+                setDeltaMovement(getDeltaMovement().scale(-0.2d));
+                break;
+            }
+        } else if (horizontalCollision) {
+            autoSpinAttackTicks = 0;
+        }
+
+        if (!level.isClientSide && autoSpinAttackTicks <= 0) {
+            setLivingEntityFlag(4, false);
+        }
+
+        if (!isAutoSpinAttack()) {
+            setPose(Pose.STANDING);
+        }
+    }
+
+    @Override
+    protected void doAutoAttackOnTouch(LivingEntity living) {
+        doHurtTarget(living);
     }
 
     @Override
@@ -1461,6 +1628,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 && !isFamily(other.getUUID(), false);
     }
 
+    @Override
     public boolean isFamily(UUID otherUUID) {
         return isFamily(otherUUID, false);
     }
@@ -1471,17 +1639,25 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if ((time >= lastGossipTime && time < lastGossipTime + 1200L)) return;
         if ((time >= npc.getLastGossipTime() && time < npc.getLastGossipTime() + 1200L)) return;
 
-        getGossips().transferFrom(with.getGossips(), random, Config.MAX_GOSSIP_TOPICS.asInt());
+        getGossips().transferFrom(npc.getGossips(), random, Config.MAX_GOSSIP_TOPICS.asInt());
         lastGossipTime = time;
         npc.setLastGossipTime(time);
         spawnGolemIfNeeded(level, time, 5);
     }
 
+    @Override
     public boolean isFamily(UUID otherUUID, boolean checkPartner) {
         return (checkPartner && isPartner(otherUUID))
-                || childrens.contains(otherUUID)
-                || (father != null && father.equals(otherUUID))
-                || (mother != null && mother.equals(otherUUID));
+                || isChildren(otherUUID)
+                || (father != null && father.getUniqueId().equals(otherUUID))
+                || (mother != null && mother.getUniqueId().equals(otherUUID));
+    }
+
+    private boolean isChildren(UUID uuid) {
+        for (IVillagerNPC npc : childrens) {
+            if (npc.getUniqueId().equals(uuid)) return true;
+        }
+        return false;
     }
 
     public void disableShield(boolean flag) {
@@ -1498,6 +1674,37 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public void aiStep() {
         super.aiStep();
+
+        if (isAlive() && thrownTrident != null && thrownTrident.getBukkitEntity().isValid()) {
+            AABB box;
+            Entity vehicle = getVehicle();
+            if (vehicle != null && !vehicle.isRemoved()) {
+                box = getBoundingBox().minmax(vehicle.getBoundingBox()).inflate(1.0d, 0.0d, 1.0d);
+            } else {
+                box = getBoundingBox().inflate(1.0d, 0.5d, 1.0d);
+            }
+
+            for (Entity entity : level.getEntities(this, box)) {
+                if (entity.isRemoved() || !(entity instanceof ThrownTrident trident)) continue;
+                if (trident.shakeTime > 0 || (!trident.inGround && !trident.isNoPhysics())) continue;
+
+                ItemStack tridentItem = trident.tridentItem;
+                if (!tridentItem.isEmpty()
+                        && is(trident.getOwner())
+                        && getInventory().canAddItem(tridentItem)) {
+                    getInventory().addItem(tridentItem);
+                    take(trident, 1);
+                    trident.discard();
+                }
+            }
+        }
+
+        playShoulderEntityAmbientSound(shoulderEntityLeft);
+        playShoulderEntityAmbientSound(shoulderEntityRight);
+
+        if (!level.isClientSide && (fallDistance > 0.5f || isInWater()) || isSleeping() || isInPowderSnow) {
+            removeEntitiesOnShoulder();
+        }
 
         if (level.getDifficulty() != Difficulty.PEACEFUL || !level.getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION)) {
             return;
@@ -1517,6 +1724,22 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         super.tick();
         cooldowns.tick();
         foodData.tick();
+
+        maybeDecayGossip();
+
+        double speedModifier = moveControl.getSpeedModifier();
+        if (isSwimming()
+                || isVisuallySwimming()
+                || isInWater()
+                || isUnderWater()
+                || getFluidHeight(FluidTags.WATER) > getFluidJumpThreshold()
+                || isInLava()) {
+            setSpeed((float) (SWIMMING_SPEED_MODIFIER * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+        } else if (isEating()) {
+            setSpeed((float) ((SPEED_MODIFIER / 2) * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+        } else if (previousSpeedModifier != speedModifier) {
+            setSpeed((float) (speedModifier * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+        }
 
         if (!collides && !isSleeping()) collides = true;
 
@@ -1538,6 +1761,16 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
+    private void maybeDecayGossip() {
+        long time = level.getGameTime();
+        if (lastGossipDecayTime == 0L) {
+            lastGossipDecayTime = time;
+        } else if (time >= lastGossipDecayTime + GOSSIP_DECAY_INTERVAL) {
+            gossips.decay();
+            lastGossipDecayTime = time;
+        }
+    }
+
     @Override
     protected boolean damageEntity0(DamageSource source, float damage) {
         lastDamageSource = source;
@@ -1549,6 +1782,98 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public boolean isDamageSourceBlocked() {
         return lastDamageSource != null && isDamageSourceBlocked(lastDamageSource);
+    }
+
+    public boolean setEntityOnShoulder(CompoundTag tag) {
+        if (isPassenger() || !onGround || isInWater() || isInPowderSnow) return false;
+
+        boolean leftEmpty = shoulderEntityLeft.isEmpty();
+        if (!leftEmpty && !shoulderEntityRight.isEmpty()) return false;
+
+        if (leftEmpty) {
+            setShoulderEntityLeft(tag);
+        } else {
+            setShoulderEntityRight(tag);
+        }
+
+        updateNPC();
+
+        timeEntitySatOnShoulder = level.getGameTime();
+        return true;
+    }
+
+    private void playShoulderEntityAmbientSound(@Nullable CompoundTag tag) {
+        if (tag == null
+                || tag.isEmpty()
+                || tag.getBoolean("Silent")
+                || level.random.nextInt(200) != 0) return;
+
+        String id = tag.getString("id");
+        EntityType.byString(id)
+                .filter((type) -> type == EntityType.PARROT)
+                .ifPresent((type) -> {
+                    if (Parrot.imitateNearbyMobs(level, this)) return;
+                    level.playSound(null,
+                            getX(),
+                            getY(),
+                            getZ(),
+                            Parrot.getAmbient(level, level.random),
+                            getSoundSource(),
+                            1.0f,
+                            Parrot.getPitch(level.random));
+                });
+    }
+
+    private void removeEntitiesOnShoulder() {
+        if (timeEntitySatOnShoulder + 20L >= level.getGameTime()) return;
+        if (shoulderEntityLeft.isEmpty() && shoulderEntityRight.isEmpty()) return;
+
+        if (spawnEntityFromShoulder(shoulderEntityLeft)) {
+            setShoulderEntityLeft(new CompoundTag());
+        }
+
+        if (spawnEntityFromShoulder(shoulderEntityRight)) {
+            setShoulderEntityRight(new CompoundTag());
+        }
+
+        updateNPC();
+    }
+
+    private void updateNPC() {
+        Optional<NPC> npc = plugin.getTracker().getNPC(getId());
+        if (npc.isEmpty()) return;
+
+        MetadataModifier metadata = npc.get().metadata();
+        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, getShoulderEntityLeft()).send();
+        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, getShoulderEntityRight()).send();
+    }
+
+    private boolean spawnEntityFromShoulder(CompoundTag tag) {
+        return !level.isClientSide && !tag.isEmpty() ? EntityType.create(tag, level).map((entity) -> {
+            if (entity instanceof PetParrot parrot) {
+                parrot.setOwnerUUID(uuid);
+            }
+
+            entity.setPos(getX(), getY() + 0.699999988079071d, getZ());
+            return ((ServerLevel) level).addWithUUID(entity, CreatureSpawnEvent.SpawnReason.SHOULDER_ENTITY);
+        }).orElse(true) : true;
+    }
+
+    @Override
+    public Object getShoulderEntityLeft() {
+        return shoulderEntityLeft;
+    }
+
+    @Override
+    public Object getShoulderEntityRight() {
+        return shoulderEntityRight;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float damage) {
+        boolean damaged = super.hurt(source, damage);
+        if (damaged) removeEntitiesOnShoulder();
+        return damaged;
     }
 
     @Override
@@ -1600,7 +1925,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public boolean checkCurrentActivity(Activity checkActivity) {
         Optional<Activity> active = getBrain().getActiveNonCoreActivity();
-        return active.map(activity -> activity.equals(checkActivity)).orElse(false);
+        return active.isPresent() && active.get().equals(checkActivity);
+    }
+
+    public boolean checkCurrentActivity(Activity... checkActivities) {
+        for (Activity checkActivity : checkActivities) {
+            if (checkCurrentActivity(checkActivity)) return true;
+        }
+        return false;
     }
 
     public void drop(ItemStack item) {
@@ -1626,6 +1958,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 (double) (yRotCos * xRotCos * 0.3f) + Math.sin(f5) * (double) f6);
 
         level.addFreshEntity(itemEntity);
+    }
+
+    @Override
+    public UUID getUniqueId() {
+        return uuid;
     }
 
     @Override
@@ -1725,7 +2062,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public boolean isFighting() {
-        return checkCurrentActivity(Activity.FIGHT);
+        return getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET);
     }
 
     @Override

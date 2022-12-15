@@ -16,16 +16,14 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 
 public class LookAndFollowPlayerSink extends Behavior<Villager> {
 
-    private final float speedModifier;
     private Player player;
     private boolean isFollowing;
 
-    public LookAndFollowPlayerSink(float speedModifier) {
+    public LookAndFollowPlayerSink() {
         super(ImmutableMap.of(
                         MemoryModuleType.WALK_TARGET, MemoryStatus.REGISTERED,
                         MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED),
                 Integer.MAX_VALUE);
-        this.speedModifier = speedModifier;
     }
 
     @Override
@@ -84,7 +82,7 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
             return;
         }
 
-        if (canTeleport) {
+        if (canTeleport && !villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET)) {
             villager.absMoveTo(player.getX(), player.getY(), player.getZ(), player.getYHeadRot(), player.getXRot());
             villager.setYHeadRot(player.getYHeadRot());
         } else {
@@ -116,7 +114,7 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
 
     private void followPlayer(Villager villager) {
         Brain<Villager> brain = villager.getBrain();
-        float speed = speedModifier * (isFollowing ? 1.25f : 1f);
+        float speed = isFollowing ? VillagerNPC.SPRINT_SPEED_MODIFIER : VillagerNPC.SPEED_MODIFIER;
         brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityTracker(player, false), speed, 2));
         brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(player, true));
     }

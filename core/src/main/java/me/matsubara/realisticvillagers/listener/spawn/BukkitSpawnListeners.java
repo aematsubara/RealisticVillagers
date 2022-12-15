@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.listener.spawn;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import org.bukkit.entity.Entity;
@@ -16,6 +17,7 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -32,9 +34,7 @@ public class BukkitSpawnListeners implements Listener {
         LivingEntity entity = event.getEntity();
 
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
-        handleSpawn(
-                entity,
-                reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG || reason == CreatureSpawnEvent.SpawnReason.CUSTOM);
+        handleSpawn(entity, reason);
 
         if (reason != CreatureSpawnEvent.SpawnReason.INFECTION) return;
         if (event.getEntityType() != EntityType.ZOMBIE_VILLAGER) return;
@@ -65,11 +65,14 @@ public class BukkitSpawnListeners implements Listener {
     }
 
     public void handleSpawn(Entity entity) {
-        handleSpawn(entity, false);
+        handleSpawn(entity, null);
     }
 
-    public void handleSpawn(Entity entity, boolean createData) {
+    public void handleSpawn(Entity entity, @Nullable CreatureSpawnEvent.SpawnReason reason) {
         if (!(entity instanceof Villager villager)) return;
+
+        boolean createData = reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG
+                || reason == CreatureSpawnEvent.SpawnReason.CUSTOM;
 
         INMSConverter converter = plugin.getConverter();
         PersistentDataContainer container = villager.getPersistentDataContainer();
@@ -94,12 +97,17 @@ public class BukkitSpawnListeners implements Listener {
         }
 
         VillagerTracker tracker = plugin.getTracker();
-        tracker.add(villager);
 
         // If the zombie villager wasn't an infected villager, the tag will be empty.
         String tag = tracker.getTransformations().remove(villager.getUniqueId());
         if (tag != null) converter.loadDataFromTag(villager, tag);
 
+        // Spawn NPC & cache data.
         tracker.spawnNPC(villager);
+        tracker.getOffline(villager.getUniqueId());
+
+        if (!npc.get().isWasInfected() && villager.isAdult() && reason != CreatureSpawnEvent.SpawnReason.BREEDING) {
+            plugin.equipVillager(villager, Config.SPAWN_LOOT_FORCE_EQUIP.asBool());
+        }
     }
 }

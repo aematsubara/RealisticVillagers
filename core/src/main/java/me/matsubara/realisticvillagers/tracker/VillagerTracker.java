@@ -4,7 +4,6 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
-import com.google.common.base.Preconditions;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -43,6 +42,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
@@ -54,7 +54,7 @@ public final class VillagerTracker implements Listener {
     private final BukkitSpawnListeners spawnListeners;
     private final Map<UUID, String> transformations = new HashMap<>();
     private final Map<UUID, Integer> portalTransform = new HashMap<>();
-    private final Set<VillagerInfo> villagers = new HashSet<>();
+    private final Set<IVillagerNPC> offlineVillagers = ConcurrentHashMap.newKeySet();
     private final Map<String, Pair<File, FileConfiguration>> files = new HashMap<>();
     private final VillagerHandler handler;
 
@@ -80,81 +80,40 @@ public final class VillagerTracker implements Listener {
 
         manager.registerEvents(this, plugin);
         ProtocolLibrary.getProtocolManager().addPacketListener(handler = new VillagerHandler(plugin));
-
-        update();
     }
 
-    private void update() {
-        villagers.clear();
-
-        ConfigurationSection section = getDataFile().getConfigurationSection("villagers");
-        if (section == null) return;
-
-        for (String path : section.getKeys(false)) {
-            UUID uuid = UUID.fromString(path);
-            String lastKnownName = getDataFile().getString("villagers." + path + ".last-known-name");
-            long lastSeen = getDataFile().getLong("villagers." + path + ".last-seen");
-            villagers.add(new VillagerInfo(uuid, -1, lastKnownName, lastSeen));
-        }
-    }
-
-    public void add(Villager villager) {
-        UUID uuid = villager.getUniqueId();
-        int id = villager.getEntityId();
-
-        String name = plugin.getConverter().getNPC(villager)
-                .map(IVillagerNPC::getVillagerName)
-                .orElse(villager.getName());
-
-        long seen = System.currentTimeMillis();
-
-        VillagerInfo info = getInfoByUUID(uuid);
-        if (info != null) {
-            info.setId(id);
-            info.setLastKnownName(name);
-            info.setLastSeen(seen);
-        } else {
-            villagers.add(new VillagerInfo(uuid, id, name));
-        }
-
-        getDataFile().set("villagers." + uuid + ".last-known-name", name);
-        getDataFile().set("villagers." + uuid + ".last-seen", seen);
-
-        saveConfig();
-    }
-
-    private VillagerInfo getInfoByUUID(UUID uuid) {
-        for (VillagerInfo info : villagers) {
-            if (info.getUUID().equals(uuid)) return info;
+    public IVillagerNPC getOfflineByUUID(UUID uuid) {
+        for (IVillagerNPC info : offlineVillagers) {
+            if (info.getUniqueId().equals(uuid)) return info;
         }
         return null;
     }
 
-    public VillagerInfo get(UUID uuid) {
+    public IVillagerNPC getOffline(UUID uuid) {
         if (uuid == null) return null;
 
         Entity entity = Bukkit.getEntity(uuid);
-        if (entity instanceof Villager villager) {
-            VillagerInfo info = getInfoByUUID(uuid);
-            if (info != null) {
-                info.updateLastSeen();
-                saveConfig();
-            } else add(villager);
+
+        Optional<IVillagerNPC> npc;
+        if (entity instanceof Villager villager
+                && (npc = plugin.getConverter().getNPC(villager)).isPresent()) {
+            IVillagerNPC current = getOfflineByUUID(uuid);
+            if (current != null) offlineVillagers.remove(current);
+
+            IVillagerNPC newNPC = npc.get().getOffline();
+            offlineVillagers.add(newNPC);
+
+            return newNPC;
         }
 
-        return getInfoByUUID(uuid);
+        return getOfflineByUUID(uuid);
     }
 
     private void markAsDeath(Villager villager) {
         handlePartner(villager);
 
-        VillagerInfo info = getInfoByUUID(villager.getUniqueId());
-        if (info == null) return;
-
-        info.setLastSeen(-1L);
-        getDataFile().set("villagers." + info.getUUID() + ".last-seen", -1L);
-        getDataFile().set("villagers." + info.getUUID() + ".death", System.currentTimeMillis());
-        saveConfig();
+        IVillagerNPC info = getOfflineByUUID(villager.getUniqueId());
+        if (info != null) offlineVillagers.remove(info);
     }
 
     private void handlePartner(Villager villager) {
@@ -163,10 +122,11 @@ public final class VillagerTracker implements Listener {
         IVillagerNPC npc = optional.orElse(null);
         if (npc == null) return;
 
-        UUID partner = npc.getPartner();
+        // Can be a player or a villager (there's no chance a villager and a player share the same UUID).
+        IVillagerNPC partner = npc.getPartner();
         if (partner == null) return;
 
-        Player player = Bukkit.getPlayer(partner);
+        Player player = Bukkit.getPlayer(partner.getUniqueId());
         if (player != null && player.isOnline()) {
             player.getPersistentDataContainer().remove(plugin.getMarriedWith());
             return;
@@ -184,25 +144,23 @@ public final class VillagerTracker implements Listener {
         }
     }
 
-    private void saveConfig() {
-        try {
-            Pair<File, FileConfiguration> data = getFile("villagers.yml");
-            data.getSecond().save(data.getFirst());
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
-    }
-
     @EventHandler
     public void onEntitiesUnload(EntitiesUnloadEvent event) {
         for (Entity entity : event.getEntities()) {
             if (!(entity instanceof Villager villager) || isInvalid(villager)) continue;
+            updateData(villager);
+            removeNPC(entity.getEntityId());
+        }
+    }
 
-            VillagerInfo info = get(entity.getUniqueId());
-            if (info != null && info.getId() != -1) {
-                removeNPC(entity.getEntityId());
-                info.setId(-1);
-            }
+    private void updateData(Villager villager) {
+        // Update the data after being unloaded.
+        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
+        if (npc.isPresent()) {
+            IVillagerNPC currentOffline = getOfflineByUUID(villager.getUniqueId());
+            if (currentOffline != null) offlineVillagers.remove(currentOffline);
+
+            offlineVillagers.add(npc.get().getOffline());
         }
     }
 
@@ -237,7 +195,11 @@ public final class VillagerTracker implements Listener {
 
     @EventHandler
     public void onVillagerRemove(VillagerRemoveEvent event) {
-        if (event.getReason() != VillagerRemoveEvent.RemovalReason.DISCARDED) return;
+        VillagerRemoveEvent.RemovalReason reason = event.getReason();
+        if (reason != VillagerRemoveEvent.RemovalReason.DISCARDED) {
+            if (reason != VillagerRemoveEvent.RemovalReason.KILLED) updateData(event.getNPC().bukkit());
+            return;
+        }
         markAsDeath(event.getNPC().bukkit());
         removeNPC(event.getNPC().bukkit().getEntityId());
     }
@@ -270,11 +232,9 @@ public final class VillagerTracker implements Listener {
         if (partner == null) return;
 
         UUID uuid = UUID.fromString(partner);
-        for (VillagerInfo info : villagers) {
-            if (!info.getUUID().equals(uuid)) continue;
-            if (!info.isDead()) continue;
-            container.remove(plugin.getMarriedWith());
-        }
+
+        IVillagerNPC offline = getOffline(uuid);
+        if (offline == null) container.remove(plugin.getMarriedWith());
     }
 
     @EventHandler
@@ -283,7 +243,7 @@ public final class VillagerTracker implements Listener {
     }
 
     public void removeNPC(int entityId) {
-        pool.getNpc(entityId).ifPresent(npc -> pool.removeNPC(npc.getEntityId()));
+        getNPC(entityId).ifPresent(npc -> pool.removeNPC(npc.getEntityId()));
     }
 
     public boolean hasNPC(int entityId) {
@@ -319,7 +279,10 @@ public final class VillagerTracker implements Listener {
         if (hasNPC(entityId)) return;
 
         WrappedSignedProperty textures = getTextures(villager);
-        Preconditions.checkArgument(textures != null, "Invalid textures!");
+        if (textures.getName().equals("error")) {
+            plugin.getLogger().severe(textures.getValue());
+            return;
+        }
 
         String defaultName = plugin.getConverter().getNPC(villager)
                 .map(IVillagerNPC::getVillagerName)
@@ -365,7 +328,9 @@ public final class VillagerTracker implements Listener {
 
     public WrappedSignedProperty getTextures(Villager villager) {
         IVillagerNPC npc = plugin.getConverter().getNPC(villager).orElse(null);
-        if (npc == null) return null;
+        if (npc == null) {
+            return error("Invalid textures! The villager {" + villager.getEntityId() + "} isn't a custom one.");
+        }
 
         Pair<File, FileConfiguration> pair = getFile(plugin.getSkinFolder(), npc.getSex() + ".yml");
         FileConfiguration config = pair.getSecond();
@@ -373,13 +338,34 @@ public final class VillagerTracker implements Listener {
         String profession = villager.getProfession().name().toLowerCase();
 
         ConfigurationSection section = config.getConfigurationSection(profession);
-        if (section == null) return null;
+        if (section == null) {
+            return error("Invalid textures! No section found for {" + profession + "}.");
+        }
 
         int which = getSkinId(npc, section.getKeys(false));
+        return getTextures(config, profession, which);
+    }
 
+    public WrappedSignedProperty getTextures(String sex, String profession, int which) {
+        Pair<File, FileConfiguration> pair = getFile(plugin.getSkinFolder(), sex + ".yml");
+        FileConfiguration config = pair.getSecond();
+
+        return getTextures(config, profession, which);
+    }
+
+    private WrappedSignedProperty getTextures(FileConfiguration config, String profession, int which) {
         String texture = config.getString(profession + "." + which + ".texture");
         String signature = config.getString(profession + "." + which + ".signature");
-        return texture != null && signature != null ? new WrappedSignedProperty("textures", texture, signature) : null;
+
+        if (texture != null && signature != null) {
+            return new WrappedSignedProperty("textures", texture, signature);
+        }
+
+        return error("Invalid textures! No skin found for id {" + which + "}.");
+    }
+
+    private WrappedSignedProperty error(String message) {
+        return WrappedSignedProperty.fromValues("error", message, "");
     }
 
     private int getSkinId(IVillagerNPC npc, Set<String> ids) {
@@ -423,10 +409,6 @@ public final class VillagerTracker implements Listener {
 
     public Pair<File, FileConfiguration> getFile(@Nullable String folder, String fileName) {
         return files.computeIfAbsent(fileName, name -> loadFile(folder, fileName));
-    }
-
-    private FileConfiguration getDataFile() {
-        return getFile("villagers.yml").getSecond();
     }
 
     public String getRandomNameBySex(String sex) {

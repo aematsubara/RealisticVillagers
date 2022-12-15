@@ -138,7 +138,7 @@ public final class Messages {
         return list.get(random.nextInt(list.size()));
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "unused"})
     public void sendMessages(CommandSender sender, Message message) {
         if (!(configuration.get(message.getPath()) instanceof List<?> messages)) return;
 
@@ -170,7 +170,8 @@ public final class Messages {
         CAN_NOT_SPAWN_BABY("can-not-spawn-baby"),
         DIVORCE_NORMAL("divorce.normal"),
         DIVORCE_PAPERS("divorce.papers"),
-        CLERIC_DIVORCE_PAPERS("cleric-divorce-papers"),
+        CLERIC_DIVORCE_PAPERS("cleric.divorce-papers"),
+        CLERIC_NOT_MARRIED("cleric.not-married"),
         BED_OCCUPIED("bed-occupied"),
         BED_ESTABLISHED("bed-established"),
         INTERACT_FAIL_FIGHTING_OR_RAID("interact-fail.fighting-or-raid"),
@@ -184,20 +185,23 @@ public final class Messages {
         INTERACT_FAIL_OTHER_EXPECTING_GIFT("interact-fail.other-expecting-gift"),
         INTERACT_FAIL_OTHER_EXPECTING_BED("interact-fail.other-expecting-bed"),
         INTERACT_FAIL_IN_COOLDOWN("interact-fail.in-cooldown"),
+        INTERACT_FAIL_NOT_ALLOWED("interact-fail.not-allowed"),
         GIFT_EXPECTING("gift.expecting"),
         GIFT_EXPECTING_FAIL("gift.expecting-fail"),
         THROW_GIFT("throw-gift"),
         SELECT_BED("select-bed"),
         RELOAD("reload"),
         NO_PERMISSION("no-permission"),
-        HELP("help"),
         FOLLOW_ME_START("follow-me.start"),
         FOLLOW_ME_STOP("follow-me.stop"),
         FOLLOW_ME_LOW_REPUTATION("follow-me.low-reputation"),
         STAY_HERE_START("stay-here.start"),
         STAY_HERE_STOP("stay-here.stop"),
         STAY_HERE_LOW_REPUTATION("stay-here.low-reputation"),
-        NO_TRADES("no-trades");
+        NO_TRADES("no-trades"),
+        WHISTLE_TELEPORTED("whistle-teleported"),
+        WHISTLE_ERROR("whistle-error"),
+        WHISTLE_NO_FAMILY("whistle-no-family");
 
         private final String path;
 

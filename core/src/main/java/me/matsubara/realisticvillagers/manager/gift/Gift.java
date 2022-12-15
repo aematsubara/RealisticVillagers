@@ -1,20 +1,22 @@
 package me.matsubara.realisticvillagers.manager.gift;
 
+import lombok.Getter;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.Material;
 
 import java.util.function.Predicate;
 
+@Getter
 public class Gift {
 
+    private final int amount;
     private final Material type;
+    private final boolean inventoryLootOnly;
 
-    public Gift(Material type) {
+    public Gift(int amount, Material type, boolean inventoryLootOnly) {
+        this.amount = amount;
         this.type = type;
-    }
-
-    public Material getType() {
-        return type;
+        this.inventoryLootOnly = inventoryLootOnly;
     }
 
     public boolean is(Material type) {
@@ -25,8 +27,8 @@ public class Gift {
 
         private final Predicate<IVillagerNPC> predicate;
 
-        public GiftWithCondition(Material material, Predicate<IVillagerNPC> predicate) {
-            super(material);
+        public GiftWithCondition(int amount, Material type, boolean inventoryLootOnly, Predicate<IVillagerNPC> predicate) {
+            super(amount, type, inventoryLootOnly);
             this.predicate = predicate;
         }
 

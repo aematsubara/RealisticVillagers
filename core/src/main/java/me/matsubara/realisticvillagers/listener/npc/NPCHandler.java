@@ -1,6 +1,9 @@
 package me.matsubara.realisticvillagers.listener.npc;
 
 import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.comphenix.protocol.wrappers.nbt.NbtCompound;
+import lombok.Getter;
+import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.util.npc.NPC;
@@ -14,21 +17,18 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 
+@Getter
+@Setter
 public class NPCHandler implements SpawnCustomizer {
 
     private final RealisticVillagers plugin;
     private final IVillagerNPC villager;
 
-    // Show everything except cape.
-    private static final MetadataModifier.EntityMetadata<Boolean, Byte> SKIN_LAYERS = new MetadataModifier.EntityMetadata<>(
-            10,
-            Byte.class,
-            Arrays.asList(9, 9, 10, 14, 14, 15, 17),
-            input -> (byte) (input ? 126 : 0));
+    private NbtCompound shoulderEntityLeft;
+    private NbtCompound shoulderEntityRight;
 
     public NPCHandler(RealisticVillagers plugin, Villager villager) {
         this.plugin = plugin;
@@ -40,7 +40,11 @@ public class NPCHandler implements SpawnCustomizer {
         Location location = villager.bukkit().getLocation();
 
         npc.rotation().queueRotate(location.getYaw(), location.getPitch()).send(player);
-        npc.metadata().queue(SKIN_LAYERS, true).send(player);
+
+        MetadataModifier metadata = npc.metadata();
+        metadata.queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(player);
+        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, villager.getShoulderEntityLeft()).send(player);
+        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, villager.getShoulderEntityRight()).send(player);
 
         if (villager.bukkit().isSleeping()) {
             Location home = villager.bukkit().getMemory(MemoryKey.HOME);
@@ -49,7 +53,7 @@ public class NPCHandler implements SpawnCustomizer {
             sleeping.add(player.getUniqueId());
 
             npc.teleport().queueTeleport(location, villager.bukkit().isOnGround()).send(player);
-            npc.metadata().queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
+            metadata.queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
 
             villager.bukkit().wakeup();
 

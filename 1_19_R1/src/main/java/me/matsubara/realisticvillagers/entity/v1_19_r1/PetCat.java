@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_19_r1;
 
+import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -49,8 +50,8 @@ public class PetCat extends Cat implements Pet {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Setter
-    private boolean tamedByPlayer;
+    @Getter
+    private @Setter boolean tamedByPlayer;
     private CatAvoidEntityGoal<Player> avoidPlayersGoal;
     private @Nullable CatTemptGoal temptGoal;
 
@@ -87,8 +88,12 @@ public class PetCat extends Cat implements Pet {
         setTame(true);
         setOwnerUUID(npc.bukkit().getUniqueId());
         setTamedByPlayer(false);
-        level.broadcastEntityEvent(this, (byte) 7);
         setPersistenceRequired();
+    }
+
+    @Override
+    public UUID getOwnerUniqueId() {
+        return super.getOwnerUUID();
     }
 
     @Override
@@ -149,10 +154,12 @@ public class PetCat extends Cat implements Pet {
             this.cat = cat;
         }
 
+        @Override
         public boolean canUse() {
             return !cat.isTame() && super.canUse();
         }
 
+        @Override
         public boolean canContinueToUse() {
             return !cat.isTame() && super.canContinueToUse();
         }
@@ -170,6 +177,7 @@ public class PetCat extends Cat implements Pet {
             this.cat = cat;
         }
 
+        @Override
         public boolean canUse() {
             if (!cat.isTame()) return false;
             if (cat.isOrderedToSit()) return false;
@@ -208,6 +216,7 @@ public class PetCat extends Cat implements Pet {
             return false;
         }
 
+        @Override
         public boolean canContinueToUse() {
             return cat.isTame()
                     && !cat.isOrderedToSit()
@@ -217,12 +226,14 @@ public class PetCat extends Cat implements Pet {
                     && spaceAvailable();
         }
 
+        @Override
         public void start() {
             if (goalPos == null) return;
             cat.setInSittingPose(false);
             cat.getNavigation().moveTo(goalPos.getX(), goalPos.getY(), goalPos.getZ(), 1.100000023841858);
         }
 
+        @Override
         public void stop() {
             cat.setLying(false);
             float time = cat.level.getTimeOfDay(1.0f);
@@ -279,6 +290,7 @@ public class PetCat extends Cat implements Pet {
 
         }
 
+        @Override
         public void tick() {
             if (owner == null || goalPos == null) return;
 

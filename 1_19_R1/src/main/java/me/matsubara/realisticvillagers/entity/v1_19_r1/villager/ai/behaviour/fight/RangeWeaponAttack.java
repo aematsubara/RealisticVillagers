@@ -50,7 +50,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     }
 
     @Override
-    protected void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, Villager villager, long time) {
         weapon = villager.getMainHandItem();
         hand = ProjectileUtil.getWeaponHoldingHand(villager, weapon.getItem());
         isCrossbow = weapon.is(Items.CROSSBOW);

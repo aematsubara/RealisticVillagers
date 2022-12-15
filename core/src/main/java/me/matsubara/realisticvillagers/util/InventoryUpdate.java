@@ -71,7 +71,6 @@ public final class InventoryUpdate {
     private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(InventoryUpdate.class);
     private static final Set<String> UNOPENABLES = Sets.newHashSet("CRAFTING", "CREATIVE", "PLAYER");
     private static final boolean SUPPORTS_19 = ReflectionUtils.supports(19);
-    private static final boolean TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR = ReflectionUtils.supports(7) && ReflectionUtils.VER < 16;
     private static final Object[] DUMMY_COLOR_MODIFIERS = new Object[0];
 
     static {
@@ -92,9 +91,7 @@ public final class InventoryUpdate {
         literal = SUPPORTS_19 ? getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true) : null;
 
         // Initialize constructors.
-        chatMessage = SUPPORTS_19 ? null : TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR ?
-                getConstructor(CHAT_MESSAGE, String.class, Object[].class) :
-                getConstructor(CHAT_MESSAGE, String.class);
+        chatMessage = SUPPORTS_19 ? null : getConstructor(CHAT_MESSAGE, String.class, Object[].class);
         packetPlayOutOpenWindow =
                 (useContainers()) ?
                         getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, CONTAINERS, I_CHAT_BASE_COMPONENT) :
@@ -112,8 +109,18 @@ public final class InventoryUpdate {
      * @param player   whose inventory will be updated.
      * @param newTitle the new title for the inventory.
      */
-
     public static void updateInventory(Player player, String newTitle) {
+        updateInventory(PLUGIN, player, newTitle);
+    }
+
+    /**
+     * @param plugin the plugin calling this method, needed for logging purpose.
+     * @see InventoryUpdate#updateInventory(Player, String)
+     * @deprecated use {@link InventoryUpdate#updateInventory(Player, String)}
+     */
+    @SuppressWarnings("DeprecatedIsStillUsed")
+    @Deprecated
+    public static void updateInventory(JavaPlugin plugin, Player player, String newTitle) {
         Preconditions.checkArgument(player != null, "Cannot update inventory to null player.");
         Preconditions.checkArgument(newTitle != null, "The new title can't be null.");
 
@@ -131,9 +138,7 @@ public final class InventoryUpdate {
             if (ReflectionUtils.supports(19)) {
                 title = literal.invoke(newTitle);
             } else {
-                title = TWO_ARGS_CHAT_MESSAGE_CONSTRUCTOR ?
-                        chatMessage.invoke(newTitle, DUMMY_COLOR_MODIFIERS) :
-                        chatMessage.invoke(newTitle);
+                title = chatMessage.invoke(newTitle, DUMMY_COLOR_MODIFIERS);
             }
 
             // Get activeContainer from EntityPlayer.
@@ -164,7 +169,7 @@ public final class InventoryUpdate {
 
             // If the container was added in a newer version than the current, return.
             if (container.getContainerVersion() > ReflectionUtils.VER && useContainers()) {
-                PLUGIN.getLogger().warning("This container doesn't work on your current version.");
+                (plugin != null ? plugin : PLUGIN).getLogger().warning("This container doesn't work on your current version.");
                 return;
             }
 

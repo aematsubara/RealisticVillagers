@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.nms;
 
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.Location;
+import org.bukkit.Raid;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -26,4 +27,10 @@ public interface INMSConverter {
     void loadDataFromTag(Villager villager, String tag);
 
     void removePartnerFromPlayerNBT(File file);
+
+    void loadData();
+
+    ItemStack randomVanillaEnchantments(Location location, ItemStack item);
+
+    Raid getRaidAt(Location location);
 }

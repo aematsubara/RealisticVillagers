@@ -41,8 +41,8 @@ public final class CombatGUI extends InteractGUI {
     private final ItemStack enabled;
     private final ItemStack disabled;
 
-    public CombatGUI(RealisticVillagers plugin, Player player, IVillagerNPC npc, @Nullable String keyword) {
-        super("combat", plugin, npc, 45, null);
+    public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable String keyword) {
+        super(plugin, npc, "combat", 45, null);
         this.player = player;
 
         previous = getGUIItem("previous");
@@ -85,7 +85,7 @@ public final class CombatGUI extends InteractGUI {
         }
 
         if (current > 0) inventory.setItem(28, previous);
-        inventory.setItem(31, keyword != null ? clearSearch : search);
+        inventory.setItem(31, keyword != null ? clearSearch : pages > 1 ? search : null);
         inventory.setItem(44, close);
         if (current < pages - 1) inventory.setItem(34, next);
 
@@ -131,7 +131,7 @@ public final class CombatGUI extends InteractGUI {
     protected String getTitle() {
         return super.getTitle()
                 .replace("%page%", String.valueOf(current + 1))
-                .replace("%max-page%", String.valueOf(pages));
+                .replace("%max-page%", String.valueOf(pages == 0 ? 1 : pages));
     }
 
     public void previousPage(boolean isShiftClick) {

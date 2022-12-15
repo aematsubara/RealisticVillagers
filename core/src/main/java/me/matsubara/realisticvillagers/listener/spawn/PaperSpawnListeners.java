@@ -9,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityEvent;
 import org.bukkit.plugin.EventExecutor;
+import org.bukkit.plugin.PluginManager;
 import org.jetbrains.annotations.NotNull;
 
 public class PaperSpawnListeners implements EventExecutor {
@@ -23,7 +24,9 @@ public class PaperSpawnListeners implements EventExecutor {
         try {
             @SuppressWarnings("unchecked") Class<? extends Event> clazz = (Class<? extends Event>) Class.forName(EVENT_CLASS);
 
-            plugin.getServer().getPluginManager().registerEvent(
+            PluginManager pluginManager = plugin.getServer().getPluginManager();
+
+            pluginManager.registerEvent(
                     clazz,
                     new Listener() {
                     },
@@ -32,7 +35,7 @@ public class PaperSpawnListeners implements EventExecutor {
                     plugin,
                     false);
 
-            plugin.getServer().getPluginManager().registerEvents(new Listener() {
+            pluginManager.registerEvents(new Listener() {
                 @EventHandler(ignoreCancelled = true)
                 public void onCreatureSpawn(CreatureSpawnEvent event) {
                     plugin.getTracker().getSpawnListeners().onCreatureSpawn(event);
@@ -46,8 +49,7 @@ public class PaperSpawnListeners implements EventExecutor {
 
     @Override
     public void execute(@NotNull Listener listener, @NotNull Event event) {
-        if (event instanceof EntityEvent entityEvent) {
-            plugin.getTracker().getSpawnListeners().handleSpawn(entityEvent.getEntity());
-        }
+        if (!(event instanceof EntityEvent entityEvent)) return;
+        plugin.getTracker().getSpawnListeners().handleSpawn(entityEvent.getEntity());
     }
 }

@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r1.villager.ai.behaviour.co
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_19_r1.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -12,17 +13,14 @@ import net.minecraft.world.phys.Vec3;
 public class LookAtTargetSink extends Behavior<Villager> {
 
     public LookAtTargetSink(int minDuration, int maxDuration) {
-        super(ImmutableMap.of(
-                        MemoryModuleType.LOOK_TARGET, MemoryStatus.VALUE_PRESENT),
-                minDuration,
-                maxDuration);
+        super(ImmutableMap.of(MemoryModuleType.LOOK_TARGET, MemoryStatus.VALUE_PRESENT), minDuration, maxDuration);
     }
 
     @Override
     public boolean canStillUse(ServerLevel level, Villager villager, long time) {
         return villager.getBrain().getMemory(MemoryModuleType.LOOK_TARGET)
-                .filter((tracker) -> tracker.isVisibleBy(villager))
-                .isPresent() && (!(villager instanceof VillagerNPC npc) || !npc.isShakingHead());
+                .filter((tracker) -> tracker.isVisibleBy(villager)).isPresent()
+                && (!(villager instanceof VillagerNPC npc) || !npc.isShakingHead());
     }
 
     @Override
@@ -37,7 +35,10 @@ public class LookAtTargetSink extends Behavior<Villager> {
                     // Baby villagers as NPC look a bit higher than target location.
                     Vec3 position = tracker.currentPosition();
 
-                    if (villager.isBaby()) position = position.subtract(0.0d, 1.0d, 0.0d);
+                    if (villager.isBaby() && !Config.DISABLE_SKINS.asBool()) {
+                        position = position.subtract(0.0d, 1.0d, 0.0d);
+                    }
+
                     villager.getLookControl().setLookAt(position);
                 });
     }

@@ -12,6 +12,7 @@ import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.CombatGUI;
 import me.matsubara.realisticvillagers.gui.types.EquipmentGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.task.BabyTask;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -21,6 +22,7 @@ import org.bukkit.EntityEffect;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -34,6 +36,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -54,6 +57,8 @@ public final class InventoryListeners implements Listener {
         if (!(inventory.getHolder() instanceof InteractGUI gui)) return;
 
         IVillagerNPC npc = gui.getNPC();
+        if (npc == null) return;
+
         if (gui.shouldStopInteracting()) npc.stopInteracting();
 
         if (!(gui instanceof EquipmentGUI)) return;
@@ -92,15 +97,81 @@ public final class InventoryListeners implements Listener {
         if (inventory.getType() == InventoryType.PLAYER
                 && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
                 && event.getView().getTopInventory().getHolder() instanceof InteractGUI interact
-                && (!(interact instanceof EquipmentGUI) || !canModifyInventory(interact.getNPC(), player))) {
+                && (!(interact instanceof EquipmentGUI) || (interact.getNPC() != null && !canModifyInventory(interact.getNPC(), player)))) {
             event.setCancelled(true);
             return;
         }
 
         if (!(inventory.getHolder() instanceof InteractGUI interact)) return;
 
-        IVillagerNPC npc = interact.getNPC();
         ItemStack current = event.getCurrentItem();
+        boolean isShiftClick = event.getClick().isShiftClick();
+
+        IVillagerNPC npc = interact.getNPC();
+        if (npc == null) {
+            if (!(interact instanceof WhistleGUI whistle)) return;
+
+            event.setCancelled(true);
+
+            if (current == null) return;
+            if (current.isSimilar(whistle.getClose())) {
+                closeInventory(player);
+                return;
+            } else if (current.isSimilar(whistle.getPrevious())) {
+                whistle.previousPage(isShiftClick);
+                return;
+            } else if (current.isSimilar(whistle.getNext())) {
+                whistle.nextPage(isShiftClick);
+                return;
+            } else if (current.isSimilar(whistle.getSearch())) {
+                new AnvilGUI.Builder()
+                        .onComplete((opener, text) -> {
+                            runTask(() -> plugin.openWhistleGUI(opener, text));
+                            return AnvilGUI.Response.close();
+                        })
+                        .title(Config.WHISTLE_SEARCH_TITLE.asStringTranslated())
+                        .text(Config.WHISTLE_SEARCH_TEXT.asStringTranslated())
+                        .itemLeft(new ItemStack(Material.PAPER))
+                        .preventClose()
+                        .plugin(plugin)
+                        .open((Player) event.getWhoClicked());
+                return;
+            } else if (current.isSimilar(whistle.getClearSearch())) {
+                runTask(() -> plugin.openWhistleGUI(player, null));
+                return;
+            }
+
+            ItemMeta meta = current.getItemMeta();
+            if (meta == null) return;
+
+            String villagerName = meta.getPersistentDataContainer().get(plugin.getVillagerNameKey(), PersistentDataType.STRING);
+            if (villagerName == null || villagerName.isEmpty()) {
+                closeInventory(player);
+                return;
+            }
+
+            for (IVillagerNPC offline : plugin.getTracker().getOfflineVillagers()) {
+                if (!offline.getVillagerName().equalsIgnoreCase(villagerName)) continue;
+
+                Villager bukkit = offline.bukkit();
+                boolean teleported = true;
+                if (bukkit != null) bukkit.teleport(player);
+                else {
+                    Villager villager = plugin.getUnloadedOffline(offline);
+                    if (villager != null) villager.teleport(player);
+                    else teleported = false;
+                }
+
+                plugin.getMessages().send(
+                        player,
+                        teleported ? Messages.Message.WHISTLE_TELEPORTED : Messages.Message.WHISTLE_ERROR,
+                        message -> message.replace("%villager-name%", villagerName));
+                break;
+            }
+
+            closeInventory(player);
+            return;
+        }
 
         if (interact instanceof EquipmentGUI equipment) {
             if (!canModifyInventory(npc, player)) {
@@ -119,25 +190,22 @@ public final class InventoryListeners implements Listener {
             return;
         }
 
-        if (current == null) {
-            event.setCancelled(true);
-            return;
-        }
-
         event.setCancelled(true);
 
+        if (current == null) return;
+
         if (interact instanceof CombatGUI combat) {
-            if (current.isSimilar(combat.getNext())) {
-                combat.nextPage(event.getClick().isShiftClick());
-            } else if (current.isSimilar(combat.getPrevious())) {
-                combat.previousPage(event.getClick().isShiftClick());
-            } else if (current.isSimilar(combat.getClose())) {
+            if (current.isSimilar(combat.getClose())) {
                 closeInventory(player);
+            } else if (current.isSimilar(combat.getPrevious())) {
+                combat.previousPage(isShiftClick);
+            } else if (current.isSimilar(combat.getNext())) {
+                combat.nextPage(isShiftClick);
             } else if (current.isSimilar(combat.getSearch())) {
                 combat.setShouldStopInteracting(false);
                 new AnvilGUI.Builder()
                         .onComplete((opener, text) -> {
-                            plugin.getServer().getScheduler().runTask(plugin, () -> new CombatGUI(plugin, opener, npc, text));
+                            openCombatGUI(npc, opener, text);
                             return AnvilGUI.Response.close();
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
@@ -148,7 +216,7 @@ public final class InventoryListeners implements Listener {
                         .open((Player) event.getWhoClicked());
             } else if (current.isSimilar(combat.getClearSearch())) {
                 combat.setShouldStopInteracting(false);
-                new CombatGUI(plugin, player, npc, null);
+                openCombatGUI(npc, player, null);
             } else if (current.getItemMeta() != null) {
                 ItemMeta meta = current.getItemMeta();
                 PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -177,7 +245,12 @@ public final class InventoryListeners implements Listener {
         int reputation = npc.getReputation(playerUUID);
 
         MainGUI main = (MainGUI) interact;
-        boolean isClericPartner = current.isSimilar(main.getPapers()) && npc.isPartner(playerUUID);
+
+        boolean isPartner = npc.isPartner(playerUUID);
+        boolean isCleric = npc.is(Villager.Profession.CLERIC);
+        boolean isClericPartner = current.isSimilar(main.getPapers()) && isPartner;
+        boolean isFamily = npc.isFamily(player.getUniqueId(), true);
+        boolean isDivorceItem = current.isSimilar(main.getDivorce());
 
         Messages messages = plugin.getMessages();
         ExpectingManager expectingManager = plugin.getExpectingManager();
@@ -205,7 +278,7 @@ public final class InventoryListeners implements Listener {
             return;
         } else if (current.isSimilar(main.getInspect())) {
             main.setShouldStopInteracting(false);
-            new EquipmentGUI(plugin, player, npc);
+            runTask(() -> new EquipmentGUI(plugin, npc, player));
             return;
         } else if (current.isSimilar(main.getGift())) {
             if (!npc.isExpectingGift()) {
@@ -224,6 +297,8 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getProcreate())) {
+            if (conditionNotMet(player, isPartner)) return;
+
             if (reputation < Config.REPUTATION_REQUIRED_TO_PROCREATE.asInt()) {
                 messages.send(player, npc, Messages.Message.PROCREATE_FAIL_LOW_REPUTATION);
                 closeInventory(player);
@@ -245,9 +320,11 @@ public final class InventoryListeners implements Listener {
 
             npc.setProcreatingWith(playerUUID);
             new BabyTask(plugin, npc.bukkit(), player).runTaskTimer(plugin, 0L, 20L);
-        } else if (current.isSimilar(main.getDivorce()) || isClericPartner) {
-            ItemStack divorcePapers = new ItemBuilder(main.getPapers()).clearLore().build();
-            boolean hasDivorcePapers = player.getInventory().containsAtLeast(divorcePapers, 1) || isClericPartner;
+        } else if (isDivorceItem || isClericPartner) {
+            if ((isDivorceItem && conditionNotMet(player, isPartner))
+                    || (isClericPartner && conditionNotMet(player, isCleric))) return;
+
+            boolean hasDivorcePapers = isClericPartner || removeDivorcePapers(player.getInventory());
 
             int lossReputation;
             if (hasDivorcePapers) {
@@ -256,7 +333,7 @@ public final class InventoryListeners implements Listener {
                 lossReputation = Config.DIVORCE_REPUTATION_LOSS.asInt();
             }
 
-            npc.addMinorNegative(playerUUID, lossReputation);
+            if (lossReputation > 1) npc.addMinorNegative(playerUUID, lossReputation);
 
             if (hasDivorcePapers) {
                 messages.send(player, npc, Messages.Message.DIVORCE_PAPERS);
@@ -264,15 +341,19 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, npc, Messages.Message.DIVORCE_NORMAL);
             }
 
-            if (hasDivorcePapers && !isClericPartner) player.getInventory().removeItem(divorcePapers);
-
             // Divorce, remove and drop previous wedding ring.
             npc.divorceAndDropRing(player);
         } else if (current.isSimilar(main.getCombat())) {
+            String combat = Config.WHO_CAN_MODIFY_VILLAGER_COMBAT.asString();
+            if (conditionNotMet(player, combat.equalsIgnoreCase("everyone")
+                    || (combat.equalsIgnoreCase("family") && isFamily))) return;
+
             main.setShouldStopInteracting(false);
-            new CombatGUI(plugin, player, npc, null);
+            openCombatGUI(npc, player, null);
             return;
         } else if (current.isSimilar(main.getHome())) {
+            if (conditionNotMet(player, isFamily)) return;
+
             IVillagerNPC other = expectingManager.get(playerUUID);
             if (other != null && other.isExpectingBed()) {
                 messages.send(player, Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_BED);
@@ -285,9 +366,19 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getPapers())) {
+            if (!isCleric || !plugin.isMarried(player)) {
+                if (!isCleric) {
+                    messages.send(player, Messages.Message.INTERACT_FAIL_NOT_ALLOWED);
+                } else {
+                    messages.send(player, npc, Messages.Message.CLERIC_NOT_MARRIED);
+                }
+                closeInventory(player);
+                return;
+            }
+
             if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), "divorce-papers")) {
                 messages.send(player, npc, Messages.Message.CLERIC_DIVORCE_PAPERS);
-                npc.drop(new ItemBuilder(main.getPapers()).clearLore().build());
+                npc.drop(plugin.getDivorcePapers());
             } else {
                 messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
             }
@@ -317,6 +408,13 @@ public final class InventoryListeners implements Listener {
                 } else {
                     interactType = GUIInteractType.valueOf(type);
                 }
+
+                boolean isProudOf;
+                if ((isProudOf = interactType == GUIInteractType.BE_PROUD_OF) || interactType == GUIInteractType.FLIRT) {
+                    boolean allowFlirt = !npc.isFamily(player.getUniqueId()) && npc.bukkit().isAdult();
+                    if (conditionNotMet(player, isProudOf != allowFlirt)) return;
+                }
+
                 if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), interactType.getName())) {
                     handleChatInteraction(npc, interactType, player);
                 } else {
@@ -326,6 +424,37 @@ public final class InventoryListeners implements Listener {
         }
 
         closeInventory(player);
+    }
+
+    private boolean removeDivorcePapers(Inventory inventory) {
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            ItemStack item = inventory.getItem(slot);
+            if (item == null) continue;
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) continue;
+
+            if (!meta.getPersistentDataContainer().has(
+                    plugin.getDivorcePapersKey(),
+                    PersistentDataType.INTEGER)) continue;
+
+            int newAmount = item.getAmount() - 1;
+            if (newAmount > 0) {
+                item.setAmount(newAmount);
+            } else {
+                inventory.clear(slot);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean conditionNotMet(Player player, boolean condition) {
+        if (!condition) {
+            plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_NOT_ALLOWED);
+            closeInventory(player);
+        }
+        return !condition;
     }
 
     public void handleChatInteraction(IVillagerNPC npc, GUIInteractType interactType, Player player) {
@@ -341,11 +470,13 @@ public final class InventoryListeners implements Listener {
         VillagerChatInteractionEvent chatEvent = new VillagerChatInteractionEvent(npc, player, interactType, success);
         plugin.getServer().getPluginManager().callEvent(chatEvent);
 
-        int amount = Math.max(2, Config.CHAT_INTERACT_REPUTATION.asInt());
-        if (chatEvent.isSuccess()) {
-            npc.addMinorPositive(playerUUID, amount);
-        } else {
-            npc.addMinorNegative(playerUUID, amount);
+        int amount = Config.CHAT_INTERACT_REPUTATION.asInt();
+        if (amount > 1) {
+            if (chatEvent.isSuccess()) {
+                npc.addMinorPositive(playerUUID, amount);
+            } else {
+                npc.addMinorNegative(playerUUID, amount);
+            }
         }
 
         EntityEffect effect = chatEvent.isSuccess() ? interactType.isFlirt() ? EntityEffect.VILLAGER_HEART : EntityEffect.VILLAGER_HAPPY : EntityEffect.VILLAGER_ANGRY;
@@ -354,8 +485,16 @@ public final class InventoryListeners implements Listener {
         plugin.getMessages().sendRandomInteractionMessage(player, npc, interactType, chatEvent.isSuccess());
     }
 
+    private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
+        runTask(() -> new CombatGUI(plugin, npc, player, keyword));
+    }
+
     private void closeInventory(Player player) {
-        plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+        runTask(player::closeInventory);
+    }
+
+    private void runTask(Runnable runnable) {
+        plugin.getServer().getScheduler().runTask(plugin, runnable);
     }
 
     public static boolean canModifyInventory(IVillagerNPC npc, Player player) {

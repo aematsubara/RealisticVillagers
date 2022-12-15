@@ -196,7 +196,7 @@ public final class ExpectingManager implements Listener {
         int reputation = npc.getReputation(playerUUID);
         int repRequiredToMarry = Config.REPUTATION_REQUIRED_TO_MARRY.asInt();
 
-        boolean isRing = gift.isSimilar(plugin.getRing().getRecipe().getResult());
+        boolean isRing = gift.isSimilar(plugin.getRing().getResult());
 
         boolean alreadyMarriedWithPlayer = isRing && npc.isPartner(playerUUID);
 
@@ -218,7 +218,7 @@ public final class ExpectingManager implements Listener {
             amount = isRing ? 0 : Config.BAD_GIFT_REPUTATION.asInt();
         }
 
-        if (amount != 0) {
+        if (amount > 1) {
             if (success) {
                 npc.addMinorPositive(playerUUID, amount);
             } else {
@@ -277,7 +277,7 @@ public final class ExpectingManager implements Listener {
         npc.drop(gift);
         plugin.getServer().getScheduler().runTaskLater(
                 plugin,
-                () -> npc.bukkit().getInventory().removeItem(plugin.getRing().getRecipe().getResult()),
+                () -> npc.bukkit().getInventory().removeItem(plugin.getRing().getResult()),
                 2L);
     }
 

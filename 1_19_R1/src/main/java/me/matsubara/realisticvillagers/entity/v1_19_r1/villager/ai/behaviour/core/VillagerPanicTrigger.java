@@ -16,6 +16,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -42,7 +43,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
 
     @Override
     public boolean canStillUse(ServerLevel level, Villager villager, long time) {
-        return shouldPanic(villager) && (isHurt(villager) || hasHostile(villager));
+        return (isHurt(villager) || hasHostile(villager)) && shouldPanic(villager);
     }
 
     @Override
@@ -133,9 +134,13 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     }
 
     public static boolean ignorePlayer(VillagerNPC npc, Player player) {
-        return !isWearingMonsterHead(player)
-                || !Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
-                || !getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
+        return !isWearingMonsterHead(npc, player) && !isDefendVillager(npc, player);
+    }
+
+    private static boolean isWearingMonsterHead(VillagerNPC npc, Player player) {
+        return isWearingMonsterHead(player)
+                && Config.ATTACK_PLAYER_WEARING_MONSTER_SKULL.asBool()
+                && getTypeBySkullType(player.getItemBySlot(EquipmentSlot.HEAD))
                 .map(entityType -> npc.getTargetEntities().contains(entityType)).orElse(false);
     }
 
@@ -154,5 +159,29 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             if (current.is(head)) return true;
         }
         return false;
+    }
+
+    private static boolean isDefendVillager(LivingEntity entity, LivingEntity closest) {
+        if (!(entity instanceof VillagerNPC npc)) return false;
+        if (!(closest instanceof Player player)) return false;
+        if (!Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) return false;
+
+        Optional<Player> damager = getPlayerFightningFamily(npc);
+        return damager.isPresent() && damager.get().is(player);
+    }
+
+    private static Optional<Player> getPlayerFightningFamily(Villager villager) {
+        Optional<Player> empty = Optional.empty();
+        if (!(villager instanceof VillagerNPC npc)) return empty;
+
+        Optional<NearestVisibleLivingEntities> nearest = npc.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+        if (nearest.isEmpty()) return empty;
+
+        Optional<LivingEntity> closest = nearest.get().findClosest(
+                living -> living instanceof VillagerNPC && npc.isFamily(living.getUUID(), true));
+        if (closest.isEmpty() || !(closest.get() instanceof VillagerNPC family)) return empty;
+
+        Optional<LivingEntity> hurtBy = family.getBrain().getMemory(MemoryModuleType.HURT_BY_ENTITY);
+        return hurtBy.isPresent() && hurtBy.get() instanceof Player player ? Optional.of(player) : empty;
     }
 }

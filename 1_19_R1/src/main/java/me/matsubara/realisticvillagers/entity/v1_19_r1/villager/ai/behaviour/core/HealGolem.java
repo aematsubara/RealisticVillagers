@@ -15,6 +15,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -44,12 +45,13 @@ public class HealGolem extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        return isGolemVisible(villager)
-                && villager instanceof VillagerNPC npc
+        return villager instanceof VillagerNPC npc
                 && npc.isDoingNothing(ChangeItemType.HEALING_GOLEM)
-                && villager.getInventory().hasAnyOf(HEAL_ITEM)
-                && !villager.getBrain().hasMemoryValue(VillagerNPC.HAS_HEALED_GOLEM_RECENTLY)
-                && !villager.isSleeping()
+                && !npc.getBrain().hasMemoryValue(VillagerNPC.HAS_HEALED_GOLEM_RECENTLY)
+                && !npc.isSleeping()
+                && isGolemVisible(npc)
+                && npc.getInventory().hasAnyOf(HEAL_ITEM)
+                && npc.checkCurrentActivity(Activity.IDLE, Activity.PRE_RAID, Activity.RAID)
                 && Config.VILLAGER_FIX_IRON_GOLEM_WITH_IRON.asBool();
     }
 

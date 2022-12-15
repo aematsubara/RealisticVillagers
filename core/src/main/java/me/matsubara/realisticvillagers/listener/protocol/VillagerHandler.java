@@ -6,6 +6,7 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.reflect.StructureModifier;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -14,21 +15,22 @@ import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import me.matsubara.realisticvillagers.util.npc.NPC;
 import org.bukkit.Location;
 import org.bukkit.Particle;
+import org.bukkit.Raid;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.comphenix.protocol.PacketType.Play.Server.*;
 
 public class VillagerHandler extends PacketAdapter {
 
     private final RealisticVillagers plugin;
-    private final @Getter Set<UUID> sleeping = new HashSet<>();
+    private final @Getter Set<UUID> sleeping = ConcurrentHashMap.newKeySet();
 
     private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
             ENTITY_VELOCITY,
@@ -69,6 +71,8 @@ public class VillagerHandler extends PacketAdapter {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Override
     public void onPacketSending(PacketEvent event) {
+        if (event.isCancelled()) return;
+
         Player player = event.getPlayer();
         Entity entity = event.getPacket().getEntityModifier(player.getWorld()).readSafely(0);
         if (isInvalidEntity(entity)) return;
@@ -79,9 +83,11 @@ public class VillagerHandler extends PacketAdapter {
             return;
         }
 
+        StructureModifier<Byte> bytes = event.getPacket().getBytes();
+
         if (type == ENTITY_STATUS) {
             IVillagerNPC npc = plugin.getConverter().getNPC((Villager) entity).get();
-            handleStatus(npc, event.getPacket().getBytes().readSafely(0));
+            handleStatus(npc, bytes.readSafely(0));
         }
 
         int entityId = entity.getEntityId();
@@ -99,9 +105,8 @@ public class VillagerHandler extends PacketAdapter {
         if (!MOVEMENT_PACKETS.contains(type)) return;
 
         Location location = entity.getLocation();
-
         if (type == ENTITY_HEAD_ROTATION) {
-            float yaw = (event.getPacket().getBytes().read(0) * 360.f) / 256.0f;
+            float yaw = (bytes.read(0) * 360.f) / 256.0f;
             float pitch = location.getPitch();
 
             location.setYaw(yaw);
@@ -112,23 +117,32 @@ public class VillagerHandler extends PacketAdapter {
             if (!isSleeping && !shakingHead) {
                 PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
                 moveLook.getIntegers().write(0, entityId);
-                moveLook.getBytes().write(0, event.getPacket().getBytes().read(0));
+                moveLook.getBytes().write(0, bytes.read(0));
                 moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
 
                 ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
             }
         } else if (type == ENTITY_LOOK || type == REL_ENTITY_MOVE || type == REL_ENTITY_MOVE_LOOK) {
-            double changeInX = event.getPacket().getShorts().read(0) / 4096.0d;
-            double changeInY = event.getPacket().getShorts().read(1) / 4096.0d;
-            double changeInZ = event.getPacket().getShorts().read(2) / 4096.0d;
+            StructureModifier<Short> shorts = event.getPacket().getShorts();
+            double changeInX = shorts.read(0) / 4096.0d;
+            double changeInY = shorts.read(1) / 4096.0d;
+            double changeInZ = shorts.read(2) / 4096.0d;
 
             boolean hasRot = event.getPacket().getBooleans().read(0);
-            float yaw = hasRot ? (event.getPacket().getBytes().read(0) * 360.f) / 256.0f : location.getYaw();
-            float pitch = hasRot ? (event.getPacket().getBytes().read(1) * 360.f) / 256.0f : location.getPitch();
+            float yaw = hasRot ? (bytes.read(0) * 360.f) / 256.0f : location.getYaw();
+            float pitch = hasRot ? (bytes.read(1) * 360.f) / 256.0f : location.getPitch();
 
             location.add(changeInX, changeInY, changeInZ);
             location.setYaw(yaw);
             location.setPitch(pitch);
+        } else if (type == ENTITY_TELEPORT) {
+            StructureModifier<Double> doubles = event.getPacket().getDoubles();
+            location.setX(doubles.read(0));
+            location.setY(doubles.read(1));
+            location.setZ(doubles.read(2));
+
+            location.setYaw((bytes.read(0) * 360.f) / 256.0f);
+            location.setPitch((bytes.read(1) * 360.f) / 256.0f);
         }
 
         npc.get().setLocation(location);
@@ -140,7 +154,10 @@ public class VillagerHandler extends PacketAdapter {
             case 12 -> particle = Particle.HEART;
             case 13 -> particle = Particle.VILLAGER_ANGRY;
             case 14 -> particle = Particle.VILLAGER_HAPPY;
-            case 42 -> particle = npc.canAttack() ? null : Particle.WATER_SPLASH;
+            case 42 -> {
+                Raid raid = plugin.getConverter().getRaidAt(npc.bukkit().getLocation());
+                particle = raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : Particle.WATER_SPLASH;
+            }
             default -> particle = null;
         }
         if (particle != null) npc.spawnEntityEventParticle(particle);
