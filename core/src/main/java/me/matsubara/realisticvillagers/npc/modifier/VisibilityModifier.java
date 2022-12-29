@@ -65,7 +65,11 @@ public class VisibilityModifier extends NPCModifier {
             PacketContainer container = new PacketContainer(Server.PLAYER_INFO);
 
             if (NPC.IS_1_19_3) {
-                container.getPlayerInfoActions().writeSafely(0, ADD_ACTIONS);
+                try {
+                    container.getPlayerInfoActions().write(0, ADD_ACTIONS);
+                } catch (NullPointerException ignored) {
+
+                }
             } else {
                 container.getPlayerInfoAction().write(0, action);
             }
