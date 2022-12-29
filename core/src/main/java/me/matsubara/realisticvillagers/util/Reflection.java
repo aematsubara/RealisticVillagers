@@ -62,7 +62,7 @@ public final class Reflection {
         }
     }
 
-    public static void setFieldUsingUnsafe(final Field field, final Object object, final Object newValue) {
+    public static void setFieldUsingUnsafe(Field field, Object object, Object newValue) {
         try {
             field.setAccessible(true);
             int fieldModifiersMask = field.getModifiers();

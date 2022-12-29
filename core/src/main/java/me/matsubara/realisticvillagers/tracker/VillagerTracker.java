@@ -13,8 +13,8 @@ import me.matsubara.realisticvillagers.listener.npc.NPCHandler;
 import me.matsubara.realisticvillagers.listener.protocol.VillagerHandler;
 import me.matsubara.realisticvillagers.listener.spawn.BukkitSpawnListeners;
 import me.matsubara.realisticvillagers.listener.spawn.PaperSpawnListeners;
-import me.matsubara.realisticvillagers.util.npc.NPC;
-import me.matsubara.realisticvillagers.util.npc.NPCPool;
+import me.matsubara.realisticvillagers.npc.NPC;
+import me.matsubara.realisticvillagers.npc.NPCPool;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -251,7 +251,7 @@ public final class VillagerTracker implements Listener {
     }
 
     public Optional<NPC> getNPC(int entityId) {
-        return pool.getNpc(entityId);
+        return pool.getNPC(entityId);
     }
 
     public boolean isInvalid(Villager villager, boolean ignoreSkinsState) {
