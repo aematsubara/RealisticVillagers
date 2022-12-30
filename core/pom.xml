@@ -74,8 +74,9 @@
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_15*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_16*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_17*</exclude>
-                                        <exclude>net/wesjd/anvilgui/version/special/AnvilContainer1_14*</exclude>
-                                        <exclude>net/wesjd/anvilgui/version/special/AnvilContainer1_17*</exclude>
+                                        <exclude>net/wesjd/anvilgui/version/Wrapper1_18_R1*</exclude>
+                                        <exclude>net/wesjd/anvilgui/version/Wrapper1_19_R1*</exclude>
+                                        <exclude>net/wesjd/anvilgui/version/special/*</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
@@ -124,7 +125,7 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.19.2-R0.1-SNAPSHOT</version>
+            <version>1.19.3-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- ProtocolLib -->
@@ -138,7 +139,7 @@
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.5.3-SNAPSHOT</version>
+            <version>1.6.3-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>
