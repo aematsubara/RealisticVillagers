@@ -43,7 +43,13 @@ public class ChestHandler extends PacketAdapter {
         World world = event.getPlayer().getWorld();
 
         if (packet.getType() == PacketType.Play.Server.NAMED_SOUND_EFFECT) {
-            Sound sound = packet.getSoundEffects().readSafely(0);
+            Sound sound;
+            try {
+                sound = packet.getSoundEffects().readSafely(0);
+            } catch (IllegalStateException | NullPointerException exception) {
+                // Should "fix" IllegalStateException: Unable to invoke method public static org.bukkit.Sound org.bukkit.craftbukkit.v1_19_R2.CraftSound.getBukkit(net.minecraft.sounds.SoundEffect);
+                return;
+            }
             if (sound != Sound.BLOCK_CHEST_OPEN && sound != Sound.BLOCK_CHEST_CLOSE) return;
 
             StructureModifier<Integer> integers = packet.getIntegers();

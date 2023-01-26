@@ -16,6 +16,7 @@ import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Raid;
+import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -74,7 +75,16 @@ public class VillagerHandler extends PacketAdapter {
         if (event.isCancelled()) return;
 
         Player player = event.getPlayer();
-        Entity entity = event.getPacket().getEntityModifier(player.getWorld()).readSafely(0);
+
+        World world;
+        try {
+            world = player.getWorld();
+        } catch (UnsupportedOperationException exception) {
+            // Should "fix" -> UnsupportedOperationException: The method getWorld is not supported for temporary players.
+            return;
+        }
+
+        Entity entity = event.getPacket().getEntityModifier(world).readSafely(0);
         if (isInvalidEntity(entity)) return;
 
         PacketType type = event.getPacketType();
