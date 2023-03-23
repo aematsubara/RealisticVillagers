@@ -99,7 +99,7 @@ public final class InventoryUpdate {
                         getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, String.class, I_CHAT_BASE_COMPONENT, int.class);
 
         // Initialize fields.
-        activeContainer = getField(ENTITY_PLAYER, CONTAINER, "activeContainer", "bV", "bW", "bU", "containerMenu");
+        activeContainer = getField(ENTITY_PLAYER, CONTAINER, "activeContainer", "bV", "bW", "bU", "bP", "containerMenu");
         windowId = getField(CONTAINER, int.class, "windowId", "j", "containerId");
     }
 
@@ -110,17 +110,6 @@ public final class InventoryUpdate {
      * @param newTitle the new title for the inventory.
      */
     public static void updateInventory(Player player, String newTitle) {
-        updateInventory(PLUGIN, player, newTitle);
-    }
-
-    /**
-     * @param plugin the plugin calling this method, needed for logging purpose.
-     * @see InventoryUpdate#updateInventory(Player, String)
-     * @deprecated use {@link InventoryUpdate#updateInventory(Player, String)}
-     */
-    @SuppressWarnings("DeprecatedIsStillUsed")
-    @Deprecated
-    public static void updateInventory(JavaPlugin plugin, Player player, String newTitle) {
         Preconditions.checkArgument(player != null, "Cannot update inventory to null player.");
         Preconditions.checkArgument(newTitle != null, "The new title can't be null.");
 
@@ -151,8 +140,9 @@ public final class InventoryUpdate {
             Object bukkitView = getBukkitView.invoke(activeContainer);
             if (!(bukkitView instanceof InventoryView)) return;
 
-            // Some people may be using an older version of java.
-            @SuppressWarnings("PatternVariableCanBeUsed") InventoryView view = (InventoryView) bukkitView;
+            // Avoiding pattern variable, since some people may be using an older version of java.
+            //noinspection PatternVariableCanBeUsed
+            InventoryView view = (InventoryView) bukkitView;
             InventoryType type = view.getTopInventory().getType();
 
             // Workbenchs and anvils can change their title since 1.14.
@@ -169,7 +159,7 @@ public final class InventoryUpdate {
 
             // If the container was added in a newer version than the current, return.
             if (container.getContainerVersion() > ReflectionUtils.VER && useContainers()) {
-                (plugin != null ? plugin : PLUGIN).getLogger().warning("This container doesn't work on your current version.");
+                PLUGIN.getLogger().warning("This container doesn't work on your current version.");
                 return;
             }
 

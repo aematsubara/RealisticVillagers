@@ -25,6 +25,7 @@ import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Shape;
+import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
@@ -100,6 +101,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private List<String> worlds;
 
+    public static final List<AnvilGUI.ResponseAction> CLOSE_RESPONSE = Collections.singletonList(AnvilGUI.ResponseAction.close());
     private static final List<String> FILTER_TYPES = List.of("WHITELIST", "BLACKLIST");
     private static final List<String> SPECIAL_SECTIONS = List.of(
             "spawn-loot",

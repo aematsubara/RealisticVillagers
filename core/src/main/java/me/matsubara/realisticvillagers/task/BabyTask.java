@@ -18,6 +18,7 @@ public class BabyTask extends BukkitRunnable {
     private final RealisticVillagers plugin;
     private final IVillagerNPC villager;
     private final Player player;
+    private final boolean isBoy;
 
     private int count = 0;
     private boolean success = false;
@@ -27,6 +28,7 @@ public class BabyTask extends BukkitRunnable {
         this.plugin = plugin;
         this.villager = plugin.getConverter().getNPC(villager).get();
         this.player = player;
+        this.isBoy = ThreadLocalRandom.current().nextBoolean();
     }
 
     @Override
@@ -42,26 +44,26 @@ public class BabyTask extends BukkitRunnable {
     }
 
     private void openInventory(String text) {
-        boolean isBoy = ThreadLocalRandom.current().nextBoolean();
-
         new AnvilGUI.Builder()
                 .title(Config.BABY_TITLE.asStringTranslated().replace("%sex%", isBoy ? Config.BOY.asString() : Config.GIRL.asString()))
                 .text(text)
                 .itemLeft(new ItemStack(Material.PAPER))
-                .onComplete((opener, result) -> {
-                    if (!plugin.getTracker().isValidName(result)) return AnvilGUI.Response.close();
+                .onComplete(completion -> {
+                    String result = completion.getText();
+
+                    if (!plugin.getTracker().isValidName(result)) return RealisticVillagers.CLOSE_RESPONSE;
 
                     long procreation = System.currentTimeMillis();
-                    opener.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
+                    player.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
 
 
                     int reputation = Config.BABY_REPUTATION.asInt();
-                    if (reputation > 1) villager.addMinorPositive(opener.getUniqueId(), reputation);
+                    if (reputation > 1) villager.addMinorPositive(player.getUniqueId(), reputation);
                     villager.setProcreatingWith(null);
                     villager.setLastProcreation(procreation);
 
                     success = true;
-                    return AnvilGUI.Response.close();
+                    return RealisticVillagers.CLOSE_RESPONSE;
                 })
                 .onClose(opener -> {
                     if (success) return;

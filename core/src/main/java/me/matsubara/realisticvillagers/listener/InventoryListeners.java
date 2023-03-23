@@ -125,9 +125,12 @@ public final class InventoryListeners implements Listener {
                 return;
             } else if (current.isSimilar(whistle.getSearch())) {
                 new AnvilGUI.Builder()
-                        .onComplete((opener, text) -> {
-                            runTask(() -> plugin.openWhistleGUI(opener, text));
-                            return AnvilGUI.Response.close();
+                        .onComplete(completion -> {
+                            Player opener = completion.getPlayer();
+                            String result = completion.getText();
+
+                            openWhistleGUI(opener, result);
+                            return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.WHISTLE_SEARCH_TITLE.asStringTranslated())
                         .text(Config.WHISTLE_SEARCH_TEXT.asStringTranslated())
@@ -137,7 +140,7 @@ public final class InventoryListeners implements Listener {
                         .open((Player) event.getWhoClicked());
                 return;
             } else if (current.isSimilar(whistle.getClearSearch())) {
-                runTask(() -> plugin.openWhistleGUI(player, null));
+                openWhistleGUI(player, null);
                 return;
             }
 
@@ -204,9 +207,12 @@ public final class InventoryListeners implements Listener {
             } else if (current.isSimilar(combat.getSearch())) {
                 combat.setShouldStopInteracting(false);
                 new AnvilGUI.Builder()
-                        .onComplete((opener, text) -> {
-                            openCombatGUI(npc, opener, text);
-                            return AnvilGUI.Response.close();
+                        .onComplete(completion -> {
+                            Player opener = completion.getPlayer();
+                            String result = completion.getText();
+
+                            openCombatGUI(npc, opener, result);
+                            return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
                         .text(Config.COMBAT_SEARCH_TEXT.asStringTranslated())
@@ -487,6 +493,10 @@ public final class InventoryListeners implements Listener {
 
     private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
         runTask(() -> new CombatGUI(plugin, npc, player, keyword));
+    }
+
+    private void openWhistleGUI(Player player, @Nullable String keyword) {
+        runTask(() -> plugin.openWhistleGUI(player, keyword));
     }
 
     private void closeInventory(Player player) {
