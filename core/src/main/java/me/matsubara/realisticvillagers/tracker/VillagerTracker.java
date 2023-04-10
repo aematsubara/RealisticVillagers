@@ -132,16 +132,20 @@ public final class VillagerTracker implements Listener {
             return;
         }
 
+        // Player is offline, we need to modify the NBT file (if possible).
+        File playerFile = getPlayerNBTFile(partner.getUniqueId());
+        if (playerFile != null) plugin.getConverter().removePartnerFromPlayerNBT(playerFile);
+    }
+
+    public File getPlayerNBTFile(UUID uuid) {
         for (World world : Bukkit.getWorlds()) {
             File data = new File(world.getWorldFolder(), "playerdata");
 
-            File playerFile = new File(data, partner + ".dat");
+            File playerFile = new File(data, uuid.toString() + ".dat");
             if (!playerFile.exists()) continue;
-
-            // Player is offline, we need to modify the NBT file (if possible).
-            plugin.getConverter().removePartnerFromPlayerNBT(playerFile);
-            break;
+            return playerFile;
         }
+        return null;
     }
 
     @EventHandler

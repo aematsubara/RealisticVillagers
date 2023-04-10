@@ -43,9 +43,6 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.DebugPackets;
-import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -120,8 +117,8 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
@@ -259,7 +256,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private static final int GOSSIP_DECAY_INTERVAL = 24000;
     private static final Vec3i ITEM_PICKUP_REACH = new Vec3i(1, 1, 1);
     private static final int[] ROTATION = {-1, -3 - 5, -7, -7, -6, -4, -2, 1, 3, 5, 7, 7, 6, 4, 2, 2, 0};
-    private static final EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(VillagerNPC.class, EntityDataSerializers.BOOLEAN);
     private static final ImmutableSet<Class<? extends Item>> DO_NOT_SAVE = ImmutableSet.of(
             SwordItem.class,
             AxeItem.class,
@@ -379,8 +375,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void savePluginData(CompoundTag tag) {
         CompoundTag villagerTag = new CompoundTag();
         villagerTag.put(OfflineVillagerNPC.INVENTORY, inventory.createTag());
-        villagerTag.putString(OfflineVillagerNPC.NAME, villagerName);
-        villagerTag.putString(OfflineVillagerNPC.SEX, sex);
+        if (villagerName != null) villagerTag.putString(OfflineVillagerNPC.NAME, villagerName);
+        if (sex != null) villagerTag.putString(OfflineVillagerNPC.SEX, sex);
         if (partner != null) villagerTag.put(OfflineVillagerNPC.PARTNER, fromOffline(partner));
         villagerTag.putBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER, isPartnerVillager);
         villagerTag.putLong(OfflineVillagerNPC.LAST_PROCREATION, lastProcreation);
@@ -624,7 +620,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void setChargingCrossbow(boolean flag) {
-        entityData.set(DATA_IS_CHARGING, flag);
+
     }
 
     @Override
@@ -745,12 +741,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return ItemStack.EMPTY;
     }
 
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        entityData.define(DATA_IS_CHARGING, false);
-    }
-
     @SuppressWarnings("deprecation")
     @Override
     public void die(DamageSource source) {
@@ -788,11 +778,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                         ((Villager) living).getBrain(),
                         (LivingEntity) entity,
                         TargetReason.DEFEND));
-    }
-
-    @SuppressWarnings("unused")
-    public boolean isCharging() {
-        return entityData.get(DATA_IS_CHARGING);
     }
 
     @Override
@@ -865,13 +850,13 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
-    public void divorceAndDropRing(Player player) {
+    public void divorceAndDropRing(@Nullable Player player) {
         org.bukkit.inventory.ItemStack ring = plugin.getRing().getResult();
         getBukkitEntity().getInventory().removeItem(ring);
         drop(CraftItemStack.asNMSCopy(ring));
 
         setPartner(null);
-        player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
+        if (player != null) player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
     }
 
     @Override
@@ -1619,7 +1604,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     private @Nullable Component getCustomName(boolean vanilla) {
-        return vanilla ? super.getCustomName() : Component.literal(villagerName);
+        return vanilla ? super.getCustomName() : villagerName != null ? Component.literal(villagerName) : null;
     }
 
     public boolean canBreedWith(VillagerNPC other) {
@@ -1891,8 +1876,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void divorceAndDropRing(org.bukkit.entity.Player player) {
-        divorceAndDropRing(((CraftPlayer) player).getHandle());
+    public void divorceAndDropRing(@Nullable org.bukkit.entity.Player player) {
+        divorceAndDropRing(player != null ? ((CraftPlayer) player).getHandle() : null);
     }
 
     @Override

@@ -148,10 +148,7 @@ public final class InventoryListeners implements Listener {
             if (meta == null) return;
 
             String villagerName = meta.getPersistentDataContainer().get(plugin.getVillagerNameKey(), PersistentDataType.STRING);
-            if (villagerName == null || villagerName.isEmpty()) {
-                closeInventory(player);
-                return;
-            }
+            if (villagerName == null || villagerName.isEmpty()) return;
 
             for (IVillagerNPC offline : plugin.getTracker().getOfflineVillagers()) {
                 if (!offline.getVillagerName().equalsIgnoreCase(villagerName)) continue;

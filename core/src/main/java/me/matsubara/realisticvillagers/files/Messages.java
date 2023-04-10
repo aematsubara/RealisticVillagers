@@ -201,7 +201,10 @@ public final class Messages {
         NO_TRADES("no-trades"),
         WHISTLE_TELEPORTED("whistle-teleported"),
         WHISTLE_ERROR("whistle-error"),
-        WHISTLE_NO_FAMILY("whistle-no-family");
+        WHISTLE_NO_FAMILY("whistle-no-family"),
+        UNKNOWN_PLAYER("unknown-player"),
+        NOT_MARRIED("not-married"),
+        DIVORCED("divorced");
 
         private final String path;
 

@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -350,7 +351,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public void divorceAndDropRing(Player player) {
+    public void divorceAndDropRing(@Nullable Player player) {
 
     }
 

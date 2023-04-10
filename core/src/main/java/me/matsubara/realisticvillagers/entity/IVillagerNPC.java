@@ -10,6 +10,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -109,7 +110,7 @@ public interface IVillagerNPC {
 
     long getLastProcreation();
 
-    void divorceAndDropRing(Player player);
+    void divorceAndDropRing(@Nullable Player player);
 
     void drop(ItemStack item);
 

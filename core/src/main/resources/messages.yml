@@ -99,8 +99,12 @@ interact-fail:
 
 reload: "&6The plugin has been reloaded!"
 no-permission: "&cYou don't have permission to execute this command!"
+unknown-player: "&cThat player doesn't exist!"
+# %player-name% - the name of the player involved (@not-married & @divorced).
+not-married: "&cThe player %player-name% isn't married!"
+divorced: "&6The player %player-name% has been divorced!"
 
-# %villager-name% - the name of the villager involved.
+# %villager-name% - the name of the villager involved (@whistle-teleported & @whistle-error).
 whistle-teleported: "&a%villager-name% has been teleported."
 whistle-error: "&cIt wasn't possible to teleport %villager-name%."
 whistle-no-family: "&cYou should get a family first!"

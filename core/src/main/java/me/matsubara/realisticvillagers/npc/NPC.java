@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 /**
  * Represents a non-person player which can be spawned and is managed by a {@link NPCPool}.
  */
-@SuppressWarnings("deprecation")
+@SuppressWarnings({"deprecation", "unused"})
 public class NPC {
 
     private final Collection<Player> seeingPlayers = new CopyOnWriteArraySet<>();
@@ -42,7 +42,7 @@ public class NPC {
     private boolean lookAtPlayer;
     private boolean imitatePlayer;
 
-    public static final boolean IS_1_19_3 = MinecraftVersion.FEATURE_PREVIEW_UPDATE.atOrAbove();
+    public static final boolean IS_1_19_3 = new MinecraftVersion("1.19.3").atOrAbove();
 
     /**
      * Creates a new npc instance.

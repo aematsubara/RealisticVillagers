@@ -22,12 +22,18 @@ import java.util.UUID;
 public class VisibilityModifier extends NPCModifier {
 
     // Static actions we need to send out for all player updates (since 1.19.3).
-    private static final EnumSet<EnumWrappers.PlayerInfoAction> ADD_ACTIONS = EnumSet.of(
-            EnumWrappers.PlayerInfoAction.ADD_PLAYER,
-            EnumWrappers.PlayerInfoAction.UPDATE_LISTED,
-            EnumWrappers.PlayerInfoAction.UPDATE_LATENCY,
-            EnumWrappers.PlayerInfoAction.UPDATE_GAME_MODE,
-            EnumWrappers.PlayerInfoAction.UPDATE_DISPLAY_NAME);
+    private static final EnumSet<EnumWrappers.PlayerInfoAction> ADD_ACTIONS;
+
+    static {
+        if (NPC.IS_1_19_3) {
+            ADD_ACTIONS = EnumSet.of(
+                    EnumWrappers.PlayerInfoAction.ADD_PLAYER,
+                    EnumWrappers.PlayerInfoAction.UPDATE_LISTED,
+                    EnumWrappers.PlayerInfoAction.UPDATE_LATENCY,
+                    EnumWrappers.PlayerInfoAction.UPDATE_GAME_MODE,
+                    EnumWrappers.PlayerInfoAction.UPDATE_DISPLAY_NAME);
+        } else ADD_ACTIONS = EnumSet.noneOf(EnumWrappers.PlayerInfoAction.class);
+    }
 
     // Converter for UUID lists.
     private static final EquivalentConverter<List<UUID>> UUID_LIST_CONVERTER = BukkitConverters.getListConverter(Converters.passthrough(UUID.class));
@@ -81,14 +87,23 @@ public class VisibilityModifier extends NPCModifier {
                 profile.getProperties().putAll(playerProfile.getProperties());
             }
 
-            PlayerInfoData data = new PlayerInfoData(
-                    profile.getUUID(),
-                    20,
-                    false,
-                    NativeGameMode.CREATIVE,
-                    profile,
-                    null,
-                    null);
+            PlayerInfoData data;
+            if (NPC.IS_1_19_3) {
+                data = new PlayerInfoData(
+                        profile.getUUID(),
+                        20,
+                        false,
+                        NativeGameMode.CREATIVE,
+                        profile,
+                        null,
+                        null);
+            } else {
+                data = new PlayerInfoData(
+                        profile,
+                        20,
+                        NativeGameMode.CREATIVE,
+                        null);
+            }
 
             container.getPlayerInfoDataLists().write(NPC.IS_1_19_3 ? 1 : 0, Lists.newArrayList(data));
             return container;

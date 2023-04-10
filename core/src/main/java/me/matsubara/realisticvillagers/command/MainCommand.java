@@ -9,6 +9,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Shape;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -18,12 +19,12 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.io.File;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
@@ -31,14 +32,15 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
     private final RealisticVillagers plugin;
 
-    private static final List<String> COMMAND_ARGS = Lists.newArrayList("reload", "get_ring", "get_whistle", "get_divorce_papers");
+    private static final List<String> COMMAND_ARGS = Lists.newArrayList("reload", "give_ring", "give_whistle", "give_divorce_papers", "force_divorce");
     private static final List<String> HELP = Stream.of(
             "&8----------------------------------------",
-            "&6&lRealisticVillagers &f&oCommands",
+            "&6&lRealisticVillagers &f&oCommands &c(optional) <required>",
             "&e/rv reload &f- &7Reload configuration files.",
-            "&e/rv get_ring &f- &7Get a wedding ring.",
-            "&e/rv get_whistle &f- &7Get a whistle.",
-            "&e/rv get_divorce_papers &f- &7Get divorce papers.",
+            "&e/rv give_ring (player) &f- &7Gives a wedding ring.",
+            "&e/rv give_whistle (player) &f- &7Gives a whistle.",
+            "&e/rv give_divorce_papers (player) &f- &7Gives divorce papers.",
+            "&e/rv force_divorce (player) &f- &7Forces the divorce of a player.",
             "&8----------------------------------------").map(PluginUtils::translate).toList();
 
     public MainCommand(RealisticVillagers plugin) {
@@ -48,20 +50,24 @@ public class MainCommand implements CommandExecutor, TabCompleter {
     @SuppressWarnings("NullableProblems")
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!command.getName().equalsIgnoreCase("realisticvillagers")) return true;
-
         if (!hasPermission(sender, "realisticvillagers.help")) return true;
 
-        if (args.length != 1 || !COMMAND_ARGS.contains(args[0].toLowerCase())) {
+        if (args.length == 0 || args.length > 2 || !COMMAND_ARGS.contains(args[0].toLowerCase())) {
             for (String line : HELP) {
                 sender.sendMessage(line);
             }
             return true;
         }
 
-        if (getItemCommand(sender, args[0], "get_ring", plugin.getRing())) return true;
-        if (getItemCommand(sender, args[0], "get_whistle", plugin.getWhistle())) return true;
-        if (getItemCommand(sender, args[0], "get_divorce_papers", plugin.getDivorcePapers())) return true;
+        if (args[0].equalsIgnoreCase("force_divorce")) {
+            if (!hasPermission(sender, "realisticvillagers.forcedivorce")) return true;
+            handleForceDivorce(sender, args);
+            return true;
+        }
+
+        if (getItemCommand(sender, args, "give_ring", plugin.getRing())) return true;
+        if (getItemCommand(sender, args, "give_whistle", plugin.getWhistle())) return true;
+        if (getItemCommand(sender, args, "give_divorce_papers", plugin.getDivorcePapers())) return true;
 
         if (!hasPermission(sender, "realisticvillagers.reload")) return true;
 
@@ -109,16 +115,77 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean getItemCommand(CommandSender sender, String argument, String itemGetter, Shape shape) {
-        return getItemCommand(sender, argument, itemGetter, shape.getResult());
+    private void handleForceDivorce(CommandSender sender, String[] args) {
+        @SuppressWarnings("deprecation") OfflinePlayer offline = args.length > 1 ? Bukkit.getOfflinePlayer(args[1]) : sender instanceof Player ? (Player) sender : null;
+        if (offline == null || !offline.hasPlayedBefore()) {
+            plugin.getMessages().sendMessages(sender, Messages.Message.UNKNOWN_PLAYER);
+            return;
+        }
+
+        UUID partnerUUID = null;
+
+        Player player = offline.getPlayer();
+        if (player == null) {
+            File playerFile = plugin.getTracker().getPlayerNBTFile(offline.getUniqueId());
+            if (playerFile != null && (partnerUUID = plugin.getConverter().getPartnerUUIDFromPlayerNBT(playerFile)) != null) {
+                plugin.getConverter().removePartnerFromPlayerNBT(playerFile);
+            }
+        } else {
+            String uuidString = player.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
+            if (uuidString != null) partnerUUID = UUID.fromString(uuidString);
+            player.getPersistentDataContainer().remove(plugin.getMarriedWith());
+        }
+
+        if (partnerUUID == null) {
+            plugin.getMessages().send(
+                    sender,
+                    Messages.Message.NOT_MARRIED,
+                    string -> string.replace("%player-name%", Objects.requireNonNullElse(offline.getName(), "???")));
+            return;
+        }
+
+        for (IVillagerNPC offlineVillager : plugin.getTracker().getOfflineVillagers()) {
+            if (!offlineVillager.getUniqueId().equals(partnerUUID)) continue;
+
+            Villager bukkit = offlineVillager.bukkit();
+            if (bukkit == null) {
+                bukkit = plugin.getUnloadedOffline(offlineVillager);
+                if (bukkit == null) continue;
+            }
+
+            Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(bukkit);
+
+            IVillagerNPC npc = optional.orElse(null);
+            if (npc == null) continue;
+
+            npc.divorceAndDropRing(player);
+            break;
+        }
+
+        // At this point, either the player or the villager (or both) should be divorced.
+        plugin.getMessages().send(
+                sender,
+                Messages.Message.DIVORCED,
+                string -> string.replace("%player-name%", Objects.requireNonNullElse(offline.getName(), "???")));
     }
 
-    private boolean getItemCommand(CommandSender sender, String argument, String itemGetter, ItemStack item) {
-        if (!argument.equalsIgnoreCase(itemGetter)) return false;
-        if (!hasPermission(sender, "realisticvillagers." + itemGetter)) return true;
-        if (sender instanceof Player player) {
-            player.getInventory().addItem(item);
-        }
+    private boolean getItemCommand(CommandSender sender, String[] args, String itemGetter, Shape shape) {
+        return getItemCommand(sender, args, itemGetter, shape.getResult());
+    }
+
+    private boolean getItemCommand(CommandSender sender, String[] args, String itemGetter, ItemStack item) {
+        if (!args[0].equalsIgnoreCase(itemGetter)) return false;
+
+        boolean isOther = args.length > 1;
+
+        Player target = isOther ? Bukkit.getPlayer(args[1]) : sender instanceof Player ? (Player) sender : null;
+        if (!hasPermission(sender, "realisticvillagers." + itemGetter
+                .replaceFirst("_", isOther ? ".other." : ".")
+                .replace("_", ""))) return true;
+
+        if (target != null) target.getInventory().addItem(item);
+        else plugin.getMessages().sendMessages(sender, Messages.Message.UNKNOWN_PLAYER);
+
         return true;
     }
 

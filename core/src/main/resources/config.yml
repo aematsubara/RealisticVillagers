@@ -860,7 +860,7 @@ initial-reputation-at-birth: 50
 # @only-for-range-weapon: the item will only be added to the inventory if the villager received a ranged weapon.
 # @only-for-bow: same as above, but only for bows.
 # @only-for-crossbow: same as above, but only for crossbows.
-# @off-hand-if-possible: the item will be added to the secondary hand if possible (if the off-hand is not occupied).
+# @off-hand-if-possible: the item will be added to the secondary hand if possible (only if the off-hand is not occupied).
 spawn-loot:
   # If true, villagers who have spawned before will also be equipped.
   force-equip: false

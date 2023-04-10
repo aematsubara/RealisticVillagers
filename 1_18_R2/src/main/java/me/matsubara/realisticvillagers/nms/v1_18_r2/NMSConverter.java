@@ -206,6 +206,22 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
+    public UUID getPartnerUUIDFromPlayerNBT(File file) {
+        try (FileInputStream stream = new FileInputStream(file)) {
+            CompoundTag tag = NbtIo.readCompressed(stream);
+
+            CompoundTag bukkit = getOrCreateBukkitTag(tag);
+            if (bukkit.hasUUID(plugin.getMarriedWith().toString())) {
+                return bukkit.getUUID(plugin.getMarriedWith().toString());
+            } else {
+                return null;
+            }
+        } catch (IOException exception) {
+            return null;
+        }
+    }
+
+    @Override
     public void removePartnerFromPlayerNBT(File file) {
         try (FileInputStream stream = new FileInputStream(file)) {
             CompoundTag tag = NbtIo.readCompressed(stream);

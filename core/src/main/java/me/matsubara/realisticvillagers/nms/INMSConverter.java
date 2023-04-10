@@ -26,6 +26,8 @@ public interface INMSConverter {
 
     void loadDataFromTag(Villager villager, String tag);
 
+    UUID getPartnerUUIDFromPlayerNBT(File file);
+
     void removePartnerFromPlayerNBT(File file);
 
     void loadData();
