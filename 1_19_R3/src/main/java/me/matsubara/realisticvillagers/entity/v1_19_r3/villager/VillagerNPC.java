@@ -18,6 +18,7 @@ import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.VillagerNPCGo
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.core.LootChest;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.sensing.NearestItemSensor;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.sensing.SecondaryPoiSensor;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.sensing.VillagerHostilesSensor;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
@@ -30,7 +31,9 @@ import me.matsubara.realisticvillagers.nms.v1_19_r3.NMSConverter;
 import me.matsubara.realisticvillagers.nms.v1_19_r3.VillagerFoodData;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.npc.modifier.MetadataModifier;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -64,6 +67,8 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
+import net.minecraft.world.entity.ai.behavior.GateBehavior;
+import net.minecraft.world.entity.ai.behavior.ShufflingList;
 import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
 import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -77,6 +82,7 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
@@ -109,6 +115,7 @@ import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftVillager;
 import org.bukkit.craftbukkit.v1_19_R3.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
+import org.bukkit.entity.AbstractArrow.PickupStatus;
 import org.bukkit.entity.FishHook;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
@@ -117,6 +124,8 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
@@ -125,8 +134,9 @@ import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-@SuppressWarnings("Guava")
+@SuppressWarnings({"Guava", "deprecation"})
 @Getter
 @Setter
 public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob {
@@ -136,9 +146,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private String villagerName;
     private String sex;
     private IVillagerNPC partner;
+    private List<IVillagerNPC> partners = new ArrayList<>();
     private boolean isPartnerVillager;
     private long lastProcreation;
     private int skinTextureId = -1;
+    private int kidSkinTextureId = -1;
     private UUID interactingWith;
     private InteractType interactType;
     private ExpectingType expectingType;
@@ -165,6 +177,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean isTaming;
     private boolean isHealingGolem;
     private boolean isUsingBoneMeal;
+    private boolean isUsingHoe;
+    private boolean isUsingFishingRod;
     private boolean isLooting;
     private boolean wasInfected;
     private boolean shakingHead;
@@ -175,7 +189,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private long timeEntitySatOnShoulder;
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
-    private double previousSpeedModifier;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -192,6 +205,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public static final MemoryModuleType<Player> PLAYER_HORN = NMSConverter.registerMemoryType("player_horn");
     public static final MemoryModuleType<TargetReason> TARGET_REASON = NMSConverter.registerMemoryType("target_reason");
     public static final MemoryModuleType<ItemEntity> NEAREST_WANTED_ITEM = NMSConverter.registerMemoryType("nearest_wanted_item");
+    public static final MemoryModuleType<PrimedTnt> NEAREST_PRIMED_TNT = NMSConverter.registerMemoryType("nearest_primed_tnt");
 
     public static final Activity STAY = NMSConverter.registerActivity("stay");
 
@@ -234,28 +248,40 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             PLAYER_HORN,
             TARGET_REASON,
             NEAREST_WANTED_ITEM,
+            NEAREST_PRIMED_TNT,
             MemoryModuleType.ATTACK_TARGET,
             MemoryModuleType.ATTACK_COOLING_DOWN);
 
-    private static final SensorType<VillagerHostilesSensor> NEAREST_HOSTILE = NMSConverter.registerSensor("nearest_hostile", VillagerHostilesSensor::new);
-    private static final SensorType<NearestItemSensor> NEAREST_ITEMS = NMSConverter.registerSensor("nearest_wanted_items", NearestItemSensor::new);
+    private static final SensorType<VillagerHostilesSensor> VILLAGER_HOSTILES = NMSConverter.registerSensor("rv_villager_hostiles", VillagerHostilesSensor::new);
+    private static final SensorType<NearestItemSensor> NEAREST_ITEMS = NMSConverter.registerSensor("rv_nearest_items", NearestItemSensor::new);
+    private static final SensorType<SecondaryPoiSensor> SECONDARY_POIS = NMSConverter.registerSensor("rv_secondary_pois", SecondaryPoiSensor::new);
 
     private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSORS = ImmutableList.of(
             SensorType.NEAREST_LIVING_ENTITIES,
             SensorType.NEAREST_BED,
             SensorType.HURT_BY,
             SensorType.VILLAGER_BABIES,
-            SensorType.SECONDARY_POIS,
             SensorType.GOLEM_DETECTED,
             SensorType.NEAREST_PLAYERS,
+            VILLAGER_HOSTILES != null ? VILLAGER_HOSTILES : SensorType.VILLAGER_HOSTILES,
             NEAREST_ITEMS != null ? NEAREST_ITEMS : SensorType.NEAREST_ITEMS,
-            NEAREST_HOSTILE != null ? NEAREST_HOSTILE : SensorType.VILLAGER_HOSTILES);
+            SECONDARY_POIS != null ? SECONDARY_POIS : SensorType.SECONDARY_POIS);
 
-    public static final float SWIMMING_SPEED_MODIFIER = SPEED_MODIFIER * 2.0f;
-    public static final float SPRINT_SPEED_MODIFIER = SPEED_MODIFIER * 1.5f;
+    public static final Supplier<Float> EAT_SPEED = Config.SPEED_MODIFIER_EAT::asFloat;
+    public static final Supplier<Float> WALK_SPEED = Config.SPEED_MODIFIER_WALK::asFloat;
+    public static final Supplier<Float> SPRINT_SPEED = Config.SPEED_MODIFIER_SPRINT::asFloat;
+    public static final Supplier<Float> SWIM_SPEED = Config.SPEED_MODIFIER_SWIM::asFloat;
+
     private static final int GOSSIP_DECAY_INTERVAL = 24000;
     private static final Vec3i ITEM_PICKUP_REACH = new Vec3i(1, 1, 1);
     private static final int[] ROTATION = {-1, -3 - 5, -7, -7, -6, -4, -2, 1, 3, 5, 7, 7, 6, 4, 2, 2, 0};
+    private static final ImmutableSet<Item> SEEDS = ImmutableSet.of(
+            Items.WHEAT_SEEDS,
+            Items.POTATO,
+            Items.CARROT,
+            Items.BEETROOT_SEEDS,
+            Items.PUMPKIN_SEEDS,
+            Items.MELON_SEEDS);
     private static final ImmutableSet<Class<? extends Item>> DO_NOT_SAVE = ImmutableSet.of(
             SwordItem.class,
             AxeItem.class,
@@ -265,6 +291,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             ArmorItem.class);
 
     private static final MethodHandle BUKKIT_ENTITY = Reflection.getFieldSetter(Entity.class, "bukkitEntity");
+    private static final MethodHandle BEHAVIORS_FIELD = Reflection.getFieldGetter(GateBehavior.class, "e");
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {
         this(type, level, VillagerType.PLAINS);
@@ -307,7 +334,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         VillagerProfession profession = getProfession();
         if (isBaby()) {
             brain.setSchedule(Schedule.VILLAGER_BABY);
-            brain.addActivity(Activity.PLAY, VillagerGoalPackages.getPlayPackage(SPEED_MODIFIER));
+            brain.addActivity(Activity.PLAY, VillagerGoalPackages.getPlayPackage(VillagerNPC.WALK_SPEED.get()));
         } else {
             brain.setSchedule(Schedule.VILLAGER_DEFAULT);
             brain.addActivityWithConditions(
@@ -323,8 +350,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 ImmutableSet.of(Pair.of(MemoryModuleType.MEETING_POINT, MemoryStatus.VALUE_PRESENT)));
         brain.addActivity(Activity.REST, VillagerNPCGoalPackages.getRestPackage());
         brain.addActivity(Activity.IDLE, VillagerNPCGoalPackages.getIdlePackage());
-        brain.addActivity(Activity.PANIC, VillagerGoalPackages.getPanicPackage(profession, SPEED_MODIFIER));
-        brain.addActivity(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(profession, SPEED_MODIFIER));
+        brain.addActivity(Activity.PANIC, VillagerGoalPackages.getPanicPackage(profession, VillagerNPC.WALK_SPEED.get()));
+        brain.addActivity(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(profession, VillagerNPC.WALK_SPEED.get()));
         brain.addActivity(Activity.RAID, VillagerNPCGoalPackages.getRaidPackage());
         brain.addActivity(Activity.HIDE, VillagerNPCGoalPackages.getHidePackage());
         brain.addActivity(Activity.FIGHT, VillagerNPCGoalPackages.getFightPackage());
@@ -341,7 +368,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public int getPlayerReputation(Player player) {
+    public int getPlayerReputation(@NotNull Player player) {
         return gossips.getReputation(player.getUUID(), (type) -> true);
     }
 
@@ -366,6 +393,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
         savePluginData(bukkit);
+        stopAllInteractions();
 
         tag.put("BukkitValues", bukkit);
 
@@ -378,9 +406,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (villagerName != null) villagerTag.putString(OfflineVillagerNPC.NAME, villagerName);
         if (sex != null) villagerTag.putString(OfflineVillagerNPC.SEX, sex);
         if (partner != null) villagerTag.put(OfflineVillagerNPC.PARTNER, fromOffline(partner));
+        saveCollection(partners, this::fromOffline, OfflineVillagerNPC.PARTNERS, villagerTag);
         villagerTag.putBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER, isPartnerVillager);
         villagerTag.putLong(OfflineVillagerNPC.LAST_PROCREATION, lastProcreation);
         villagerTag.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
+        villagerTag.putInt(OfflineVillagerNPC.KID_SKIN_TEXTURE_ID, kidSkinTextureId);
         if (father != null) villagerTag.put(OfflineVillagerNPC.FATHER, fromOffline(father));
         if (mother != null) villagerTag.put(OfflineVillagerNPC.MOTHER, fromOffline(mother));
         villagerTag.putBoolean(OfflineVillagerNPC.IS_FATHER_VILLAGER, isFatherVillager);
@@ -409,7 +439,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return villager instanceof OfflineVillagerNPC offline ? offline.getTag() : null;
     }
 
-    private <T> void saveCollection(Collection<T> collection, Function<T, Tag> mapper, String name, CompoundTag tag) {
+    private <T> void saveCollection(@NotNull Collection<T> collection, Function<T, Tag> mapper, String name, CompoundTag tag) {
         ListTag list = new ListTag();
         for (T object : collection) {
             list.add(mapper.apply(object));
@@ -438,16 +468,32 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public void loadPluginData(CompoundTag villagerTag) {
+        VillagerTracker tracker = plugin.getTracker();
+
         inventory.fromTag(villagerTag.getList(OfflineVillagerNPC.INVENTORY, 10));
         villagerName = villagerTag.getString(OfflineVillagerNPC.NAME);
         sex = villagerTag.getString(OfflineVillagerNPC.SEX);
         if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
-        if (villagerName.isEmpty()) setVillagerName(plugin.getTracker().getRandomNameBySex(sex));
+        if (tracker.shouldRename(villagerName)) {
+            setVillagerName(tracker.getRandomNameBySex(sex));
+        }
         isPartnerVillager = villagerTag.getBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER);
         partner = getFamily(villagerTag, OfflineVillagerNPC.PARTNER, isPartnerVillager);
+        fillCollection(
+                partners,
+                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(tracker, input),
+                OfflineVillagerNPC.PARTNERS,
+                villagerTag);
+        if (partner != null && isPartnerVillager && tracker.getOffline(this.partner.getUniqueId()) == null) {
+            partners.add(partner);
+            setPartner(null, false);
+        }
         lastProcreation = villagerTag.getLong(OfflineVillagerNPC.LAST_PROCREATION);
         skinTextureId = villagerTag.contains(OfflineVillagerNPC.SKIN_TEXTURE_ID) ?
                 villagerTag.getInt(OfflineVillagerNPC.SKIN_TEXTURE_ID) :
+                -1;
+        kidSkinTextureId = villagerTag.contains(OfflineVillagerNPC.KID_SKIN_TEXTURE_ID) ?
+                villagerTag.getInt(OfflineVillagerNPC.KID_SKIN_TEXTURE_ID) :
                 -1;
         isFatherVillager = villagerTag.getBoolean(OfflineVillagerNPC.IS_FATHER_VILLAGER);
         father = getFamily(villagerTag, OfflineVillagerNPC.FATHER, isFatherVillager);
@@ -467,14 +513,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
         fillCollection(
                 childrens,
-                input -> {
-                    if (input instanceof CompoundTag compound) {
-                        return OfflineVillagerNPC.from(compound);
-                    } else {
-                        UUID uuid = NbtUtils.loadUUID(input);
-                        return plugin.getTracker().getOffline(uuid);
-                    }
-                },
+                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(tracker, input),
                 OfflineVillagerNPC.CHILDRENS,
                 villagerTag);
         fillCollection(
@@ -492,7 +531,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return 1.0f;
     }
 
-    private IVillagerNPC getFamily(CompoundTag tag, String who, boolean isVillager) {
+    @Override
+    public boolean hasFarmSeeds() {
+        return getInventory().hasAnyOf(SEEDS);
+    }
+
+    private @Nullable IVillagerNPC getFamily(@NotNull CompoundTag tag, String who, boolean isVillager) {
         if (!tag.contains(who)) return null;
 
         if (tag.hasUUID(who)) {
@@ -503,7 +547,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
-    private void loadBedHomePosition(CompoundTag tag) {
+    private void loadBedHomePosition(@NotNull CompoundTag tag) {
         if (!tag.contains(OfflineVillagerNPC.BED_HOME)) return;
 
         CompoundTag bedHomeTag = (CompoundTag) tag.get(OfflineVillagerNPC.BED_HOME);
@@ -537,8 +581,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         bedHomeWorld = world.getUID();
     }
 
-    @SuppressWarnings({"Guava"})
-    public static <T> void fillCollection(Collection<T> collection, Function<Tag, T> mapper, String name, CompoundTag tag) {
+    public static <T> void fillCollection(Collection<T> collection, Function<Tag, T> mapper, String name, @NotNull CompoundTag tag) {
         if (!tag.contains(name)) return;
         collection.clear();
 
@@ -552,7 +595,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void releasePoi(MemoryModuleType<GlobalPos> memory) {
+    public void releasePoi(@NotNull MemoryModuleType<GlobalPos> memory) {
         level.broadcastEntityEvent(this, (byte) 13);
         if (memory.equals(MemoryModuleType.HOME)) {
             Optional<GlobalPos> pos = getBrain().getMemory(memory);
@@ -569,29 +612,37 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return (CraftVillager) super.getBukkitEntity();
     }
 
+    @Override
     public boolean hasPartner() {
         return partner != null;
     }
 
+    @Override
     public boolean isConversating() {
         return isInteracting() && interactType.isGUI();
     }
 
+    @Override
     public boolean isFollowing() {
         return isInteracting() && interactType.isFollowing();
     }
 
+    @Override
     public void stopInteracting() {
         setInteractingWithAndType(null, null);
     }
 
+    public void stopAllInteractions() {
+        stopExchangeables();
+        stopInteracting();
+        stopStayingInPlace();
+        stopExpecting();
+    }
+
+    @Override
     public void setInteractingWithAndType(UUID interactingWith, InteractType interactType) {
         this.interactingWith = interactingWith;
         this.interactType = interactType;
-    }
-
-    public int getMeleeAttackCooldown() {
-        return Config.MELEE_ATTACK_COOLDOWN.asInt();
     }
 
     @Override
@@ -599,7 +650,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return isHoldingWeapon();
     }
 
-    public boolean is(VillagerProfession... professions) {
+    public boolean is(VillagerProfession @NotNull ... professions) {
         for (VillagerProfession profession : professions) {
             if (getProfession() == profession) return true;
         }
@@ -611,11 +662,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean isHoldingMeleeWeapon() {
-        return isHolding(item -> item.getItem() instanceof SwordItem || item.getItem() instanceof AxeItem || item.is(Items.TRIDENT));
+        return isHolding(stack -> {
+            Item item = stack.getItem();
+            return item instanceof SwordItem || item instanceof AxeItem || stack.is(Items.TRIDENT);
+        });
     }
 
     public boolean isHoldingRangeWeapon() {
-        return isHolding(item -> item.getItem() instanceof ProjectileWeaponItem weapon && canFireProjectileWeapon(weapon));
+        return isHolding(stack -> stack.getItem() instanceof ProjectileWeaponItem weapon && canFireProjectileWeapon(weapon));
     }
 
     @Override
@@ -656,28 +710,13 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         Projectile projectile;
         if (isBow) {
             projectile = ProjectileUtil.getMobArrow(this, arrow, force);
-
-            float powerForTime = BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION);
-            if (powerForTime == 1.0f) {
-                ((AbstractArrow) projectile).setCritArrow(true);
-            }
+        } else if (isRocket) {
+            projectile = new FireworkRocketEntity(level, arrow, this, getX(), getEyeY() - 0.15000000596046448d, getZ(), true);
         } else {
-            if (isRocket) {
-                projectile = new FireworkRocketEntity(level, arrow, this, getX(), getEyeY() - 0.15000000596046448d, getZ(), true);
-            } else {
-                projectile = ((ArrowItem) arrow.getItem()).createArrow(level, arrow, this);
-                if (projectile instanceof AbstractArrow abstractArrow) {
-                    abstractArrow.setSoundEvent(SoundEvents.CROSSBOW_HIT);
-                    abstractArrow.setShotFromCrossbow(true);
-                    abstractArrow.setCritArrow(true);
-                }
-            }
-
-            int piercing = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.PIERCING, weapon);
-            if (piercing > 0 && projectile instanceof AbstractArrow abstractArrow) {
-                abstractArrow.setPierceLevel((byte) piercing);
-            }
+            projectile = ((ArrowItem) arrow.getItem()).createArrow(level, arrow, this);
         }
+
+        setupProjectile(weapon, projectile, isBow);
 
         if (isBow) {
             shootBow(target, projectile);
@@ -699,7 +738,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (event.isCancelled()) {
             event.getProjectile().remove();
             return;
-        } else if (event.getProjectile() == projectile.getBukkitEntity() && !level.addFreshEntity(projectile)) {
+        }
+
+        if (event.getProjectile() == projectile.getBukkitEntity() && !level.addFreshEntity(projectile)) {
             plugin.getLogger().info("Can't add projectile to world!");
             return;
         }
@@ -707,7 +748,28 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         onCrossbowAttackPerformed();
     }
 
-    private void shootBow(LivingEntity target, Projectile projectile) {
+    private void setupProjectile(ItemStack weapon, Projectile projectile, boolean isBow) {
+        if (!(projectile instanceof AbstractArrow arrow)) return;
+
+        PickupStatus status = PluginUtils.getOrDefault(PickupStatus.class, Config.ARROW_STATUS.asString().toUpperCase(), PickupStatus.ALLOWED);
+        arrow.pickup = AbstractArrow.Pickup.byOrdinal(status.ordinal());
+
+        if (isBow && BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION) != 1.0f) {
+            return;
+        }
+
+        arrow.setCritArrow(true);
+
+        if (isBow) return;
+
+        arrow.setSoundEvent(SoundEvents.CROSSBOW_HIT);
+        arrow.setShotFromCrossbow(true);
+
+        int piercing = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.PIERCING, weapon);
+        if (piercing > 0) arrow.setPierceLevel((byte) piercing);
+    }
+
+    private void shootBow(@NotNull LivingEntity target, @NotNull Projectile projectile) {
         double deltaX = target.getX() - getX();
         double deltaY = target.getY(0.3333333333333333d) - projectile.getY();
         double deltaZ = target.getZ() - getZ();
@@ -729,7 +791,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return !getProjectile(item).isEmpty();
     }
 
-    public ItemStack getProjectile(ProjectileWeaponItem item) {
+    public ItemStack getProjectile(@NotNull ProjectileWeaponItem item) {
         ItemStack held = ProjectileWeaponItem.getHeldProjectile(this, item.getSupportedHeldProjectiles());
         if (!held.isEmpty()) return held;
 
@@ -741,7 +803,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return ItemStack.EMPTY;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void die(DamageSource source) {
         super.die(source);
@@ -750,17 +811,34 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         // Stop all behaviors.
         for (BehaviorControl<? super Villager> behavior : getBrain().getRunningBehaviors()) {
-            if (behavior instanceof LootChest loot) {
-                loot.doStop((ServerLevel) level, this, level.getGameTime());
+            if (behavior instanceof LootChest) {
+                behavior.doStop((ServerLevel) level, this, level.getGameTime());
             }
         }
 
-        if (!level.isClientSide && hasPartner() && !isPartnerVillager) {
-            Player player = level.getPlayerByUUID(getPartner().getUniqueId());
-            if (player != null) player.sendSystemMessage(getCombatTracker().getDeathMessage());
-        }
+        announceDeath();
 
         if (!isRemoved()) removeEntitiesOnShoulder();
+    }
+
+    private void announceDeath() {
+        // Partner & father.
+        announceDeath(partner, isPartnerVillager);
+        announceDeath(father, isFatherVillager);
+
+        // Grandfathers.
+        IVillagerNPC father = this.father;
+        while (father != null) {
+            boolean isFatherVillager = father.isFatherVillager();
+            announceDeath(father = father.getFather(), isFatherVillager);
+        }
+    }
+
+    private void announceDeath(IVillagerNPC who, boolean isVillager) {
+        if (who == null || isVillager) return;
+
+        Player player = level.getPlayerByUUID(who.getUniqueId());
+        if (player != null) player.sendSystemMessage(getCombatTracker().getDeathMessage());
     }
 
     private void tellFamilyThatIWasMurdered(DamageSource source) {
@@ -773,7 +851,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (optional.isEmpty()) return;
 
         optional.get()
-                .findAll(living -> living instanceof VillagerNPC npc && npc.isFamily(getUUID(), true))
+                .findAll(living -> living instanceof VillagerNPC npc && npc.canAttack() && npc.isFamily(getUUID(), true))
                 .forEach(living -> VillagerPanicTrigger.handleFightReaction(
                         ((Villager) living).getBrain(),
                         (LivingEntity) entity,
@@ -809,7 +887,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void setDropChance(EquipmentSlot slot, float chance) {
+    public void setDropChance(@NotNull EquipmentSlot slot, float chance) {
         (slot.getType() == EquipmentSlot.Type.HAND ? handDropChances : armorDropChances)[slot.getIndex()] = chance;
     }
 
@@ -825,7 +903,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         DamageSource lastDamage = getLastDamageSource();
         boolean thornsCheck = lastDamage == null || !lastDamage.is(DamageTypes.THORNS);
 
-        if (type != ReputationEventType.VILLAGER_HURT
+        if ((type != ReputationEventType.VILLAGER_HURT && type != ReputationEventType.VILLAGER_KILLED)
                 || (EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)
                 && raidCheck
                 && thornsCheck)) {
@@ -855,8 +933,13 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         getBukkitEntity().getInventory().removeItem(ring);
         drop(CraftItemStack.asNMSCopy(ring));
 
-        setPartner(null);
-        if (player != null) player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
+        setPartner(null, false);
+
+        if (player != null) {
+            // Remove data and add to old partners.
+            player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
+            partners.add(dummyPlayerOffline(player.getUUID()));
+        }
     }
 
     @Override
@@ -879,11 +962,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         ifTargetPresent(type, entityType -> targetEntities.remove(entityType));
     }
 
-    private void ifTargetPresent(org.bukkit.entity.EntityType type, Consumer<EntityType<?>> consumer) {
+    private void ifTargetPresent(org.bukkit.entity.@NotNull EntityType type, Consumer<EntityType<?>> consumer) {
         EntityType.byString(type.name().toLowerCase()).ifPresent(consumer);
     }
 
-    private Set<EntityType<?>> getDefaultTargets() {
+    private @NotNull Set<EntityType<?>> getDefaultTargets() {
         Set<EntityType<?>> types = new HashSet<>();
 
         for (String entity : plugin.getDefaultTargets()) {
@@ -904,7 +987,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public ItemStack eat(Level level, ItemStack item) {
+    public ItemStack eat(@NotNull Level level, ItemStack item) {
         foodData.eat(item.getItem(), item);
         level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, getSoundSource(), 0.5f, random.nextFloat() * 0.1f + 0.9f);
         return super.eat(level, item);
@@ -920,6 +1003,32 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             VillagerExhaustionEvent event = new VillagerExhaustionEvent(this, reason, exhaustion);
             if (!event.isCancelled()) foodData.addExhaustion(event.getExhaustion());
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void stopExchangeables() {
+        for (BehaviorControl<? super Villager> behavior : getBrain().getRunningBehaviors()) {
+            long time = level.getGameTime();
+
+            if (!(behavior instanceof GateBehavior<? super Villager> gate)) {
+                stopExchangeable(time, behavior);
+                continue;
+            }
+
+            try {
+                for (BehaviorControl<? super Villager> next : (ShufflingList<BehaviorControl<? super Villager>>) BEHAVIORS_FIELD.invoke(gate)) {
+                    stopExchangeable(time, next);
+                }
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        }
+    }
+
+    private void stopExchangeable(long time, BehaviorControl<? super Villager> behavior) {
+        if (!(behavior instanceof Exchangeable exchangeable)) return;
+        if (exchangeable.getPreviousItem() != null) behavior.doStop((ServerLevel) level, this, time);
     }
 
     @Override
@@ -942,11 +1051,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (!Config.DISABLE_VILLAGER_RIDING_NEARBY_BOAT.asBool()) return super.startRiding(entity);
 
         StackTraceElement[] stacktraces = Thread.currentThread().getStackTrace();
-        if (stacktraces.length >= 3) {
-            if (Boat.class.getName().equalsIgnoreCase(stacktraces[2].getClassName())) {
-                return false;
-            }
-        }
+        if (stacktraces.length >= 3 && Boat.class.getName().equals(stacktraces[2].getClassName())) return false;
 
         return super.startRiding(entity);
     }
@@ -1121,17 +1226,24 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return inventory;
     }
 
-    public void setPartner(UUID partner, boolean isPartnerVillager) {
+    public void setPartner(@Nullable UUID partner, boolean isPartnerVillager) {
+        this.isPartnerVillager = isPartnerVillager;
+
+        if (partner == null) {
+            this.partner = null;
+            return;
+        }
+
         if (isPartnerVillager) {
             IVillagerNPC partnerNPC = plugin.getTracker().getOffline(partner);
             if (partnerNPC != null) this.partner = partnerNPC;
         } else {
             this.partner = dummyPlayerOffline(partner);
         }
-        this.isPartnerVillager = isPartnerVillager;
     }
 
-    public static OfflineVillagerNPC dummyPlayerOffline(UUID uuid) {
+    @Contract("_ -> new")
+    public static @NotNull OfflineVillagerNPC dummyPlayerOffline(UUID uuid) {
         OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
         CompoundTag tag = new CompoundTag();
         String name = player.getName();
@@ -1249,7 +1361,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean is(org.bukkit.entity.Villager.Profession... professions) {
+    public boolean is(org.bukkit.entity.Villager.Profession @NotNull ... professions) {
         for (org.bukkit.entity.Villager.Profession profession : professions) {
             if (is(CraftVillager.bukkitToNmsProfession(profession))) return true;
         }
@@ -1278,7 +1390,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void pickUpItem(ItemEntity entity) {
+    public void pickUpItem(@NotNull ItemEntity entity) {
         ItemStack stack = entity.getItem();
         if (!wantsToPickUp(stack)) return;
 
@@ -1327,7 +1439,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 && (type == null || !isChangingItem(type));
     }
 
-    public boolean isDoingNothing(ChangeItemType... types) {
+    public boolean isDoingNothing(ChangeItemType @NotNull ... types) {
         for (ChangeItemType type : types) {
             ChangeItemType changing = getChangingItem(type);
             if (changing != null && !ArrayUtils.contains(types, changing)) {
@@ -1342,17 +1454,19 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return getChangingItem(ignore) != null;
     }
 
-    private ChangeItemType getChangingItem(ChangeItemType ignore) {
+    private @Nullable ChangeItemType getChangingItem(@NotNull ChangeItemType ignore) {
         if (ignore.isEating(isEating)) return ChangeItemType.EATING;
         if (ignore.isShowingTrades(showingTrades)) return ChangeItemType.SHOWING_TRADES;
         if (ignore.isTaming(isTaming)) return ChangeItemType.TAMING;
         if (ignore.isHealingGolem(isHealingGolem)) return ChangeItemType.HEALING_GOLEM;
         if (ignore.isUsingBoneMeal(isUsingBoneMeal)) return ChangeItemType.USING_BONE_MEAL;
+        if (ignore.isUsingHoe(isUsingHoe)) return ChangeItemType.USING_HOE;
+        if (ignore.isUsingFishingRod(isUsingFishingRod)) return ChangeItemType.USING_FISHING_ROD;
         if (ignore.isLooting(isLooting)) return ChangeItemType.LOOTING;
         return null;
     }
 
-    private void handleRemaining(ItemStack original, ItemStack remaining, ItemEntity itemEntity) {
+    private void handleRemaining(ItemStack original, @NotNull ItemStack remaining, ItemEntity itemEntity) {
         if (remaining.isEmpty()) itemEntity.discard();
         else original.setCount(remaining.getCount());
     }
@@ -1395,7 +1509,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return false;
     }
 
-    private UUID getThrower(ItemStack stack) {
+    private @Nullable UUID getThrower(ItemStack stack) {
         ItemMeta meta = CraftItemStack.asBukkitCopy(stack).getItemMeta();
         if (meta != null) {
             String uuidString = meta.getPersistentDataContainer().get(plugin.getGiftKey(), PersistentDataType.STRING);
@@ -1440,8 +1554,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
-    @SuppressWarnings("ConstantConditions")
-    private boolean fromTrident(LightningBolt lightning) {
+    private boolean fromTrident(@NotNull LightningBolt lightning) {
         // If the cause is a player, then it's from a player trident.
         if (lightning.getCause() != null) return true;
 
@@ -1474,7 +1587,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public float getStandingEyeHeight(Pose pose, EntityDimensions dimensions) {
+    public float getStandingEyeHeight(@NotNull Pose pose, EntityDimensions dimensions) {
         return switch (pose) {
             case FALL_FLYING, SWIMMING, SPIN_ATTACK -> 0.4f;
             case CROUCHING -> 1.27f;
@@ -1483,9 +1596,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void checkAutoSpinAttack(AABB first, AABB second) {
-        // super.checkAutoSpinAttack(first, second);
-
+    public void checkAutoSpinAttack(@NotNull AABB first, AABB second) {
         List<Entity> list = level.getEntities(
                 this,
                 first.minmax(second),
@@ -1524,7 +1635,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         plugin.getServer().getPluginManager().callEvent(removeEvent);
     }
 
-    private VillagerRemoveEvent.RemovalReason toWrapper(RemovalReason reason) {
+    @Contract(pure = true)
+    private VillagerRemoveEvent.RemovalReason toWrapper(@NotNull RemovalReason reason) {
         return switch (reason) {
             case KILLED -> VillagerRemoveEvent.RemovalReason.KILLED;
             case DISCARDED -> VillagerRemoveEvent.RemovalReason.DISCARDED;
@@ -1607,7 +1719,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return vanilla ? super.getCustomName() : villagerName != null ? Component.literal(villagerName) : null;
     }
 
-    public boolean canBreedWith(VillagerNPC other) {
+    public boolean canBreedWith(@NotNull VillagerNPC other) {
         return other.getSex() != null
                 && !other.getSex().equalsIgnoreCase(sex)
                 && canBreed()
@@ -1715,18 +1827,15 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         maybeDecayGossip();
 
-        double speedModifier = moveControl.getSpeedModifier();
         if (isSwimming()
                 || isVisuallySwimming()
                 || isInWater()
                 || isUnderWater()
                 || getFluidHeight(FluidTags.WATER) > getFluidJumpThreshold()
                 || isInLava()) {
-            setSpeed((float) (SWIMMING_SPEED_MODIFIER * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+            setSpeed((float) (SWIM_SPEED.get() * getAttributeValue(Attributes.MOVEMENT_SPEED)));
         } else if (isEating()) {
-            setSpeed((float) ((SPEED_MODIFIER / 2) * getAttributeValue(Attributes.MOVEMENT_SPEED)));
-        } else if (previousSpeedModifier != speedModifier) {
-            setSpeed((float) (speedModifier * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+            setSpeed((float) (EAT_SPEED.get() * getAttributeValue(Attributes.MOVEMENT_SPEED)));
         }
 
         if (!collides && !isSleeping()) collides = true;
@@ -1916,14 +2025,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return active.isPresent() && active.get().equals(checkActivity);
     }
 
-    public boolean checkCurrentActivity(Activity... checkActivities) {
+    public boolean checkCurrentActivity(Activity @NotNull ... checkActivities) {
         for (Activity checkActivity : checkActivities) {
             if (checkCurrentActivity(checkActivity)) return true;
         }
         return false;
     }
 
-    public void drop(ItemStack item) {
+    public void drop(@NotNull ItemStack item) {
         if (item.isEmpty()) return;
         if (level.isClientSide) swing(InteractionHand.MAIN_HAND);
 
@@ -1979,18 +2088,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean handleBedHome(Block block) {
+    public HandleHomeResult handleBedHome(@NotNull Block block) {
         BlockPos bedPosition = new BlockPos(block.getX(), block.getY(), block.getZ());
 
         Predicate<Holder<PoiType>> predicate = holder -> holder.is(PoiTypes.HOME);
 
-        // Add poi if doesn't exists.
+        // Add POI if it doesn't exist.
         PoiManager poiManager = ((ServerLevel) level).getPoiManager();
         if (!poiManager.exists(bedPosition, predicate)) {
             Optional<Holder<PoiType>> poi = PoiTypes.forState(level.getBlockState(bedPosition));
             if (poi.isEmpty()) {
-                plugin.getLogger().warning("An error occurred while trying to set a new POI.");
-                return false;
+                plugin.getLogger().warning("An error occurred when trying to acquire a POI at " + bedPosition + ".");
+                return HandleHomeResult.INVALID;
             }
             poiManager.add(bedPosition, poi.get());
         }
@@ -2009,8 +2118,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             // Release previous POI.
             releasePoi(MemoryModuleType.HOME);
         } else {
-            plugin.getLogger().warning("Either the POI is already occupied or an error occurred when trying to acquire it.");
-            return false;
+            if (poiManager
+                    .getInRange(predicate, bedPosition, 1, PoiManager.Occupancy.IS_OCCUPIED)
+                    .anyMatch((record) -> record.getPos().equals(bedPosition))) return HandleHomeResult.OCCUPIED;
+            plugin.getLogger().warning("An error occurred when trying to acquire a POI at " + bedPosition + ".");
+            return HandleHomeResult.INVALID;
         }
 
         GlobalPos bedHome = GlobalPos.of(level.dimension(), bedPosition);
@@ -2021,26 +2133,35 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         level.broadcastEntityEvent(this, (byte) 14);
         DebugPackets.sendPoiTicketCountPacket((ServerLevel) level, bedPosition);
-        return true;
+        return HandleHomeResult.SUCCESS;
     }
 
     @Override
     public void stayInPlace() {
-        getBrain().setMemory(STAY_PLACE, GlobalPos.of(level.dimension(), blockPosition()));
-        getBrain().setDefaultActivity(STAY);
-        getBrain().setActiveActivityIfPossible(STAY);
+        stayInPlace(blockPosition());
+    }
+
+    private void stayInPlace(BlockPos pos) {
+        Brain<Villager> brain = getBrain();
+        brain.setMemory(STAY_PLACE, GlobalPos.of(level.dimension(), pos));
+        brain.setDefaultActivity(STAY);
+        brain.setActiveActivityIfPossible(STAY);
     }
 
     public void stopStayingInPlace() {
-        getBrain().eraseMemory(STAY_PLACE);
-        getBrain().setDefaultActivity(Activity.IDLE);
-        getBrain().updateActivityFromSchedule(level.getDayTime(), level.getGameTime());
+        Brain<Villager> brain = getBrain();
+        if (!brain.hasMemoryValue(STAY_PLACE) || !checkCurrentActivity(STAY)) return;
+
+        brain.eraseMemory(STAY_PLACE);
+        brain.setDefaultActivity(Activity.IDLE);
+        brain.updateActivityFromSchedule(level.getDayTime(), level.getGameTime());
     }
 
     @Override
     public void reactToSeekHorn(org.bukkit.entity.Player player) {
-        getBrain().setMemory(HEARD_HORN_TIME, level.getGameTime());
-        getBrain().setMemory(PLAYER_HORN, ((CraftPlayer) player).getHandle());
+        Brain<Villager> brain = getBrain();
+        brain.setMemory(HEARD_HORN_TIME, level.getGameTime());
+        brain.setMemory(PLAYER_HORN, ((CraftPlayer) player).getHandle());
     }
 
     @Override

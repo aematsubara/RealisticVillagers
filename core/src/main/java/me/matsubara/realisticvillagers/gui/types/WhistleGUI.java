@@ -11,6 +11,7 @@ import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Stream;
@@ -30,8 +31,8 @@ public class WhistleGUI extends PaginatedGUI {
     private static final int NEXT_SLOT = 25;
     private static final int SEARCH_SLOT = 22;
 
-    public WhistleGUI(RealisticVillagers plugin, Player player, Stream<IVillagerNPC> family, @Nullable String keyword) {
-        super(plugin, null, "whistle", plugin.getConfig().getInt("gui.whistle.size"), player, family
+    public WhistleGUI(RealisticVillagers plugin, Player player, @NotNull Stream<IVillagerNPC> family, @Nullable String keyword) {
+        super(plugin, null, "whistle", getValidSize(plugin, "skin", 36), player, family
                 .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(npc -> {
                     String name = npc.getVillagerName();
@@ -54,11 +55,11 @@ public class WhistleGUI extends PaginatedGUI {
         previous = getGUIItem("previous");
         next = getGUIItem("next");
         search = getGUIItem("search");
-        clearSearch = getGUIItem("clear-search");
+        clearSearch = keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : null;
     }
 
     @Override
-    protected void addButtons() {
+    public void addButtons() {
         int extra = 9 * (size == 36 ? 0 : size == 45 ? 1 : 2);
         inventory.setItem(CLOSE_SLOT + extra, close);
         if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, previous);

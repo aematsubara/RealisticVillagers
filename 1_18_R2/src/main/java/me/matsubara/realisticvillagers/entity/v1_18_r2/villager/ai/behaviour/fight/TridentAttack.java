@@ -31,6 +31,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -60,7 +61,7 @@ public class TridentAttack extends Behavior<Villager> {
                 && level.random.nextInt(3) == 0;
     }
 
-    private boolean canThrow(VillagerNPC npc) {
+    private boolean canThrow(@NotNull VillagerNPC npc) {
         ItemStack item = npc.getItemInHand(ProjectileUtil.getWeaponHoldingHand(npc, Items.TRIDENT));
         return EnchantmentHelper.getRiptide(item) > 0 || EnchantmentHelper.getLoyalty(item) > 0;
     }
@@ -74,7 +75,7 @@ public class TridentAttack extends Behavior<Villager> {
     }
 
     @Override
-    public boolean canStillUse(ServerLevel level, Villager villager, long time) {
+    public boolean canStillUse(ServerLevel level, @NotNull Villager villager, long time) {
         return villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET);
     }
 
@@ -87,7 +88,7 @@ public class TridentAttack extends Behavior<Villager> {
         tridentAttack((VillagerNPC) villager);
     }
 
-    private void removeWalkTargetIfNeeded(Villager villager) {
+    private void removeWalkTargetIfNeeded(@NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
 
         Optional<WalkTarget> walkTarget = brain.getMemory(MemoryModuleType.WALK_TARGET);
@@ -104,7 +105,7 @@ public class TridentAttack extends Behavior<Villager> {
     }
 
     @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
+    public void stop(ServerLevel level, @NotNull Villager villager, long time) {
         if (villager.isUsingItem()) villager.stopUsingItem();
 
         if (villager.isHolding(Items.TRIDENT)) {
@@ -199,12 +200,12 @@ public class TridentAttack extends Behavior<Villager> {
         return false;
     }
 
-    private void lookAtTarget(Mob mob, LivingEntity target) {
+    private void lookAtTarget(@NotNull Mob mob, LivingEntity target) {
         mob.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity getAttackTarget(Villager villager) {
+    private @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
         // Can't be null since the value should be present in the constructor.
         return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
     }

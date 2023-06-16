@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.fi
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,6 +11,7 @@ import net.minecraft.world.entity.ai.behavior.EntityTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
 
@@ -35,13 +37,18 @@ public class BackUpIfTooClose extends Behavior<Villager> {
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(getTarget(villager), true));
         villager.getMoveControl().strafe(-strafeSpeed, 0.0f);
         villager.setYRot(Mth.rotateIfNecessary(villager.getYRot(), villager.yHeadRot, 0.0f));
+
+        // Random jump to be more "realistic".
+        if (villager.getRandom().nextFloat() < Config.BACK_UP_JUMP_CHANCE.asFloat()) {
+            villager.getJumpControl().jump();
+        }
     }
 
-    private boolean isTargetVisible(Villager villager) {
+    private boolean isTargetVisible(@NotNull Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES).get().contains(getTarget(villager));
     }
 
@@ -49,7 +56,7 @@ public class BackUpIfTooClose extends Behavior<Villager> {
         return getTarget(villager).closerThan(villager, tooCloseDistance.apply((VillagerNPC) villager));
     }
 
-    private LivingEntity getTarget(Villager villager) {
+    private @NotNull LivingEntity getTarget(@NotNull Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
     }
 }

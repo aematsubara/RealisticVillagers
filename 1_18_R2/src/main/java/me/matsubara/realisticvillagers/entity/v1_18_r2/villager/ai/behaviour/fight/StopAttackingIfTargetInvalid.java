@@ -13,6 +13,7 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.schedule.Activity;
 import org.bukkit.Bukkit;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -39,7 +40,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
 
         if (!brain.hasMemoryValue(MemoryModuleType.ATTACK_TARGET)) {
@@ -72,7 +73,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity getAttackTarget(Villager villager) {
+    private @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
         // Can't be null since the value should be present in the constructor.
         return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
     }
@@ -87,7 +88,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         return target instanceof ServerPlayer && Bukkit.getServer().getPlayer(target.getUUID()) == null;
     }
 
-    private boolean isTiredOfTryingToReachTarget(Villager villager) {
+    private boolean isTiredOfTryingToReachTarget(@NotNull Villager villager) {
         Optional<Long> optional = villager.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         return optional.isPresent() && villager.level.getGameTime() - optional.get() > TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE;
     }
@@ -96,7 +97,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         return !getAttackTarget(villager).isAlive();
     }
 
-    private boolean isCurrentTargetFarAway(Villager villager) {
+    private boolean isCurrentTargetFarAway(@NotNull Villager villager) {
         return villager.distanceTo(getAttackTarget(villager)) > MAX_DISTANCE_LIMIT;
     }
 
@@ -110,7 +111,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         backToDefault(villager);
     }
 
-    private void backToDefault(Villager villager) {
+    private void backToDefault(@NotNull Villager villager) {
         villager.getBrain().setDefaultActivity(Activity.IDLE);
         villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
         villager.getBrain().updateActivityFromSchedule(villager.level.getDayTime(), villager.level.getGameTime());

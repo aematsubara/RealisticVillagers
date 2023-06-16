@@ -17,6 +17,7 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -30,7 +31,7 @@ public class BukkitSpawnListeners implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onCreatureSpawn(CreatureSpawnEvent event) {
+    public void onCreatureSpawn(@NotNull CreatureSpawnEvent event) {
         LivingEntity entity = event.getEntity();
 
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
@@ -47,18 +48,18 @@ public class BukkitSpawnListeners implements Listener {
     }
 
     @EventHandler
-    public void onEntitiesLoad(EntitiesLoadEvent event) {
+    public void onEntitiesLoad(@NotNull EntitiesLoadEvent event) {
         if (!event.getChunk().isLoaded()) return;
         event.getEntities().forEach(this::handleSpawn);
     }
 
     @EventHandler
-    public void onWorldLoad(WorldLoadEvent event) {
+    public void onWorldLoad(@NotNull WorldLoadEvent event) {
         event.getWorld().getEntitiesByClass(Villager.class).forEach(this::handleSpawn);
     }
 
     @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
+    public void onChunkLoad(@NotNull ChunkLoadEvent event) {
         for (Entity entity : event.getChunk().getEntities()) {
             handleSpawn(entity);
         }
@@ -102,12 +103,13 @@ public class BukkitSpawnListeners implements Listener {
         String tag = tracker.getTransformations().remove(villager.getUniqueId());
         if (tag != null) converter.loadDataFromTag(villager, tag);
 
-        // Spawn NPC & cache data.
-        tracker.spawnNPC(villager);
-        tracker.getOffline(villager.getUniqueId());
-
+        // Equip armor (if possible).
         if (!npc.get().isWasInfected() && villager.isAdult() && reason != CreatureSpawnEvent.SpawnReason.BREEDING) {
             plugin.equipVillager(villager, Config.SPAWN_LOOT_FORCE_EQUIP.asBool());
         }
+
+        // Spawn NPC & cache data.
+        tracker.spawnNPC(villager);
+        tracker.updateData(villager);
     }
 }

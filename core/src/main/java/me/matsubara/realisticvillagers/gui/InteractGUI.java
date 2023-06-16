@@ -1,8 +1,12 @@
 package me.matsubara.realisticvillagers.gui;
 
+import lombok.Getter;
+import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.gui.anim.RainbowAnimation;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -11,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.UnaryOperator;
 
+@Getter
 public abstract class InteractGUI implements InventoryHolder {
 
     protected final String name;
@@ -18,10 +23,28 @@ public abstract class InteractGUI implements InventoryHolder {
     protected final RealisticVillagers plugin;
     protected final IVillagerNPC npc;
     protected final Inventory inventory;
+    protected @Setter int taskId;
+    protected RainbowAnimation animation;
     private boolean shouldStopInteracting;
 
     private static final UnaryOperator<String> EMPTY = string -> string;
     public static final String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
+    public static final Material[] PANES = {
+            Material.WHITE_STAINED_GLASS_PANE,
+            Material.ORANGE_STAINED_GLASS_PANE,
+            Material.MAGENTA_STAINED_GLASS_PANE,
+            Material.LIGHT_BLUE_STAINED_GLASS_PANE,
+            Material.YELLOW_STAINED_GLASS_PANE,
+            Material.LIME_STAINED_GLASS_PANE,
+            Material.PINK_STAINED_GLASS_PANE,
+            Material.GRAY_STAINED_GLASS_PANE,
+            Material.CYAN_STAINED_GLASS_PANE,
+            Material.PURPLE_STAINED_GLASS_PANE,
+            Material.BLUE_STAINED_GLASS_PANE,
+            Material.BROWN_STAINED_GLASS_PANE,
+            Material.GREEN_STAINED_GLASS_PANE,
+            Material.RED_STAINED_GLASS_PANE,
+            Material.BLACK_STAINED_GLASS_PANE};
 
     protected InteractGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, @Nullable UnaryOperator<String> operator) {
         this.name = name;
@@ -34,6 +57,7 @@ public abstract class InteractGUI implements InventoryHolder {
         this.inventory = Bukkit.createInventory(this, (this.size = size), (operator != null ? operator : EMPTY).apply(title));
 
         this.shouldStopInteracting = true;
+        this.taskId = (animation = new RainbowAnimation(this)).runTaskTimer(plugin, 0L, 1L).getTaskId();
     }
 
     protected String getTitle() {
@@ -41,7 +65,19 @@ public abstract class InteractGUI implements InventoryHolder {
     }
 
     protected ItemStack getGUIItem(String itemName) {
-        return plugin.getItem("gui." + name + ".items." + itemName).build();
+        return getGUIItem(itemName, null);
+    }
+
+    protected ItemStack getGUIItem(String itemName, @Nullable UnaryOperator<String> operator) {
+        return plugin.getItem("gui." + name + ".items." + itemName).replace(operator != null ? operator : EMPTY).build();
+    }
+
+    protected void clear(int[] @NotNull ... arrays) {
+        for (int[] array : arrays) {
+            for (int i : array) {
+                inventory.clear(i);
+            }
+        }
     }
 
     @Override
@@ -59,5 +95,14 @@ public abstract class InteractGUI implements InventoryHolder {
 
     public void setShouldStopInteracting(boolean shouldStopInteracting) {
         this.shouldStopInteracting = shouldStopInteracting;
+    }
+
+    public static int getValidSize(@NotNull RealisticVillagers plugin, String sizePath, int min) {
+        int size = plugin.getConfig().getInt("gui." + sizePath + ".size");
+        return getValidSize(size, min);
+    }
+
+    private static int getValidSize(int size, int min) {
+        return size < min ? min : Math.min(size, 54);
     }
 }

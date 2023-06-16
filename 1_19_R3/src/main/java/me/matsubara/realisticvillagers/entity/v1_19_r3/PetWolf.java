@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftWolf;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumSet;
@@ -69,7 +70,7 @@ public class PetWolf extends Wolf implements Pet {
     }
 
     @Override
-    public void tameByVillager(IVillagerNPC npc) {
+    public void tameByVillager(@NotNull IVillagerNPC npc) {
         setTame(true);
         setOwnerUUID(npc.bukkit().getUniqueId());
         setTamedByPlayer(false);
@@ -127,7 +128,7 @@ public class PetWolf extends Wolf implements Pet {
             return super.canUse() && toAvoid instanceof Llama && !wolf.isTame() && avoidLlama((Llama) toAvoid);
         }
 
-        private boolean avoidLlama(Llama llama) {
+        private boolean avoidLlama(@NotNull Llama llama) {
             return llama.getStrength() >= wolf.getRandom().nextInt(5);
         }
 
@@ -166,7 +167,7 @@ public class PetWolf extends Wolf implements Pet {
         private final TargetingConditions begTargeting;
         private int tryVillagerAgain;
 
-        public BegGoal(Wolf wolf, float lookDistance) {
+        public BegGoal(@NotNull Wolf wolf, float lookDistance) {
             this.wolf = wolf;
             this.level = wolf.level;
             this.lookDistance = lookDistance;

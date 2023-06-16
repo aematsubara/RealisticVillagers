@@ -19,6 +19,7 @@ import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.pathfinder.Path;
 import org.bukkit.craftbukkit.v1_18_R2.event.CraftEventFactory;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -49,7 +50,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(@NotNull ServerLevel level, @NotNull Villager villager, long time) {
         AgeableMob breedWith = villager.getBrain().getMemory(MemoryModuleType.BREED_TARGET).get();
         BehaviorUtils.lockGazeAndWalkToEachOther(villager, breedWith, SPEED_MODIFIER);
         level.broadcastEntityEvent(breedWith, (byte) 18);
@@ -59,7 +60,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
     }
 
     @Override
-    public void tick(ServerLevel level, Villager villager, long time) {
+    public void tick(ServerLevel level, @NotNull Villager villager, long time) {
         Villager breedWith = (Villager) villager.getBrain().getMemory(MemoryModuleType.BREED_TARGET).get();
         if (villager.distanceToSqr(breedWith) > INTERACT_DIST_SQR) return;
 
@@ -83,7 +84,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
     }
 
     @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
+    public void stop(ServerLevel level, @NotNull Villager villager, long time) {
         villager.getBrain().eraseMemory(MemoryModuleType.BREED_TARGET);
     }
 
@@ -104,7 +105,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
 
     }
 
-    private boolean isBreedingPossible(Villager villager) {
+    private boolean isBreedingPossible(@NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
         Optional<AgeableMob> optional = brain.getMemory(MemoryModuleType.BREED_TARGET)
                 .filter((breedWith) -> breedWith.getType() == EntityType.VILLAGER);
@@ -115,7 +116,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
                 && optional.get().canBreed();
     }
 
-    private Optional<BlockPos> takeVacantBed(ServerLevel level, Villager villager) {
+    private Optional<BlockPos> takeVacantBed(@NotNull ServerLevel level, @NotNull Villager villager) {
         return level.getPoiManager().take(
                 PoiType.HOME.getPredicate(),
                 pos -> canReach(villager, pos),
@@ -123,7 +124,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
                 48);
     }
 
-    private boolean canReach(Villager villager, BlockPos blockposition) {
+    private boolean canReach(@NotNull Villager villager, BlockPos blockposition) {
         Path path = villager.getNavigation().createPath(blockposition, PoiType.HOME.getValidRange());
         return path != null && path.canReach();
     }
@@ -166,7 +167,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
         return Optional.of(baby);
     }
 
-    private void giveBedToChild(ServerLevel level, Villager villager, BlockPos position) {
+    private void giveBedToChild(@NotNull ServerLevel level, @NotNull Villager villager, BlockPos position) {
         GlobalPos globalpos = GlobalPos.of(level.dimension(), position);
         villager.getBrain().setMemory(MemoryModuleType.HOME, globalpos);
     }

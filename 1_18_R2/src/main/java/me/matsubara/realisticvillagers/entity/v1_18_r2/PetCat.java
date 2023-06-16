@@ -40,6 +40,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftCat;
 import org.bukkit.event.entity.EntityDropItemEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -82,7 +83,7 @@ public class PetCat extends Cat implements Pet {
     }
 
     @Override
-    public void tameByVillager(IVillagerNPC npc) {
+    public void tameByVillager(@NotNull IVillagerNPC npc) {
         playSound(SoundEvents.CAT_EAT, 1.0f, 1.0f);
 
         setTame(true);

@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.manager;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
@@ -23,15 +24,19 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,13 +54,13 @@ public final class ExpectingManager implements Listener {
     }
 
     @EventHandler()
-    public void onEntityDeath(EntityDeathEvent event) {
+    public void onEntityDeath(@NotNull EntityDeathEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
         villagerExpectingCache.entrySet().removeIf(next -> next.getValue().bukkit().equals(villager));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onVillagerFish(VillagerFishEvent event) {
+    public void onVillagerFish(@NotNull VillagerFishEvent event) {
         if (event.getState() != VillagerFishEvent.State.CAUGHT_FISH) return;
 
         Entity caught = event.getCaught();
@@ -74,7 +79,7 @@ public final class ExpectingManager implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerDropItem(PlayerDropItemEvent event) {
+    public void onPlayerDropItem(@NotNull PlayerDropItemEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
 
         IVillagerNPC npc = villagerExpectingCache.get(uuid);
@@ -91,21 +96,46 @@ public final class ExpectingManager implements Listener {
         item.setItemMeta(meta);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityDamage(@NotNull EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Item item)) return;
+
+        EntityDamageEvent.DamageCause cause = event.getCause();
+        if (cause == EntityDamageEvent.DamageCause.LAVA
+                || cause == EntityDamageEvent.DamageCause.FIRE
+                || cause == EntityDamageEvent.DamageCause.FIRE_TICK) {
+            handleItemDissapear(item);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryPickupItem(@NotNull InventoryPickupItemEvent event) {
+        handleItemDissapear(event.getItem());
+    }
+
+    private void handleItemDissapear(Item item) {
+        if (notOurItem(item)) return;
+
+        // We know that thrower isn't null since isOurItem() is true.
+        IVillagerNPC npc = get(item.getThrower());
+        npc.setGiftDropped(false);
+
+        removeMetadata(item, plugin.getGiftKey());
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onEntityPickupItem(EntityPickupItemEvent event) {
+    public void onEntityPickupItem(@NotNull EntityPickupItemEvent event) {
         Item item = event.getItem();
-        removeMetadata(item, plugin.getFishedKey());
+        if (notOurItem(item)) return;
 
         UUID thrower = item.getThrower();
-        if (thrower == null) return;
-
         IVillagerNPC npc = get(thrower);
-        if (npc == null || !npc.isExpectingGift()) return;
 
         Entity picker = event.getEntity();
         UUID pickerUUID = picker.getUniqueId();
 
-        Player throwerPlayer = Bukkit.getPlayer(thrower);
+        // We know that thrower isn't null since isOurItem() is true.
+        @SuppressWarnings("DataFlowIssue") Player throwerPlayer = Bukkit.getPlayer(thrower);
 
         if (npc.bukkit().getUniqueId().equals(pickerUUID)) {
             remove(thrower);
@@ -134,21 +164,38 @@ public final class ExpectingManager implements Listener {
 
         if (!pickerUUID.equals(thrower)) {
             event.setCancelled(true);
-        } else {
-            npc.setGiftDropped(false);
-            removeMetadata(item, plugin.getGiftKey());
+            return;
+        }
 
-            if (throwerPlayer == null) return;
+        npc.setGiftDropped(false);
+        removeMetadata(item, plugin.getGiftKey());
 
-            Inventory openInventory = throwerPlayer.getOpenInventory().getTopInventory();
-            if (openInventory.getHolder() instanceof InteractGUI interact) {
-                interact.setShouldStopInteracting(true);
-                throwerPlayer.closeInventory();
-            }
+        if (throwerPlayer == null) return;
+
+        Inventory open = throwerPlayer.getOpenInventory().getTopInventory();
+        if (open.getHolder() instanceof InteractGUI interact) {
+            interact.setShouldStopInteracting(true);
+            throwerPlayer.closeInventory();
         }
     }
 
-    private void removeMetadata(Item item, NamespacedKey key) {
+    private boolean notOurItem(Item item) {
+        removeMetadata(item, plugin.getFishedKey());
+
+        UUID thrower = item.getThrower();
+        if (thrower == null) return true;
+
+        IVillagerNPC npc = get(thrower);
+        if (npc == null || !npc.isExpectingGift()) {
+            // No longer expecting, remove metadata.
+            removeMetadata(item, plugin.getGiftKey());
+            return true;
+        }
+
+        return false;
+    }
+
+    private void removeMetadata(@NotNull Item item, NamespacedKey key) {
         ItemStack stack = item.getItemStack();
 
         ItemMeta meta = stack.getItemMeta();
@@ -159,38 +206,43 @@ public final class ExpectingManager implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onPlayerInteract(PlayerInteractEvent event) {
+    public void onPlayerInteract(@NotNull PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
-        if (event.getItem() != null) return;
+        if (event.getHand() != EquipmentSlot.HAND) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         IVillagerNPC npc = get(player.getUniqueId());
         if (npc == null || !npc.isExpectingBed()) return;
 
         Block block = event.getClickedBlock();
-        if (block == null || !Tag.BEDS.isTagged(block.getType())) return;
-
         Messages messages = plugin.getMessages();
+
+        if (block == null || !Tag.BEDS.isTagged(block.getType())) {
+            messages.send(player, Messages.Message.BED_INVALID);
+            return;
+        }
 
         Bed bed = (Bed) block.getBlockData();
         boolean occupied = bed.isOccupied();
-        if (occupied || !npc.handleBedHome(bed.getPart() == Bed.Part.HEAD ? block : block.getRelative(bed.getFacing()))) {
-            if (occupied) {
-                messages.send(player, Messages.Message.BED_OCCUPIED);
-            }
-            messages.send(player, npc, Messages.Message.SET_HOME_FAIL);
-        } else {
+
+        HandleHomeResult result;
+        if (occupied || (result = npc.handleBedHome(bed.getPart() == Bed.Part.HEAD ? block : block.getRelative(bed.getFacing()))) == HandleHomeResult.OCCUPIED) {
+            messages.send(player, Messages.Message.BED_OCCUPIED);
+        } else if (result == HandleHomeResult.INVALID) {
+            messages.send(player, Messages.Message.BED_INVALID);
+        } else if (result == HandleHomeResult.SUCCESS) {
             messages.send(player, Messages.Message.BED_ESTABLISHED);
             messages.send(player, npc, Messages.Message.SET_HOME_SUCCESS);
         }
+
         getVillagerExpectingCache().remove(player.getUniqueId());
         npc.stopExpecting();
 
         event.setCancelled(true);
     }
 
-    private void handleGift(IVillagerNPC npc, Player player, ItemStack gift) {
+    private void handleGift(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull ItemStack gift) {
         UUID playerUUID = player.getUniqueId();
 
         int reputation = npc.getReputation(playerUUID);
@@ -273,7 +325,7 @@ public final class ExpectingManager implements Listener {
         ItemStackUtils.setArmorItem(npc.bukkit(), gift);
     }
 
-    private void dropRing(IVillagerNPC npc, ItemStack gift) {
+    private void dropRing(@NotNull IVillagerNPC npc, ItemStack gift) {
         npc.drop(gift);
         plugin.getServer().getScheduler().runTaskLater(
                 plugin,

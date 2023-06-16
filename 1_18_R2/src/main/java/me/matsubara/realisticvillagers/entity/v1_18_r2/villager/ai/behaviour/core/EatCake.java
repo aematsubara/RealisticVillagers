@@ -14,6 +14,7 @@ import net.minecraft.world.level.block.CakeBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.bukkit.Bukkit;
+import org.jetbrains.annotations.NotNull;
 
 public class EatCake extends Behavior<Villager> {
 
@@ -42,7 +43,7 @@ public class EatCake extends Behavior<Villager> {
         return canStart;
     }
 
-    private boolean canStart(ServerLevel level, Villager villager) {
+    private boolean canStart(ServerLevel level, @NotNull Villager villager) {
         if (villager.isSleeping()) return false;
 
         if (!(villager instanceof VillagerNPC npc)
@@ -79,9 +80,9 @@ public class EatCake extends Behavior<Villager> {
     }
 
     @Override
-    public void tick(ServerLevel level, Villager villager, long time) {
+    public void tick(ServerLevel level, @NotNull Villager villager, long time) {
         if (!cakePos.closerToCenterThan(villager.position(), 1.0d) || !(villager instanceof VillagerNPC npc)) {
-            BehaviorUtils.setWalkAndLookTargetMemories(villager, cakePos, Villager.SPEED_MODIFIER, 0);
+            BehaviorUtils.setWalkAndLookTargetMemories(villager, cakePos, VillagerNPC.WALK_SPEED.get(), 0);
             return;
         }
 

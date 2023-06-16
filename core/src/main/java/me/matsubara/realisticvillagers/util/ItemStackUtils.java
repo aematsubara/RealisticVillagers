@@ -8,6 +8,8 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -67,15 +69,15 @@ public final class ItemStackUtils {
         ARMOR_REDUCTION.put(Enchantment.PROTECTION_FALL, 2.5d);
     }
 
-    public static boolean isSword(ItemStack item) {
+    public static boolean isSword(@NotNull ItemStack item) {
         return item.getType().name().contains("SWORD");
     }
 
-    public static boolean isRangeWeapon(ItemStack item) {
+    public static boolean isRangeWeapon(@NotNull ItemStack item) {
         return item.getType().name().endsWith("BOW");
     }
 
-    public static boolean isAxe(ItemStack item) {
+    public static boolean isAxe(@NotNull ItemStack item) {
         return item.getType().name().endsWith("_AXE");
     }
 
@@ -83,7 +85,7 @@ public final class ItemStackUtils {
         return isMeleeWeapon(item) || isRangeWeapon(item);
     }
 
-    public static boolean isMeleeWeapon(ItemStack item) {
+    public static boolean isMeleeWeapon(@NotNull ItemStack item) {
         return item.getType() == Material.TRIDENT || isSword(item) || isAxe(item);
     }
 
@@ -92,26 +94,26 @@ public final class ItemStackUtils {
         int actualIndex = getArmorIndex(actual);
 
         if (toCheckIndex == actualIndex) {
-            // If same type, we check the damage of each armor piece.
+            // If same type, we check the damage to each armor piece.
             return getItemDamage(toCheck) < getItemDamage(actual);
         } else {
             return toCheckIndex > actualIndex;
         }
     }
 
-    private static int getItemDamage(ItemStack item) {
+    private static int getItemDamage(@NotNull ItemStack item) {
         return item.getItemMeta() instanceof Damageable damageable ? damageable.getDamage() : 0;
     }
 
-    private static int getArmorIndex(ItemStack item) {
+    private static int getArmorIndex(@NotNull ItemStack item) {
         return item.getType() == Material.TURTLE_HELMET ? 1 : ArrayUtils.indexOf(ARMOR, item.getType().name());
     }
 
-    public static boolean isBetterAxeMaterial(ItemStack toCheck, ItemStack actual) {
+    public static boolean isBetterAxeMaterial(@NotNull ItemStack toCheck, @NotNull ItemStack actual) {
         return ArrayUtils.indexOf(AXE, toCheck.getType().name()) > ArrayUtils.indexOf(AXE, actual.getType().name());
     }
 
-    public static boolean isBetterSwordMaterial(ItemStack toCheck, ItemStack actual) {
+    public static boolean isBetterSwordMaterial(@NotNull ItemStack toCheck, @NotNull ItemStack actual) {
         return ArrayUtils.indexOf(SWORD, toCheck.getType().name()) > ArrayUtils.indexOf(SWORD, actual.getType().name());
     }
 
@@ -119,7 +121,7 @@ public final class ItemStackUtils {
      * Check if two different items are the same type (sword/axe/bow/helmet/etc.).
      * This method should only be used for armor, weapons and tools.
      */
-    public static boolean isDifferentType(ItemStack first, ItemStack second) {
+    public static boolean isDifferentType(@NotNull ItemStack first, @NotNull ItemStack second) {
         String[] firstData = first.getType().name().split("_");
         String[] secondData = second.getType().name().split("_");
 
@@ -131,15 +133,15 @@ public final class ItemStackUtils {
     }
 
     @SuppressWarnings("ConstantConditions")
-    public static boolean isBetterArmor(ItemStack toCheck, ItemStack actual) {
-        // If both items doesn't have enchantments, we check which one is better (material).
+    public static boolean isBetterArmor(@NotNull ItemStack toCheck, ItemStack actual) {
+        // If both items don't have enchantments, we check which one is better (material).
         if (!toCheck.getItemMeta().hasEnchants() && !actual.getItemMeta().hasEnchants()) {
             return isBetterArmorMaterial(toCheck, actual);
         }
         return getArmorBasePoints(toCheck) > getArmorBasePoints(actual);
     }
 
-    private static double getArmorBasePoints(ItemStack item) {
+    private static double getArmorBasePoints(@NotNull ItemStack item) {
         // https://www.reddit.com/r/Minecraft/comments/157mxr/fyi_specifics_on_armor_enchantment_damage/
 
         int checkIndex;
@@ -168,7 +170,7 @@ public final class ItemStackUtils {
         setBetterWeaponInMaindHand(villager, item, true, false);
     }
 
-    public static boolean setBetterWeaponInMaindHand(Villager villager, ItemStack item, boolean addIfNotBetter, boolean canChangeType) {
+    public static boolean setBetterWeaponInMaindHand(Villager villager, @NotNull ItemStack item, boolean addIfNotBetter, boolean canChangeType) {
         boolean isShield = item.getType() == Material.SHIELD;
 
         if (!isWeapon(item) && !isShield) return false;
@@ -191,7 +193,7 @@ public final class ItemStackUtils {
         // we check if the picked item is a shield, if so, we try to put it the offhand, if already occupied, add to inventory and return.
         if (isShield) {
             // The shield always goes in offhand.
-            if (equipment.getItemInOffHand().getType().isAir()) {
+            if (equipment.getItemInOffHand().getType().isAir() && villager.getHealth() >= 8.0d) {
                 equipment.setItemInOffHand(item);
             } else {
                 if (!addIfNotBetter) return false;
@@ -236,7 +238,7 @@ public final class ItemStackUtils {
     private static boolean handle(Villager villager,
                                   ItemStack item,
                                   ItemStack content,
-                                  BiPredicate<ItemStack, ItemStack> predicate,
+                                  @NotNull BiPredicate<ItemStack, ItemStack> predicate,
                                   boolean addIfNotBetter) {
         if (predicate.test(item, content)) {
             villager.getInventory().addItem(content);
@@ -248,7 +250,7 @@ public final class ItemStackUtils {
         return true;
     }
 
-    private static double getAxeBasePoints(ItemStack item) {
+    private static double getAxeBasePoints(@NotNull ItemStack item) {
         int checkIndex = ArrayUtils.indexOf(AXE, item.getType().name());
 
         double points = switch (checkIndex) {
@@ -260,7 +262,7 @@ public final class ItemStackUtils {
         return points + getSharpnessPoints(item);
     }
 
-    private static double getSwordBasePoints(ItemStack item) {
+    private static double getSwordBasePoints(@NotNull ItemStack item) {
         int checkIndex = ArrayUtils.indexOf(SWORD, item.getType().name());
 
         double points = checkIndex + 4.0d;
@@ -277,13 +279,13 @@ public final class ItemStackUtils {
         return points;
     }
 
-    private static double getSharpnessPoints(ItemStack item) {
+    private static double getSharpnessPoints(@NotNull ItemStack item) {
         // https://minecraft.fandom.com/wiki/Sharpness - 0.5 * level + 0.5.
         int sharpnessLevel = item.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
         return (sharpnessLevel > 0) ? 0.5d * sharpnessLevel + 0.5d : 0.0d;
     }
 
-    private static double getBowBasePoints(ItemStack item) {
+    private static double getBowBasePoints(@NotNull ItemStack item) {
         double points = 0.0d;
 
         // https://minecraft.fandom.com/wiki/Power - 25% * (level + 1).
@@ -295,7 +297,7 @@ public final class ItemStackUtils {
         return points;
     }
 
-    private static double getTridentBasePoints(ItemStack item) {
+    private static double getTridentBasePoints(@NotNull ItemStack item) {
         double points = 0.0d;
 
         // https://minecraft.fandom.com/wiki/Impaling - level × 2.5.
@@ -336,7 +338,7 @@ public final class ItemStackUtils {
         return true;
     }
 
-    public static EquipmentSlot getSlotByItem(ItemStack item) {
+    public static @Nullable EquipmentSlot getSlotByItem(@NotNull ItemStack item) {
         String name = item.getType().name();
         if (name.contains("HELMET") || name.equals("TURTLE_HELMET")) return EquipmentSlot.HEAD;
         if (name.contains("CHESTPLATE")) return EquipmentSlot.CHEST;

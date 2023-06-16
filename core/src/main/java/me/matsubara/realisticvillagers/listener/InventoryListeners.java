@@ -1,5 +1,12 @@
 package me.matsubara.realisticvillagers.listener;
 
+import com.comphenix.protocol.wrappers.Pair;
+import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.GUIInteractType;
@@ -9,36 +16,46 @@ import me.matsubara.realisticvillagers.event.VillagerChatInteractionEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
-import me.matsubara.realisticvillagers.gui.types.CombatGUI;
-import me.matsubara.realisticvillagers.gui.types.EquipmentGUI;
-import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
+import me.matsubara.realisticvillagers.gui.anim.RainbowAnimation;
+import me.matsubara.realisticvillagers.gui.types.*;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.task.BabyTask;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.wesjd.anvilgui.AnvilGUI;
+import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryAction;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.mineskin.data.Skin;
+import org.mineskin.data.Texture;
 
-import java.util.UUID;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
 
@@ -52,9 +69,14 @@ public final class InventoryListeners implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void onInventoryClose(InventoryCloseEvent event) {
+    public void onInventoryClose(@NotNull InventoryCloseEvent event) {
         Inventory inventory = event.getInventory();
         if (!(inventory.getHolder() instanceof InteractGUI gui)) return;
+
+        if (gui.getTaskId() != -1) {
+            plugin.getServer().getScheduler().cancelTask(gui.getTaskId());
+            gui.setTaskId(-1);
+        }
 
         IVillagerNPC npc = gui.getNPC();
         if (npc == null) return;
@@ -88,7 +110,7 @@ public final class InventoryListeners implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent event) {
+    public void onInventoryClick(@NotNull InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
         Inventory inventory = event.getClickedInventory();
@@ -107,8 +129,18 @@ public final class InventoryListeners implements Listener {
         ItemStack current = event.getCurrentItem();
         boolean isShiftClick = event.getClick().isShiftClick();
 
+        VillagerTracker tracker = plugin.getTracker();
+
         IVillagerNPC npc = interact.getNPC();
         if (npc == null) {
+            if (interact instanceof SkinGUI skin) {
+                handleSkinGUI(event, skin);
+                return;
+            } else if (interact instanceof NewSkinGUI skin) {
+                handleNewSkinGUI(event, skin);
+                return;
+            }
+
             if (!(interact instanceof WhistleGUI whistle)) return;
 
             event.setCancelled(true);
@@ -125,17 +157,14 @@ public final class InventoryListeners implements Listener {
                 return;
             } else if (current.isSimilar(whistle.getSearch())) {
                 new AnvilGUI.Builder()
-                        .onComplete(completion -> {
-                            Player opener = completion.getPlayer();
-                            String result = completion.getText();
-
-                            openWhistleGUI(opener, result);
+                        .onClick((slot, snapshot) -> {
+                            if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+                            openWhistleGUI(snapshot.getPlayer(), snapshot.getText());
                             return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.WHISTLE_SEARCH_TITLE.asStringTranslated())
                         .text(Config.WHISTLE_SEARCH_TEXT.asStringTranslated())
                         .itemLeft(new ItemStack(Material.PAPER))
-                        .preventClose()
                         .plugin(plugin)
                         .open((Player) event.getWhoClicked());
                 return;
@@ -150,7 +179,7 @@ public final class InventoryListeners implements Listener {
             String villagerName = meta.getPersistentDataContainer().get(plugin.getVillagerNameKey(), PersistentDataType.STRING);
             if (villagerName == null || villagerName.isEmpty()) return;
 
-            for (IVillagerNPC offline : plugin.getTracker().getOfflineVillagers()) {
+            for (IVillagerNPC offline : tracker.getOfflineVillagers()) {
                 if (!offline.getVillagerName().equalsIgnoreCase(villagerName)) continue;
 
                 Villager bukkit = offline.bukkit();
@@ -179,7 +208,7 @@ public final class InventoryListeners implements Listener {
             }
 
             if (current != null) {
-                if (current.isSimilar(equipment.getBorder())
+                if (RainbowAnimation.isCachedBackground(equipment.getAnimation(), current)
                         || current.isSimilar(equipment.getHead())
                         || current.isSimilar(equipment.getClose())) {
                     event.setCancelled(true);
@@ -204,17 +233,14 @@ public final class InventoryListeners implements Listener {
             } else if (current.isSimilar(combat.getSearch())) {
                 combat.setShouldStopInteracting(false);
                 new AnvilGUI.Builder()
-                        .onComplete(completion -> {
-                            Player opener = completion.getPlayer();
-                            String result = completion.getText();
-
-                            openCombatGUI(npc, opener, result);
+                        .onClick((slot, snapshot) -> {
+                            if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+                            openCombatGUI(npc, snapshot.getPlayer(), snapshot.getText());
                             return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
                         .text(Config.COMBAT_SEARCH_TEXT.asStringTranslated())
                         .itemLeft(new ItemStack(Material.PAPER))
-                        .preventClose()
                         .plugin(plugin)
                         .open((Player) event.getWhoClicked());
             } else if (current.isSimilar(combat.getClearSearch())) {
@@ -236,7 +262,8 @@ public final class InventoryListeners implements Listener {
                     npc.removeTarget(targetType);
                 }
 
-                inventory.setItem(event.getRawSlot(), new ItemBuilder(enable ? combat.getEnabled() : combat.getDisabled())
+                int slot = event.getRawSlot();
+                inventory.setItem(slot > 18 ? slot : slot + 9, new ItemBuilder(enable ? combat.getEnabled() : combat.getDisabled())
                         .setData(plugin.getEntityTypeKey(), PersistentDataType.STRING, type)
                         .build());
             }
@@ -249,11 +276,8 @@ public final class InventoryListeners implements Listener {
 
         MainGUI main = (MainGUI) interact;
 
-        boolean isPartner = npc.isPartner(playerUUID);
-        boolean isCleric = npc.is(Villager.Profession.CLERIC);
-        boolean isClericPartner = current.isSimilar(main.getPapers()) && isPartner;
         boolean isFamily = npc.isFamily(player.getUniqueId(), true);
-        boolean isDivorceItem = current.isSimilar(main.getDivorce());
+        boolean isPartner = npc.isPartner(playerUUID);
 
         Messages messages = plugin.getMessages();
         ExpectingManager expectingManager = plugin.getExpectingManager();
@@ -300,7 +324,11 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getProcreate())) {
-            if (conditionNotMet(player, isPartner)) return;
+            // Return if it's a kid.
+            if (conditionNotMet(player, npc.bukkit().isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
+
+            // Return if not married.
+            if (conditionNotMet(player, isPartner, Messages.Message.INTERACT_FAIL_NOT_MARRIED)) return;
 
             if (reputation < Config.REPUTATION_REQUIRED_TO_PROCREATE.asInt()) {
                 messages.send(player, npc, Messages.Message.PROCREATE_FAIL_LOW_REPUTATION);
@@ -323,11 +351,16 @@ public final class InventoryListeners implements Listener {
 
             npc.setProcreatingWith(playerUUID);
             new BabyTask(plugin, npc.bukkit(), player).runTaskTimer(plugin, 0L, 20L);
-        } else if (isDivorceItem || isClericPartner) {
-            if ((isDivorceItem && conditionNotMet(player, isPartner))
-                    || (isClericPartner && conditionNotMet(player, isCleric))) return;
+        } else if (current.isSimilar(main.getDivorce())) {
+            // Return if it's a kid.
+            if (conditionNotMet(player, npc.bukkit().isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
 
-            boolean hasDivorcePapers = isClericPartner || removeDivorcePapers(player.getInventory());
+            // Return if not married.
+            if (conditionNotMet(player, isPartner, Messages.Message.INTERACT_FAIL_NOT_MARRIED)) return;
+
+            // Only remove divorce papers if the villager isn't a cleric partner.
+            boolean hasDivorcePapers = (isPartner && npc.bukkit().getProfession() == Villager.Profession.CLERIC)
+                    || removeDivorcePapers(player.getInventory());
 
             int lossReputation;
             if (hasDivorcePapers) {
@@ -347,15 +380,13 @@ public final class InventoryListeners implements Listener {
             // Divorce, remove and drop previous wedding ring.
             npc.divorceAndDropRing(player);
         } else if (current.isSimilar(main.getCombat())) {
-            String combat = Config.WHO_CAN_MODIFY_VILLAGER_COMBAT.asString();
-            if (conditionNotMet(player, combat.equalsIgnoreCase("everyone")
-                    || (combat.equalsIgnoreCase("family") && isFamily))) return;
+            if (conditionNotMet(player, isFamily, Messages.Message.INTERACT_FAIL_NOT_FAMILY)) return;
 
             main.setShouldStopInteracting(false);
             openCombatGUI(npc, player, null);
             return;
         } else if (current.isSimilar(main.getHome())) {
-            if (conditionNotMet(player, isFamily)) return;
+            if (conditionNotMet(player, isFamily, Messages.Message.INTERACT_FAIL_NOT_FAMILY)) return;
 
             IVillagerNPC other = expectingManager.get(playerUUID);
             if (other != null && other.isExpectingBed()) {
@@ -369,12 +400,9 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE);
             }
         } else if (current.isSimilar(main.getPapers())) {
-            if (!isCleric || !plugin.isMarried(player)) {
-                if (!isCleric) {
-                    messages.send(player, Messages.Message.INTERACT_FAIL_NOT_ALLOWED);
-                } else {
-                    messages.send(player, npc, Messages.Message.CLERIC_NOT_MARRIED);
-                }
+            // If it's (ask) papers item, then the villager is INDEED a cleric.
+            if (!plugin.isMarried(player)) {
+                messages.send(player, npc, Messages.Message.CLERIC_NOT_MARRIED);
                 closeInventory(player);
                 return;
             }
@@ -400,6 +428,8 @@ public final class InventoryListeners implements Listener {
                 }
             }
         } else if (current.getItemMeta() != null) {
+            if (RainbowAnimation.isCachedBackground(main.getAnimation(), current)) return;
+
             ItemMeta meta = current.getItemMeta();
 
             PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -414,8 +444,12 @@ public final class InventoryListeners implements Listener {
 
                 boolean isProudOf;
                 if ((isProudOf = interactType == GUIInteractType.BE_PROUD_OF) || interactType == GUIInteractType.FLIRT) {
-                    boolean allowFlirt = !npc.isFamily(player.getUniqueId()) && npc.bukkit().isAdult();
-                    if (conditionNotMet(player, isProudOf != allowFlirt)) return;
+                    if (isProudOf && conditionNotMet(player, !npc.bukkit().isAdult(), Messages.Message.INTERACT_FAIL_NOT_A_KID)) {
+                        return;
+                    } else if (!isProudOf && (conditionNotMet(player, npc.bukkit().isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)
+                            || conditionNotMet(player, !npc.isFamily(player.getUniqueId()), Messages.Message.INTERACT_FAIL_ONLY_PARTNER_OR_NON_FAMILY_ADULT))) {
+                        return;
+                    }
                 }
 
                 if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), interactType.getName())) {
@@ -429,7 +463,7 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
-    private boolean removeDivorcePapers(Inventory inventory) {
+    private boolean removeDivorcePapers(@NotNull Inventory inventory) {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             ItemStack item = inventory.getItem(slot);
             if (item == null) continue;
@@ -452,15 +486,15 @@ public final class InventoryListeners implements Listener {
         return false;
     }
 
-    private boolean conditionNotMet(Player player, boolean condition) {
+    private boolean conditionNotMet(Player player, boolean condition, Messages.Message message) {
         if (!condition) {
-            plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_NOT_ALLOWED);
+            plugin.getMessages().send(player, message);
             closeInventory(player);
         }
         return !condition;
     }
 
-    public void handleChatInteraction(IVillagerNPC npc, GUIInteractType interactType, Player player) {
+    public void handleChatInteraction(IVillagerNPC npc, @NotNull GUIInteractType interactType, @NotNull Player player) {
         UUID playerUUID = player.getUniqueId();
 
         boolean successByJoke = interactType.isJoke() && Config.PARTNER_JOKE_ALWAYS_SUCCESS.asBool() && npc.isPartner(playerUUID);
@@ -488,6 +522,351 @@ public final class InventoryListeners implements Listener {
         plugin.getMessages().sendRandomInteractionMessage(player, npc, interactType, chatEvent.isSuccess());
     }
 
+    private void handleSkinGUI(@NotNull InventoryClickEvent event, SkinGUI skin) {
+        event.setCancelled(true);
+
+        ItemStack current = event.getCurrentItem();
+        if (current == null) return;
+
+        Player player = (Player) event.getWhoClicked();
+        VillagerTracker tracker = plugin.getTracker();
+        Messages messages = plugin.getMessages();
+
+        ClickType click = event.getClick();
+        boolean isShiftClick = click.isShiftClick();
+        boolean isAdult = skin.isAdult();
+
+        String currentSex = skin.isMale() ? "male" : "female";
+        if (current.isSimilar(skin.getClose())) {
+            closeInventory(player);
+            return;
+        } else if (current.isSimilar(skin.getPrevious())) {
+            skin.previousPage(isShiftClick);
+            return;
+        } else if (current.isSimilar(skin.getNext())) {
+            skin.nextPage(isShiftClick);
+            return;
+        } else if (current.isSimilar(skin.getSearch())) {
+            new AnvilGUI.Builder()
+                    .onClick((slot, snapshot) -> {
+                        if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+                        openSkinGUI(snapshot.getPlayer(), currentSex, isAdult, snapshot.getText());
+                        return RealisticVillagers.CLOSE_RESPONSE;
+                    })
+                    .title(Config.SKIN_SEARCH_TITLE.asStringTranslated())
+                    .text(Config.SKIN_SEARCH_TEXT.asStringTranslated())
+                    .itemLeft(new ItemStack(Material.PAPER))
+                    .plugin(plugin)
+                    .open((Player) event.getWhoClicked());
+            return;
+        } else if (current.isSimilar(skin.getClearSearch())) {
+            openSkinGUI(player, currentSex, isAdult, null);
+            return;
+        } else if (current.isSimilar(skin.getMale()) || current.isSimilar(skin.getFemale())) {
+            openSkinGUI(player, skin.isMale() ? "female" : "male", isAdult, null);
+            return;
+        } else if (current.isSimilar(skin.getAdult()) || current.isSimilar(skin.getKid())) {
+            openSkinGUI(player, currentSex, !isAdult, null);
+            return;
+        } else if (current.isSimilar(skin.getClearSkin())) {
+            messages.send(player, tracker.clearSkin(player, true) ? Messages.Message.SKIN_CLEARED : Messages.Message.SKIN_NOT_CLEARED);
+            return;
+        } else if (current.isSimilar(skin.getNewSkin())) {
+            if (Config.MINESKIN_API_KEY.asString().isEmpty()) {
+                messages.send(player, Messages.Message.NO_MINESKIN_API_KEY);
+                closeInventory(player);
+                return;
+            }
+            plugin.getServer().getScheduler().runTask(plugin, () -> new NewSkinGUI(plugin, player, skin.isMale(), isAdult));
+            return;
+        }
+
+        // Handle profession switches.
+        if (handleSkinGUISwitches(event, skin)) return;
+
+        ItemMeta meta = current.getItemMeta();
+        if (meta == null) return;
+
+        String skinData = meta.getPersistentDataContainer().get(plugin.getSkinDataKey(), PersistentDataType.STRING);
+        if (skinData == null || skinData.isEmpty()) return;
+
+        String[] data = skinData.split(":");
+        if (data.length != 2) return;
+
+        String sex = data[0];
+        int id = Integer.parseInt(data[1]);
+
+        if (click == ClickType.RIGHT) {
+            String fileName = sex + ".yml";
+            Pair<File, FileConfiguration> pair = tracker.getFile(fileName);
+            FileConfiguration config = pair.getSecond();
+
+            ConfigurationSection noneSection = config.getConfigurationSection("none");
+            if (noneSection != null && noneSection.getKeys(false).size() == 1) {
+                messages.send(player, Messages.Message.SKIN_AT_LEAST_ONE);
+                closeInventory(player);
+                return;
+            }
+
+            for (Villager.Profession profession : Villager.Profession.values()) {
+                String professionLower = profession.name().toLowerCase();
+                config.set(professionLower + "." + id, null);
+
+                // Remove profession section if empty.
+                ConfigurationSection section = config.getConfigurationSection(professionLower);
+                if (section != null && section.getKeys(false).isEmpty()) config.set(professionLower, null);
+            }
+
+            try {
+                config.save(pair.getFirst());
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+
+            messages.send(player, Messages.Message.SKIN_REMOVED);
+
+            // Remove skin from villagers.
+            for (World world : plugin.getServer().getWorlds()) {
+                for (Entity entity : world.getEntities()) {
+                    if (!(entity instanceof Villager villager)) continue;
+
+                    Optional<IVillagerNPC> online = plugin.getConverter().getNPC(villager);
+                    if (online.isEmpty() || online.get().getSkinTextureId() != id) continue;
+
+                    // Respawn NPC with a new texture.
+                    tracker.refreshNPCSkin(villager, false);
+                }
+            }
+
+            // Remove skin from players.
+            Iterator<Map.Entry<UUID, Pair<Integer, PropertyMap>>> iterator = tracker.getOldProperties().entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<UUID, Pair<Integer, PropertyMap>> next = iterator.next();
+                if (next.getValue().getFirst() != id) continue;
+
+                // Shouldn't be null.
+                Player disguised = Bukkit.getPlayer(next.getKey());
+                if (disguised == null) continue;
+
+                tracker.clearSkin(disguised, false);
+                iterator.remove();
+            }
+
+            // Remove from cache and close inventory for players with the (skins) GUI open; this should close the current player too.
+            (sex.equals("male") ? SkinGUI.CACHE_MALE_HEADS : SkinGUI.CACHE_FEMALE_HEADS).remove(id);
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online.getOpenInventory().getTopInventory() instanceof SkinGUI) {
+                    closeInventory(online);
+                }
+            }
+            return;
+        } else if (click == ClickType.MIDDLE) {
+            String fileName = sex + ".yml";
+            Pair<File, FileConfiguration> pair = tracker.getFile(fileName);
+            FileConfiguration config = pair.getSecond();
+
+            ConfigurationSection noneSection = config.getConfigurationSection("none");
+            if (noneSection == null) return;
+
+            boolean forBabies = !config.getBoolean("none." + id + ".for-babies");
+            config.set("none." + id + ".for-babies", forBabies);
+
+            try {
+                config.save(pair.getFirst());
+
+                // Refresh inventory.
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (online.getOpenInventory().getTopInventory() instanceof SkinGUI) {
+                        openSkinGUI(player, sex, isAdult, null);
+                    }
+                }
+
+                // Remove skin from villagers if necessary.
+                for (World world : plugin.getServer().getWorlds()) {
+                    for (Entity entity : world.getEntities()) {
+                        if (!(entity instanceof Villager villager)) continue;
+
+                        Optional<IVillagerNPC> online = plugin.getConverter().getNPC(villager);
+                        IVillagerNPC npc;
+
+                        // Ignore villager with different id.
+                        if (online.isEmpty() || (npc = online.get()).getSkinTextureId() != id) continue;
+
+                        // Ignore baby villagers with skin changed for babies.
+                        if (forBabies && !villager.isAdult()) continue;
+
+                        // Ignore adult villagers with skin changed for adults or kids if had the skin as a kid.
+                        // In this case, we don't care about the state of "forBabies".
+                        if (villager.isAdult() && npc.getKidSkinTextureId() == id) continue;
+
+                        // Reseting the skin so a new one is generated.
+                        npc.setSkinTextureId(0);
+
+                        // Respawn NPC with a new texture.
+                        tracker.refreshNPCSkin(villager, false);
+                    }
+                }
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+            return;
+        }
+
+        String profession = skin.getCurrentProfession().name().toLowerCase();
+
+        WrappedSignedProperty textures = tracker.getTextures(sex, profession, id);
+        if (textures.getName().equals("error")) {
+            // This will take a bit of time since it's running in another thread...
+            messages.send(player, Messages.Message.SKIN_WAIT_WHILE_CREATING);
+
+            // Create skin and THEN disguise.
+            CompletableFuture<Skin> future = tracker.createSkin(player, sex, isAdult, profession, id);
+            if (future != null) {
+                future.thenAcceptAsync(skinObject -> {
+                    // For some unknown reason, needs to be done sync.
+                    Texture texture = skinObject.data.texture;
+                    runTask(() -> tracker.disguisePlayer(player, new VillagerTracker.SkinRelatedData(
+                            sex,
+                            profession,
+                            id,
+                            null,
+                            null,
+                            new WrappedSignedProperty("textures", texture.value, texture.signature)), isAdult));
+                }, tracker.getMineskinClient().getRequestExecutor());
+            } else {
+                VillagerTracker.SkinRelatedData tempData = new VillagerTracker.SkinRelatedData(sex, profession, id, null, null, null);
+                plugin.getLogger().severe("Failed to generate a new skin when trying to create: " + tempData + "!");
+            }
+
+            closeInventory(player);
+            return;
+        }
+
+        tracker.disguisePlayer(player, new VillagerTracker.SkinRelatedData(
+                sex,
+                profession,
+                id,
+                null,
+                null,
+                new WrappedSignedProperty("textures", textures.getValue(), textures.getSignature())), isAdult);
+
+        closeInventory(player);
+    }
+
+    private boolean handleSkinGUISwitches(@NotNull InventoryClickEvent event, SkinGUI skin) {
+        ItemStack current = event.getCurrentItem();
+        if (current == null) return true;
+
+        Map<Villager.Profession, ItemStack> map = skin.getProfessionItems();
+
+        boolean isCurrent = false;
+        int index = -1;
+        for (Map.Entry<Villager.Profession, ItemStack> entry : map.entrySet()) {
+            index++;
+            if (current.isSimilar(entry.getValue())) {
+                isCurrent = true;
+                break;
+            }
+        }
+
+        if (!isCurrent) return false;
+
+        int nextIndex = index + (event.getClick().isRightClick() ? 1 : -1);
+        if (nextIndex >= map.size()) nextIndex = 0;
+        if (nextIndex < 0) nextIndex = skin.getProfessionItems().size() - 1;
+
+        Map.Entry<Villager.Profession, ItemStack> nextEntry = new ArrayList<>(map.entrySet()).get(nextIndex);
+
+        event.getInventory().setItem(event.getRawSlot(), nextEntry.getValue());
+
+        Villager.Profession selectedProfession = nextEntry.getKey();
+        skin.setCurrentProfession(selectedProfession);
+
+        plugin.getTracker().getSelectedProfession().put(event.getWhoClicked().getUniqueId(), selectedProfession);
+        return true;
+    }
+
+    private void handleNewSkinGUI(@NotNull InventoryClickEvent event, NewSkinGUI skin) {
+        event.setCancelled(true);
+
+        ItemStack current = event.getCurrentItem();
+        if (current == null) return;
+
+        Player player = (Player) event.getWhoClicked();
+        VillagerTracker tracker = plugin.getTracker();
+
+        ItemMeta meta = current.getItemMeta();
+        if (meta == null) return;
+
+        Messages messages = plugin.getMessages();
+
+        if (current.isSimilar(skin.getFromConsole())) {
+            messages.send(player, Messages.Message.ONLY_FROM_CONSOLE);
+            closeInventory(player);
+            return;
+        }
+
+        if (!current.isSimilar(skin.getFromPlayer())) return;
+
+        // Add new skin from a player.
+        new AnvilGUI.Builder()
+                .onClick((slot, snapshot) -> {
+                    if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+                    Player opener = snapshot.getPlayer();
+                    String result = snapshot.getText();
+
+                    Player target = Bukkit.getPlayer(result);
+                    GameProfile profile;
+
+                    String sex = skin.isMale() ? "male" : "female";
+
+                    // Player is online, get texture data from the profile.
+                    if (target != null && (profile = plugin.getConverter().getPlayerProfile(target)) != null) {
+                        Property property = profile.getProperties().get("textures").iterator().next();
+                        tracker.addNewSkin(opener, null, "none", sex, skin.isAdult(), property.getValue(), property.getSignature());
+                        return RealisticVillagers.CLOSE_RESPONSE;
+                    }
+
+                    // Player is offline, we need to get the texture from minecraft servers...
+                    plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                        try {
+                            URL profiles = new URL("https://api.mojang.com/users/profiles/minecraft/" + result);
+                            InputStreamReader profilesReader = new InputStreamReader(profiles.openStream());
+                            String uuid = JsonParser.parseReader(profilesReader).getAsJsonObject().get("id").getAsString();
+
+                            URL textures = new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid + "?unsigned=false");
+                            InputStreamReader texturesReader = new InputStreamReader(textures.openStream());
+                            JsonObject asJson = JsonParser.parseReader(texturesReader).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject();
+
+                            String texture = asJson.get("value").getAsString();
+                            String signature = asJson.get("signature").getAsString();
+
+                            if (texture == null || signature == null) {
+                                messages.send(opener, Messages.Message.SKIN_NOT_FOUND);
+                                return;
+                            }
+
+                            tracker.addNewSkin(opener, null, "none", sex, skin.isAdult(), texture, signature);
+                        } catch (IOException exception) {
+                            if (exception instanceof FileNotFoundException) {
+                                messages.send(opener, Messages.Message.SKIN_NOT_FOUND);
+                            } else {
+                                exception.printStackTrace();
+                            }
+                        }
+                    });
+
+                    // This will take a bit of time since it's running in another thread...
+                    messages.send(opener, Messages.Message.SKIN_WAIT_WHILE_CREATING);
+                    return RealisticVillagers.CLOSE_RESPONSE;
+                })
+                .title(Config.NEW_SKIN_TITLE.asStringTranslated())
+                .text(Config.NEW_SKIN_TEXT.asStringTranslated())
+                .itemLeft(new ItemStack(Material.PAPER))
+                .plugin(plugin)
+                .open((Player) event.getWhoClicked());
+    }
+
     private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
         runTask(() -> new CombatGUI(plugin, npc, player, keyword));
     }
@@ -496,7 +875,11 @@ public final class InventoryListeners implements Listener {
         runTask(() -> plugin.openWhistleGUI(player, keyword));
     }
 
-    private void closeInventory(Player player) {
+    private void openSkinGUI(Player player, String sex, boolean isAdult, @Nullable String keyword) {
+        runTask(() -> SkinGUI.openMenu(plugin, player, sex, isAdult, null, keyword));
+    }
+
+    private void closeInventory(@NotNull Player player) {
         runTask(player::closeInventory);
     }
 
@@ -505,8 +888,16 @@ public final class InventoryListeners implements Listener {
     }
 
     public static boolean canModifyInventory(IVillagerNPC npc, Player player) {
+        return canModify(npc, player, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY);
+    }
+
+    public static boolean canModifyName(IVillagerNPC npc, Player player) {
+        return canModify(npc, player, Config.WHO_CAN_MODIFY_VILLAGER_NAME);
+    }
+
+    private static boolean canModify(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull Config config) {
         boolean isFamily = npc.isFamily(player.getUniqueId(), true);
-        String modifyInventory = Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY.asString();
-        return modifyInventory.equalsIgnoreCase("everyone") || (modifyInventory.equalsIgnoreCase("family") && isFamily);
+        String who = config.asString();
+        return who.equalsIgnoreCase("everyone") || (who.equalsIgnoreCase("family") && isFamily);
     }
 }

@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 public class GoToWantedItem extends Behavior<Villager> {
 
@@ -54,16 +55,16 @@ public class GoToWantedItem extends Behavior<Villager> {
         BehaviorUtils.setWalkAndLookTargetMemories(villager, getClosestLovedItem(villager), speedModifier, 0);
     }
 
-    private boolean force(VillagerNPC npc, ItemEntity closest) {
+    private boolean force(@NotNull VillagerNPC npc, @NotNull ItemEntity closest) {
         return npc.fished(closest.getItem()) || npc.isExpectingGiftFrom(closest.thrower);
     }
 
-    private boolean isOnPickupCooldown(Villager level) {
+    private boolean isOnPickupCooldown(@NotNull Villager level) {
         return level.getBrain().checkMemory(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, MemoryStatus.VALUE_PRESENT);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private ItemEntity getClosestLovedItem(Villager level) {
+    private @NotNull ItemEntity getClosestLovedItem(@NotNull Villager level) {
         return level.getBrain().getMemory(VillagerNPC.NEAREST_WANTED_ITEM).get();
     }
 }

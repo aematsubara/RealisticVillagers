@@ -1,29 +1,37 @@
 package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.work;
 
 import com.google.common.collect.ImmutableMap;
+import lombok.Getter;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.BlockPosTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 
-public class StartFishing extends Behavior<Villager> {
+public class StartFishing extends Behavior<Villager> implements Exchangeable {
+
+    private @Getter ItemStack previousItem;
+    private @Nullable BlockPos waterPos;
 
     private static final int RANGE = 16;
-
-    private @Nullable BlockPos waterPos;
 
     @SuppressWarnings("ConstantConditions")
     public StartFishing() {
@@ -38,10 +46,11 @@ public class StartFishing extends Behavior<Villager> {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         if (Config.DISABLE_SKINS.asBool()) return false;
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return false;
-        if (!villager.getMainHandItem().is(Items.FISHING_ROD)) return false;
         if (villager.getVillagerData().getProfession() != VillagerProfession.FISHERMAN) return false;
         if (fishedRecently(villager)) return false;
-        if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(true)) return false;
+        if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(ChangeItemType.USING_FISHING_ROD)) {
+            return false;
+        }
 
         BlockPos villagerPos = villager.blockPosition();
 
@@ -63,11 +72,24 @@ public class StartFishing extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (waterPos != null) lookAtWithMemory(villager, waterPos);
+        if (villager instanceof VillagerNPC npc) {
+            npc.setUsingFishingRod(true);
+            previousItem = npc.getMainHandItem();
+        }
+
+        if (waterPos != null) {
+            villager.setItemInHand(InteractionHand.MAIN_HAND, Items.FISHING_ROD.getDefaultInstance());
+            lookAtWithMemory(villager, waterPos);
+        }
     }
 
     @Override
     public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setUsingFishingRod(false);
+            npc.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
+        }
+
         villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
         waterPos = null;
     }
@@ -81,15 +103,13 @@ public class StartFishing extends Behavior<Villager> {
     public void tick(ServerLevel level, Villager villager, long time) {
         if (waterPos == null) return;
 
-        if (!(villager instanceof VillagerNPC npc)) return;
+        if (!(villager instanceof VillagerNPC npc) || npc.isFishing()) return;
 
-        if (!npc.isFishing()) {
-            lookAtWithMemory(npc, waterPos);
-            npc.toggleFishing();
-        }
+        lookAtWithMemory(npc, waterPos);
+        npc.toggleFishing();
     }
 
-    private void lookAtWithMemory(Villager villager, BlockPos at) {
+    private void lookAtWithMemory(@NotNull Villager villager, BlockPos at) {
         villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(at));
     }
 
@@ -98,7 +118,7 @@ public class StartFishing extends Behavior<Villager> {
         return !fishedRecently(villager);
     }
 
-    private boolean fishedRecently(Villager villager) {
+    private boolean fishedRecently(@NotNull Villager villager) {
         return villager.getBrain().hasMemoryValue(VillagerNPC.HAS_FISHED_RECENTLY);
     }
 }

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -30,7 +31,7 @@ public class SocializeAtBell extends Behavior<Villager> {
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(@NotNull ServerLevel level, @NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
         Optional<GlobalPos> meetPos = brain.getMemory(MemoryModuleType.MEETING_POINT);
 
@@ -46,7 +47,7 @@ public class SocializeAtBell extends Behavior<Villager> {
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
 
         brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)

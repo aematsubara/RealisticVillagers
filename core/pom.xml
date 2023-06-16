@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>2.0.3</version>
+        <version>3.0</version>
     </parent>
 
     <pluginRepositories>
@@ -51,13 +51,20 @@
                                     <pattern>com.tchristofferson</pattern>
                                     <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.jsoup</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.mineskin</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                </relocation>
                             </relocations>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
                                     <excludes>
-                                        <exclude>META-INF/*.MF</exclude>
-                                        <exclude>META-INF/maven/**</exclude>
+                                        <exclude>META-INF/**</exclude>
                                     </excludes>
                                 </filter>
                                 <filter>
@@ -76,6 +83,7 @@
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_17*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_18_R1*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_19_R1*</exclude>
+                                        <exclude>net/wesjd/anvilgui/version/Wrapper1_19_R2*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/special/*</exclude>
                                     </excludes>
                                 </filter>
@@ -118,6 +126,10 @@
             <id>minecraft-repo</id>
             <url>https://libraries.minecraft.net/</url>
         </repository>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -125,7 +137,7 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.19.4-R0.1-SNAPSHOT</version>
+            <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- ProtocolLib -->
@@ -139,7 +151,7 @@
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.6.3-SNAPSHOT</version>
+            <version>1.6.6-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>
@@ -151,8 +163,14 @@
         <dependency>
             <groupId>com.mojang</groupId>
             <artifactId>authlib</artifactId>
-            <version>1.5.21</version>
+            <version>3.17.30</version>
             <scope>provided</scope>
+        </dependency>
+        <!-- Mineskin -->
+        <dependency>
+            <groupId>com.github.aematsubara</groupId>
+            <artifactId>MineskinClient</artifactId>
+            <version>master-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

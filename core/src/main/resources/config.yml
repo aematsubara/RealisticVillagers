@@ -62,6 +62,26 @@
 # Colors: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Color.html
 # FireworkEffect.Type: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/FireworkEffect.Type.html
 
+# Don't touch this!
+config-version: 1
+
+# In order to generate skins faster, you will need to create your own api-key on the mineskin page.
+# NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
+#
+# To create an api-key, follow the steps below:
+# * Go to https://mineskin.org/account first.
+# * You must have a Google account, then click on "Continue as X".
+# * A secure connection check will be performed by cloudflare, just wait.
+# * If the page just keeps refreshing, go to https://mineskin.org/ and then do the next step, you should already be logged in.
+# * Once you've logged in, go to https://mineskin.org/account again.
+# * Under "API Keys" click on "Manage api keys".
+# * In "Action", select "Create a new API Key".
+# * Now, you only have to define the name of the api-key, you can give it any name you want.
+# * Scroll down and click on the "Create" button.
+# * That's it, now, you just have to save the name, the api-key and the key-secret, so you don't lose it.
+# * Paste the api-key down here and do /rv reload.
+mineskin-api-key: ""
+
 # If you only want villagers to look like players, spawn with weapons and attack, you can disable all interactions.
 disable-interactions: false
 
@@ -96,6 +116,9 @@ villager-defend-following-player: true
 # NOTE: This should always be true to prevent them from killing each other by accident.
 arrows-pass-through-other-villagers: true
 
+# Whether it's allowed to pick arrows shot by villagers (DISALLOWED/ALLOWED/CREATIVE_ONLY).
+arrow-status: ALLOWED
+
 # The waiting time between melee attacks (in ticks).
 melee-attack-cooldown: 10
 
@@ -129,10 +152,6 @@ divorce-reputation-loss: 150
 # The reputation that will be lost after divorce with divorce papers (given by clerics).  Minimum value: 2; use 1 or less to disable.
 divorce-reputation-loss-papers: 10
 
-# Who can modify the target entities of a villager.
-# Options: EVERYONE / FAMILY / NONE
-who-can-modify-villager-combat: FAMILY
-
 # Variables:
 # %sex% - the sex of the newborn baby.
 input-gui:
@@ -146,6 +165,12 @@ input-gui:
   whistle-search:
     title: "Search..."
     text: "Search..."
+  skin-search:
+    title: "Search..."
+    text: "Search..."
+  new-skin:
+    title: "Which player?"
+    text: "Write..."
 
 # This only applies to villagers who have not yet spawned.
 # If the villager has no weapon in hand, he will flee from danger.
@@ -186,7 +211,7 @@ villager-max-health: 20
 teleport-when-following-if-far-away: true
 
 # If the distance between the two is greater than the given value, the villager will be teleported.
-teleport-when-following-distance: 16
+teleport-when-following-distance: 12
 
 # The time (in ticks) that the villager waits for a gift (or a bed) from a player.
 time-to-expect: 100
@@ -262,15 +287,20 @@ variable-text:
     hour: "h"
     day: "d"
   dead: "†"
+  infinite: "∞"
   none: "None"
   unknown: "Unknown"
   villager: "Villager"
   player: "Player"
+  console: "Console"
+  no-partners: "No partners(s)"
+  no-partner-currently: "Currently unmarried"
   no-childrens: "No childrens"
+  no-effects: "No effects"
   kid: "Kid"
   adult: "Adult"
-  boy: "boy"
-  girl: "girl"
+  boy: "Boy"
+  girl: "Girl"
   sex:
     male: "Male"
     female: "Female"
@@ -347,13 +377,49 @@ variable-text:
     wither: "Wither"
     ender_dragon: "Ender Dragon"
     warden: "Warden"
+  potion-effect-type:
+    speed: "Speed"
+    slowness: "Slowness"
+    haste: "Haste"
+    mining-fatigue: "Mining Fatigue"
+    strength: "Strength"
+    instant-health: "Instant Health"
+    instant-damage: "Instant Damage"
+    jump-boost: "Jump Boost"
+    nausea: "Nausea"
+    regeneration: "Regeneration"
+    resistance: "Resistance"
+    fire-resistance: "Fire Resistance"
+    water-breathing: "Water Breathing"
+    invisibility: "Invisibility"
+    blindness: "Blindness"
+    night-vision: "Night Vision"
+    hunger: "Hunger"
+    weakness: "Weakness"
+    poison: "Poison"
+    wither: "Wither"
+    health-boost: "Health Boost"
+    absorption: "Absorption"
+    saturation: "Saturation"
+    glowing: "Glowing"
+    levitation: "Levitation"
+    luck: "Luck"
+    unluck: "Unluck"
+    slow-falling: "Slow Falling"
+    conduit-power: "Conduit Power"
+    dolphins-grace: "Dolphins Grace"
+    bad-omen: "Bad Omen"
+    hero-of-the-village: "Hero Of The Village"
+    darkness: "Darkness"
 
 # Here you can modify the available GUIs.
 #
 # Global title variables:
 # %villager-name% - name of the villager (if a particular villager is involved).
 # %page% - current page (only for @combat/whistle.title).
-# %max-page% - amount of pages (only for @combat/whistle.title)).
+# %max-page% - amount of pages (only for @combat/whistle.title).
+# %sex% - the sex of the skin that'll be generated (only for @skins/new-skin.title).
+# %age-stage% the age stage of the skin that'll be generated (only for @skins/new-skin.title).
 #
 # NOTE: For the "main" inventory it's possible to choose the slot in which the item'll be positioned,
 # with the following format: slot: x, y; starting from the top left; being 1, 1.
@@ -364,8 +430,17 @@ variable-text:
 #
 # All valid slots: https://filoghost.me/data/chest-commands/coordinates-table.png (credits to @filoghost)
 gui:
+  # Rainbow animation is applied to all GUI's.
+  rainbow-animation:
+    enabled: false
+    # The type of animation.
+    # 1 = All frames are changed to a random color.
+    # 2 = Each frame is changed to a different color.
+    type: 1
+    # Animation speed (in ticks).
+    delay: 10
   main:
-    # The size of this inventory. Must be a multiple of 9; minimum 9, maximum 54.
+    # The size of this inventory. Must be a multiple of 9; minimum 27, maximum 54.
     size: 45
     # %reputation% - player reputation with this villager (only for @main).
     title: "%villager-name% (rep. %reputation%)"
@@ -441,46 +516,15 @@ gui:
         display-name: "&aGift"
         lore:
           - "&7Click to give a gift to this villager."
-      procreate:
-        slot: 6, 3
-        material: EGG
-        display-name: "&aProcreate"
-        lore:
-          - "&7Click to start procreating."
-      set-home:
-        slot: 7, 3
-        material: RED_BED
-        display-name: "&aSet home"
-        lore:
-          - "&7Give this villager a bed."
-      divorce:
-        slot: 8, 3
-        material: WRITABLE_BOOK
-        display-name: "&cDivorce"
-        lore:
-          - "&7Divorce this villager."
-      combat:
-        slot: 2, 4
-        material: STONE_SWORD
-        display-name: "&cCombat"
-        lore:
-          - "&7Click to manage combat of this villager."
-        flags:
-          - HIDE_ATTRIBUTES
-      divorce-papers:
-        slot: 3, 4
-        material: FILLED_MAP
-        model-data: 124
-        display-name: "&aDivorce papers"
-        lore:
-          - "&7Ask for divorce papers."
       information:
-        slot: 4, 4
+        slot: 6, 3
         material: KNOWLEDGE_BOOK
         display-name: "&aVillager information"
-        # The ones listed below are only applicable for @lore.
-        #
         # %villager-name% - name of the villager.
+        # %id% - unique ID of the villager.
+        # %skin-id% - the id of the skin the villager is using.
+        # %experience% - the current villager's experience.
+        # %max-experience% - the experience that the villager must have to level up.
         # %sex% - sex of the villager (MALE/FEMALE).
         # %age-stage% - age stage of the villager (KID/DULT).
         # %health% - current health of the villager (including absorption amount).
@@ -489,37 +533,82 @@ gui:
         # %profession% - profession of the villager.
         # %level% - level of the villager.
         # %activity% - the activity that this villager is performing (if any).
-        # %partner% - partner of this villager.
+        # %current-partner% - current partner of this villager (if any).
+        # %partners% - partners of this villager (one line).
+        # %partner% - partners of this villager (displayed one below the other).
         # %father% - father of this villager.
         # %mother% - mother of this villager.
         # %childrens% - childrens of this villager (one line).
         # %children% - childrens of this villager (displayed one below the other).
+        # %effect% - active potion effects.
         lore:
           - "&7Name: &e%villager-name%"
+          - "&7ID: &e%id%"
+          - "&7Skin ID: &e%skin-id%"
           - "&7Sex: &e%sex%"
           - "&7Age stage: &e%age-stage%"
           - "&7Health: &e%health%&7/&e%max-health%"
           - "&7Food level: &e%food-level%&7/&e%max-food-level%"
           - "&7Type: &e%type%"
           - "&7Profession: &e%profession% (lvl. %level%)"
+          - "&7Experience: &e%experience%&7/&e%max-experience%"
           - "&7Activity (non-core): &e%activity%"
-          - "&7Partner: &e%partner%"
+          - "&7Partner(s):"
+          - "&8* &e%partner%"
           - "&7Father: &e%father%"
           - "&7Mother: &e%mother%"
           - "&7Childrens:"
           - "&8* &e%children%"
+          - "&7Effects:"
+          - "&8* &e%effect%"
       trade:
-        slot: 5, 4
+        slot: 7, 3
         material: EMERALD
         display-name: "&aTrade"
         lore:
           - "&7Click to start trading with this villager."
       no-trades:
-        slot: 5, 4
+        slot: 7, 3
         material: BARRIER
         display-name: "&cEmpty trades"
         lore:
           - "&7This villager has nothing to trade."
+      divorce:
+        slot: 8, 3
+        material: WRITABLE_BOOK
+        display-name: "&cDivorce"
+        lore:
+          - "&7Divorce this villager."
+        only-if-married: false
+      divorce-papers:
+        slot: 8, 3
+        material: FILLED_MAP
+        display-name: "&aDivorce papers"
+        lore:
+          - "&7Ask for divorce papers."
+      set-home:
+        slot: 2, 4
+        material: RED_BED
+        display-name: "&aSet home"
+        lore:
+          - "&7Give this villager a bed."
+        only-for-family: false
+      procreate:
+        slot: 3, 4
+        material: EGG
+        display-name: "&aProcreate"
+        lore:
+          - "&7Click to start procreating."
+        only-if-married: false
+      combat:
+        slot: 4, 4
+        material: STONE_SWORD
+        display-name: "&cCombat"
+        lore:
+          - "&7Click to manage combat of this villager."
+        flags:
+          - HIDE_ATTRIBUTES
+        only-for-family: false
   equipment:
     title: "%villager-name%'s inventory"
     items:
@@ -554,8 +643,11 @@ gui:
         lore:
           - "&7Click to search for a specific entity."
       clear-search:
-        material: BARRIER
-        display-name: "&cClear"
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
       close:
         material: BARRIER
         display-name: "&cClose"
@@ -595,14 +687,124 @@ gui:
         lore:
           - "&7Click to search for a specific villager."
       clear-search:
-        material: BARRIER
-        display-name: "&cClear"
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
       villager:
         material: PLAYER_HEAD
-        # %villager-name% - the name of the current villager.
+        # %villager-name% - name of the villager.
         display-name: "&a%villager-name%"
         lore:
           - "&7Click to summon this villager."
+  skin:
+    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
+    size: 54
+    title: "Skins: %sex%/%age-stage% (%page%/%max-page%)"
+    items:
+      close:
+        material: BARRIER
+        display-name: "&cClose"
+        lore:
+          - "&7Click to close this inventory."
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific skin."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      male:
+        url: e7fe6e2316ca384e0c85261b14fc066e231d6127e540dfeddb8b54d911b82831
+        material: PLAYER_HEAD
+        display-name: "&aSex: &bMale"
+        lore:
+          - "&7Click to toggle sex!"
+      female:
+        url: f6aac8c1c290be9d3bd495476aca42c68623b9cbefdd6ddbd6144855b9731c63
+        material: PLAYER_HEAD
+        display-name: "&aSex: &dFemale"
+        lore:
+          - "&7Click to toggle sex!"
+      adult:
+        material: WATER_BUCKET
+        display-name: "&aAdult"
+        lore:
+          - "&7Click to toggle age stage!"
+      kid:
+        material: BUCKET
+        display-name: "&aKid"
+        lore:
+          - "&7Click to toggle age stage!"
+      new-skin:
+        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
+        material: PLAYER_HEAD
+        display-name: "&bNew skin (BETA)"
+        lore:
+          - "&7Click to add a new skin!"
+      clear-skin:
+        material: PLAYER_HEAD
+        display-name: "&cClear skin"
+        lore:
+          - "&7Click to go back to your original skin!"
+      profession:
+        # %profession% - the name of the current profession.
+        display-name: "&a%profession%"
+        lore:
+          - "&7Click to toggle profession (left or right)!"
+      skin:
+        # %skin-id% - the id of the current skin.
+        display-name: "&a#%skin-id%"
+        # %added-by% - the player (or console) that added the skin.
+        # %when% - when was this skin added.
+        # %generated% - how many professions overlays were generated.
+        # %max-professions% - max amount of professions.
+        # %profession% - professions and their state (either added (GREEN) or not (RED), displayed one below the other).
+        lore:
+          - "&7Added by: &e%added-by%"
+          - "&7When: &e%when%"
+          - "&7"
+          - "&7Variants: &e%generated%&7/&e%max-professions%"
+          - "&8* %profession%"
+          - "&7"
+          - "&7Left click to preview this skin on yourself!"
+          - "&6Middle click to select kid skins!"
+          - "&cRight click to delete this skin!"
+  new-skin:
+    title: "New skin: %sex%/%age-stage%"
+    items:
+      from-player:
+        url: 185d9c3fbb63e8e8f1d3f250c1a8b408412ca82e9966b53b33159e766c1278b7
+        material: PLAYER_HEAD
+        display-name: "&aFrom a player"
+        lore:
+          - "&7Add a new skin from a player texture!"
+      from-console:
+        url: dcafbac5068197fda18636dfc4ce7f9df5af9b2a06e6f91e38ae35e4c435b2df
+        material: PLAYER_HEAD
+        display-name: "&aFrom console"
+        lore:
+          - "&7Add a new skin using texture values!"
+          - "&7To do this, you need to use the next command"
+          - "&7in console: &b/rv add-skin <sex> <texture> <signature>"
+
 
 # Here you can modify the items of the babies.
 #
@@ -612,13 +814,11 @@ gui:
 baby:
   boy:
     material: PAPER
-    model-data: 120
     display-name: "&b%villager-name%"
     lore:
       - "&7Right click to spawn this little boy!"
   girl:
     material: PAPER
-    model-data: 121
     display-name: "&d%villager-name%"
     lore:
       - "&7Right click to spawn this little girl!"
@@ -626,7 +826,6 @@ baby:
 # Wedding ring crafting recipe.
 wedding-ring:
   material: GOLD_INGOT
-  model-data: 122
   display-name: "&aWedding ring"
   lore:
     - "&7Give it to the love of your life."
@@ -642,7 +841,6 @@ wedding-ring:
 
 whistle:
   material: IRON_INGOT
-  model-data: 123
   display-name: "&bWhistle"
   lore:
     - "&7Use it to summon members of your family."
@@ -657,11 +855,17 @@ whistle:
       - "III"
 
 divorce-papers:
-  material: FILLED_MAP
-  model-data: 124
+  material: PAPER
   display-name: "&aDivorce papers"
   lore:
     - "&7&oEverything comes to an end."
+
+change-skin:
+  # %skin-id% - the skin that'll be applied.
+  # %sex% - the sex of the skin.
+  display-name: "&a#%skin-id% &e(%sex%)"
+  lore:
+    - "&7Right click on a villager to change his skin!"
 
 # The reputation that the player will receive when giving a bad gift. Minimum value: 2; use 1 or less to disable.
 bad-gift-reputation: 5
@@ -716,7 +920,7 @@ gift:
       - $STONE_TOOLS
       - $GOLDEN_TOOLS
       - AMETHYST_SHARD
-      - ARROW
+      - $ARROWS
       - BONE
   better:
     reputation: 3
@@ -728,7 +932,7 @@ gift:
       - ENDER_PEARL
       - BOW
       - CROSSBOW
-      - ?FLETCHER:ARROW
+      - ?FLETCHER:$ARROWS
       - ?FISHERMAN:FISHING_ROD
   best:
     reputation: 5
@@ -740,9 +944,6 @@ gift:
       - $NETHERITE_TOOLS
       - ENCHANTED_GOLDEN_APPLE
       - TRIDENT
-
-# Chance of a villager to get a fishing rod by becoming a fisherman.
-fishing-rod-chance: 1.0
 
 # Waiting time to fish again (in ticks).
 fishing-cooldown: 600
@@ -798,6 +999,10 @@ default-wanted-items:
   - WHEAT_SEEDS
   - BEETROOT
   - BEETROOT_SEEDS
+  - TORCHFLOWER_SEEDS
+  - PITCHER_POD
+  - MELON_SEEDS
+  - PUMPKIN_SEEDS
   - ?FARMER:BONE_MEAL
   - BONE(1)*
   - COD(2)*
@@ -808,13 +1013,18 @@ default-wanted-items:
 # NOTE: It's recommended to leave it at 0 so that villagers are not attacked when jumping (or use a lower value).
 melee-attack-jump-chance: 0.0
 
-# Who can modify the inventory of a villager.
-# Options: EVERYONE / FAMILY / NONE
+# Chance of jumping when attacking with a bow/crossbow and backing up (just to give more "realism").
+back-up-jump-chance: 0.2
+
+# Who can modify the inventory of a villager (EVERYONE/FAMILY/NONE).
 # NOTE: Be careful with this.
 # * Some players may give gifts to villagers to increase their reputation and then take the items from these villagers.
 # * The higher the reputation, the greater the discounts.
 # * Check the option below to prevent this.
 who-can-modify-villager-inventory: NONE
+
+# Who can modify the name of a villager using a nametag, where the amount of characters must be at least 3 and no colors can be used (EVERYONE/FAMILY/NONE).
+who-can-modify-villager-name: NONE
 
 # Whether special prices are disabled when modifying the villager's inventory.
 disable-special-prices-if-allowed-to-modify-inventory: true
@@ -1003,3 +1213,17 @@ greet-messages:
 
 # Only throw trident when the villager is in water or when exposed to rain.
 riptide-only-in-water-or-rain: true
+
+# Here you can modify the different movement speeds.
+# NOTE: Swim should be the highest speed of these 4 as it's usually slower than the others.
+speed-modifier:
+  eat: 0.25
+  walk: 0.5
+  sprint: 0.75
+  swim: 1.0
+
+# Since baby villagers are smaller, they look a bit higher than adults; here you can set the offset so that they look at the same height as adults.
+# NOTE 1: For some reason, it's not necessary to add an offset in 1.19.4, at least in some paper builds.
+# NOTE 2: If you see that baby villagers look higher than adults, you should change this value to a negative number, -0.5 used to work fine in older versions.
+# NOTE 3: This is only necessary when skins are enabled, that means, {@disable-skins = false}.
+baby-look-height-offset: 0.0

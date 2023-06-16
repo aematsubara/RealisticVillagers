@@ -1,5 +1,8 @@
 package me.matsubara.realisticvillagers.listener.npc;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 import lombok.Getter;
@@ -10,11 +13,14 @@ import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.npc.SpawnCustomizer;
 import me.matsubara.realisticvillagers.npc.modifier.MetadataModifier;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
@@ -30,7 +36,7 @@ public class NPCHandler implements SpawnCustomizer {
     private NbtCompound shoulderEntityLeft;
     private NbtCompound shoulderEntityRight;
 
-    public NPCHandler(RealisticVillagers plugin, Villager villager) {
+    public NPCHandler(@NotNull RealisticVillagers plugin, Villager villager) {
         this.plugin = plugin;
         this.villager = plugin.getConverter().getNPC(villager).orElse(null);
     }
@@ -63,6 +69,14 @@ public class NPCHandler implements SpawnCustomizer {
             }, 2L);
         }
 
+        // Mount vehicles.
+        if (villager.bukkit().getVehicle() instanceof Vehicle vehicle) {
+            PacketContainer mount = new PacketContainer(PacketType.Play.Server.MOUNT);
+            mount.getIntegers().write(0, vehicle.getEntityId());
+            mount.getIntegerArrays().write(0, vehicle.getPassengers().stream().mapToInt(Entity::getEntityId).toArray());
+            ProtocolLibrary.getProtocolManager().sendServerPacket(player, mount);
+        }
+
         EntityEquipment equipment = villager.bukkit().getEquipment();
         if (equipment == null) return;
 
@@ -71,7 +85,8 @@ public class NPCHandler implements SpawnCustomizer {
         }
     }
 
-    private EnumWrappers.ItemSlot slotToWrapper(EquipmentSlot slot) {
+    @Contract(pure = true)
+    private EnumWrappers.ItemSlot slotToWrapper(@NotNull EquipmentSlot slot) {
         return switch (slot) {
             case HEAD -> EnumWrappers.ItemSlot.HEAD;
             case CHEST -> EnumWrappers.ItemSlot.CHEST;

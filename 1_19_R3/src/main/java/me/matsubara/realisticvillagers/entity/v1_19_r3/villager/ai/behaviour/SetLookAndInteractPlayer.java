@@ -12,6 +12,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -33,7 +34,7 @@ public class SetLookAndInteractPlayer extends Behavior<Villager> {
         return !(villager instanceof VillagerNPC npc) || (!npc.isExpecting() && !npc.isLooting());
     }
 
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
 
         Optional<NearestVisibleLivingEntities> nearestEntities = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
@@ -47,7 +48,7 @@ public class SetLookAndInteractPlayer extends Behavior<Villager> {
         brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(living, true));
     }
 
-    private boolean isMatchingTarget(Villager villager, LivingEntity target) {
+    private boolean isMatchingTarget(Villager villager, @NotNull LivingEntity target) {
         return target.distanceToSqr(villager) <= interactionRangeSqr && target.getType().equals(EntityType.PLAYER);
     }
 }

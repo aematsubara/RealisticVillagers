@@ -3,9 +3,7 @@ package me.matsubara.realisticvillagers.gui;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.util.InventoryUpdate;
-import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.ArrayUtils;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -38,30 +36,22 @@ public abstract class PaginatedGUI extends InteractGUI {
             int current = row + 1;
             int currentRequired = current * 9 + 1;
             for (int slot = currentRequired; slot < currentRequired + 7; slot++) {
-                slots[slot - currentRequired] = slot;
+                slots[slot - currentRequired + row * 7] = slot;
             }
         }
 
         int last = slots[slots.length - 1];
         hotbar = IntStream.range(last + 3, last + 10).toArray();
 
+        updateInventory();
         player.openInventory(inventory);
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::updateInventory);
+        InventoryUpdate.updateInventory(player, getTitle());
     }
 
     public void updateInventory() {
-        inventory.clear();
+        clear(slots, hotbar);
 
         pages = (int) (Math.ceil((double) items.size() / slots.length));
-
-        ItemStack background = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
-                .setDisplayName("&7")
-                .build();
-
-        for (int i = 0; i < size; i++) {
-            if (ArrayUtils.contains(slots, i) || ArrayUtils.contains(hotbar, i)) continue;
-            inventory.setItem(i, background);
-        }
 
         addButtons();
 
@@ -83,7 +73,7 @@ public abstract class PaginatedGUI extends InteractGUI {
         }
     }
 
-    protected abstract void addButtons();
+    public abstract void addButtons();
 
     @Override
     protected String getTitle() {

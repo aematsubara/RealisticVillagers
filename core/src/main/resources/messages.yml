@@ -1,3 +1,9 @@
+# IMPORTANT: All messages must be enclosed in quotation marks (either single 'test' or double "test") or the messages will be lost and the file will be reset to 0.
+# Whenever you modify this file, save a copy before reloading the plugin to avoid losses and having to start all over again.
+
+# Don't touch this!
+config-version: 1
+
 reaction:
   on-hit:
     - "That hurt!"
@@ -95,11 +101,24 @@ interact-fail:
   other-expecting-gift: "&cAnother villager is expecting a gift from you!"
   other-expecting-bed: "&cAnother villager is expecting a bed from you!"
   in-cooldown: "&cYou can't interact that fast!"
-  not-allowed: "&cYou can't perform this action with this villager."
+  not-allowed:
+    not-married: "&cYou must be married to this villager to do this!"
+    not-family: "&cYou must be part of this villager's family to do this!"
+    not-a-kid: "&cThis action can only be used with a kid!"
+    not-an-adult: "&cThis action can only be used with an adult!"
+    only-partner-or-non-family-adult: "&cThis action can only be used with your partner or a non-family adult!"
+  rename-not-allowed: "&cYou're not allowed to change the name of this villager!"
 
+reloading: "&6The plugin is being reloaded in another thread, wait a few seconds..."
 reload: "&6The plugin has been reloaded!"
 no-permission: "&cYou don't have permission to execute this command!"
+invalid-command: "&cThat command doesn't exist or was used incorrectly! Do /rv to see all commands."
+no-mineskin-api-key: "&cIn order to add new skins you must define a mineskin api-key!"
+no-skin-cached: "&cNo skins have been cached yet, this may take a few seconds..."
 unknown-player: "&cThat player doesn't exist!"
+only-from-player: "&cThis command must be used by players!"
+only-from-console: "&cThis command must be used in the console!"
+invalid-number: "&cThat's not a valid number!"
 # %player-name% - the name of the player involved (@not-married & @divorced).
 not-married: "&cThe player %player-name% isn't married!"
 divorced: "&6The player %player-name% has been divorced!"
@@ -108,6 +127,28 @@ divorced: "&6The player %player-name% has been divorced!"
 whistle-teleported: "&a%villager-name% has been teleported."
 whistle-error: "&cIt wasn't possible to teleport %villager-name%."
 whistle-no-family: "&cYou should get a family first!"
+
+skin:
+  cleared: "&6The skin has been cleaned!"
+  not-cleared: "&cThe current skin couldn't be cleaned!"
+  at-least-one: "&cAt least one skin must be left by default!"
+  removed: "&cThe skin has been removed!"
+  wait-while-creating: "&6The skin is being created, wait a moment..."
+  not-found: "&cCouldn't find that player on the minecraft servers!"
+  texture-not-found: "&cThe desired skin doesn't exist!"
+  invalid-sex: "&cInvalid sex! Must be male or female."
+  invalid-age-stage: "&cInvalid age stage! Must be adult or kid."
+  # %sex% - the sex that the villager must be to change his skin (@different-sex).
+  different-sex: "&cThe villager must be a %sex% to use this skin!"
+  # %age-stage% - the age stage that the villager must be to change his skin (@different-age-stage).
+  different-age-stage: "&cThe villager must be a(n) %age-stage% to use this skin!"
+  # %id%, %profession%, %sex% - properties of the newly added skin.
+  added: "&6Added a new skin with id of %id% and profession of %profession% (%sex%/%age-stage%)!"
+  error: "&cAn error has occurred... check the console for more information."
+  same-skin: "&cYou can't disguise as yourself!"
+  villager-same-skin: "&cThe villager already has this skin!"
+  # %id%, %profession%, %sex%, %age-stage% - properties of the disguised skin.
+  disguised: "&6Disguised to %id%/%sex%/%profession%/%age-stage%!"
 
 follow-me:
   start:
@@ -144,13 +185,22 @@ procreate:
 
 # %time% - how long it will take for the baby to grow (@baby-grow).
 baby-grow: "&aThis baby will grow up in %time%!"
-can-not-spawn-baby: "&cThe spawn place is obstructed, there must be at least 2 free blocks!"
+baby-can-not-spawn: "&cThe spawn place is obstructed, there must be at least 2 free blocks!"
+# %countdown% - the number of times you must click to spawn the baby (@baby-countdown).
+baby-countdown: "&6This baby is ready to be born, click %countdown% times to spawn your baby!"
+# %baby-name% - baby's name (@baby-spawned).
+baby-spawned: "&6Baby %baby-name% is born!"
 # %time% - The maximum time the villager will wait for a gift/bed (@throw-gift & @select-bed).
-throw-gift: "&aYou have %time% seconds to throw the gift to the villager."
-select-bed: "&aYou have %time% seconds to give the villager a bed."
+throw-gift:
+  - "&aYou have %time% seconds to throw the gift to the villager."
+  - "&cShift + right click to cancel this action!"
+select-bed:
+  - "&aYou have %time% seconds to give the villager a bed."
+  - "&cShift + right click to cancel this action!"
 
 bed-occupied: "&cThis bed is occupied!"
 bed-established: "&aBed established!"
+bed-invalid: "&cInvalid bed!"
 
 gift:
   expecting:

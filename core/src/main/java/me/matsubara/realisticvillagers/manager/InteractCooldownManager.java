@@ -6,6 +6,7 @@ import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -26,7 +27,7 @@ public class InteractCooldownManager implements Listener {
     }
 
     @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
         Iterator<InteractCooldown> iterator = cooldowns.iterator();
@@ -46,7 +47,7 @@ public class InteractCooldownManager implements Listener {
         return canInteract(player, null, type, finishTime);
     }
 
-    public boolean canInteract(Player player, @Nullable Villager villager, String type, @Nullable Long finishTime) {
+    public boolean canInteract(@NotNull Player player, @Nullable Villager villager, String type, @Nullable Long finishTime) {
         InteractCooldown cooldown = getCooldown(
                 player.getUniqueId(),
                 villager != null ? villager.getUniqueId() : WELCOME_MESSAGE_UUID,
@@ -69,7 +70,7 @@ public class InteractCooldownManager implements Listener {
         return !inCooldown;
     }
 
-    public void addCooldown(Player player, Villager villager, String type) {
+    public void addCooldown(@NotNull Player player, @NotNull Villager villager, String type) {
         long finishType = plugin.getConfig().getLong("interact-cooldown." + type, 1L) * 1000L;
         addCooldown(player.getUniqueId(), villager.getUniqueId(), type, finishType);
     }
@@ -89,7 +90,7 @@ public class InteractCooldownManager implements Listener {
         }
     }
 
-    private InteractCooldown getCooldown(UUID player, UUID villager, String type) {
+    private @Nullable InteractCooldown getCooldown(UUID player, UUID villager, String type) {
         for (InteractCooldown cooldown : cooldowns) {
             if (!cooldown.player().equals(player)) continue;
             if (!cooldown.villager().equals(villager)) continue;

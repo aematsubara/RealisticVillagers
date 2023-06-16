@@ -13,17 +13,15 @@ import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.UnaryOperator;
 
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public final class ItemBuilder {
 
     private final ItemStack item;
 
-    public ItemBuilder(ItemStack item) {
+    public ItemBuilder(@NotNull ItemStack item) {
         this.item = item.clone();
     }
 
@@ -123,7 +121,7 @@ public final class ItemBuilder {
         List<String> actual = meta.getLore();
         if (actual == null) return setLore(lore);
 
-        actual.addAll(PluginUtils.translate(lore));
+        actual.addAll(lore);
         return setLore(lore);
     }
 
@@ -221,17 +219,25 @@ public final class ItemBuilder {
         return this;
     }
 
-    public ItemBuilder replace(String target, Object replace) {
+    public ItemBuilder replace(String target, @NotNull Object replace) {
         String text = PluginUtils.translate(replace.toString());
         return replaceName(target, text).replaceLore(target, text);
     }
 
+    public ItemBuilder replace(UnaryOperator<String> operator) {
+        return replaceName(operator).replaceLore(operator);
+    }
+
     public ItemBuilder replaceName(String target, String replace) {
+        return replaceName(string -> string.replace(target, replace));
+    }
+
+    public ItemBuilder replaceName(UnaryOperator<String> operator) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return this;
 
         if (meta.hasDisplayName()) {
-            meta.setDisplayName(meta.getDisplayName().replace(target, replace));
+            meta.setDisplayName(operator.apply(meta.getDisplayName()));
         }
 
         item.setItemMeta(meta);
@@ -239,12 +245,16 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder replaceLore(String target, String replace) {
+        return replaceLore(string -> string.replace(target, replace));
+    }
+
+    public ItemBuilder replaceLore(UnaryOperator<String> operator) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return this;
 
         List<String> lore;
         if (meta.hasLore() && (lore = meta.getLore()) != null) {
-            lore.replaceAll(line -> line.replace(target, replace));
+            lore.replaceAll(operator);
             meta.setLore(lore);
         }
 
@@ -257,6 +267,50 @@ public final class ItemBuilder {
                 Enchantment.DURABILITY :
                 Enchantment.ARROW_DAMAGE, 1);
         return addItemFlags(ItemFlag.HIDE_ENCHANTS);
+    }
+
+    public ItemBuilder applyMultiLineLore(
+            List<String> strings,
+            String advancedPlaceholder,
+            String simplePlaceholder,
+            String noResultLine,
+            String basicLine) {
+        List<String> lore = getLore();
+        if (lore.isEmpty()) return this;
+
+        int indexOf = -1;
+        for (int i = 0; i < lore.size(); i++) {
+            if (lore.get(i).contains(advancedPlaceholder)) {
+                indexOf = i;
+                break;
+            }
+        }
+
+        if (indexOf != -1) {
+            String toReplace = lore.get(indexOf);
+
+            List<String> newLore = new ArrayList<>();
+
+            if (indexOf > 0) {
+                newLore.addAll(lore.subList(0, indexOf));
+            }
+
+            if (strings.isEmpty()) {
+                newLore.add(toReplace.replace(advancedPlaceholder, noResultLine));
+            } else {
+                for (String string : strings) {
+                    newLore.add(toReplace.replace(advancedPlaceholder, string));
+                }
+            }
+
+            if (lore.size() > 1 && indexOf < lore.size() - 1) {
+                newLore.addAll(lore.subList(indexOf + 1, lore.size()));
+            }
+
+            return setLore(newLore);
+        }
+
+        return simplePlaceholder != null ? replace(simplePlaceholder, basicLine) : this;
     }
 
     public ItemStack build() {

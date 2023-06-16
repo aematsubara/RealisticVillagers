@@ -3,10 +3,12 @@ package me.matsubara.realisticvillagers.files;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 public enum Config {
+    MINESKIN_API_KEY("mineskin-api-key"),
     DISABLE_INTERACTIONS("disable-interactions"),
     MAX_GOSSIP_TOPICS("max-gossip-topics"),
     DISABLE_SPECIAL_PRICES("disable-special-prices"),
@@ -27,6 +29,7 @@ public enum Config {
     PROCREATION_COOLDOWN("procreation-cooldown"),
 
     ARROWS_PASS_THROUGH_OTHER_VILLAGERS("arrows-pass-through-other-villagers"),
+    ARROW_STATUS("arrow-status"),
 
     VILLAGER_MAX_HEALTH("villager-max-health"),
 
@@ -40,14 +43,17 @@ public enum Config {
     BABY_REPUTATION("baby-reputation"),
     CHAT_INTERACT_REPUTATION("chat-interact-reputation"),
 
-    WHO_CAN_MODIFY_VILLAGER_COMBAT("who-can-modify-villager-combat"),
-
     DEAD("variable-text.dead"),
+    INFINITE("variable-text.infinite"),
     NONE("variable-text.none"),
     UNKNOWN("variable-text.unknown"),
     VILLAGER("variable-text.villager"),
     PLAYER("variable-text.player"),
+    CONSOLE("variable-text.console"),
+    NO_PARTNERS("variable-text.no-partners"),
+    NO_PARTNER_CURRENTLY("variable-text.no-partner-currently"),
     NO_CHILDRENS("variable-text.no-childrens"),
+    NO_EFFECTS("variable-text.no-effects"),
     KID("variable-text.kid"),
     ADULT("variable-text.adult"),
     BOY("variable-text.boy"),
@@ -94,7 +100,12 @@ public enum Config {
     WHISTLE_SEARCH_TITLE("input-gui.whistle-search.title"),
     WHISTLE_SEARCH_TEXT("input-gui.whistle-search.text"),
 
-    FISHING_ROD_CHANCE("fishing-rod-chance"),
+    SKIN_SEARCH_TITLE("input-gui.skin-search.title"),
+    SKIN_SEARCH_TEXT("input-gui.skin-search.text"),
+
+    NEW_SKIN_TITLE("input-gui.new-skin.title"),
+    NEW_SKIN_TEXT("input-gui.new-skin.text"),
+
     FISHING_COOLDOWN("fishing-cooldown"),
 
     USE_VILLAGER_SOUNDS("use-villager-sounds"),
@@ -105,7 +116,9 @@ public enum Config {
     DISABLE_NAMETAGS("disable-nametags"),
     TAME_COOLDOWN("tame-cooldown"),
     MELEE_ATTACK_JUMP_CHANCE("melee-attack-jump-chance"),
+    BACK_UP_JUMP_CHANCE("back-up-jump-chance"),
     WHO_CAN_MODIFY_VILLAGER_INVENTORY("who-can-modify-villager-inventory"),
+    WHO_CAN_MODIFY_VILLAGER_NAME("who-can-modify-villager-name"),
     DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY("disable-special-prices-if-allowed-to-modify-inventory"),
     MELEE_ATTACK_RANGE("melee-attack-range"),
     DISABLE_VILLAGER_RIDING_NEARBY_BOAT("disable-villager-riding-nearby-boat"),
@@ -123,7 +136,6 @@ public enum Config {
     REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay"),
     INITIAL_REPUTATION_AT_BIRTH("initial-reputation-at-birth"),
     SPAWN_LOOT_FORCE_EQUIP("spawn-loot.force-equip"),
-    GUI_MAIN_FRAME_ENABLED("gui.main.frame.enabled"),
     VILLAGER_ADOPTS_ABANDONED_PET("villager-adopts-abandoned-pet"),
     VILLAGER_CROSSBOW_FIREWORK_DAMAGES_OTHER_VILLAGERS("villager-crossbow-firework-damages-other-villagers"),
     GREET_MESSAGES_ENABLED("greet-messages.enabled"),
@@ -131,7 +143,12 @@ public enum Config {
     GREET_MESSAGES_COOLDOWN("greet-messages.cooldown"),
     GREET_MESSAGES_PER_TYPE_COOLDOWN("greet-messages.per-type-cooldown"),
     GREET_MESSAGES_REQUIRED_REPUTATION("greet-messages.required-reputation"),
-    RIPTIDE_ONLY_IN_WATER_OR_RAIN("riptide-only-in-water-or-rain");
+    RIPTIDE_ONLY_IN_WATER_OR_RAIN("riptide-only-in-water-or-rain"),
+    SPEED_MODIFIER_EAT("speed-modifier.eat"),
+    SPEED_MODIFIER_WALK("speed-modifier.walk"),
+    SPEED_MODIFIER_SPRINT("speed-modifier.sprint"),
+    SPEED_MODIFIER_SWIM("speed-modifier.swim"),
+    BABY_LOOK_HEIGHT_OFFSET("baby-look-height-offset");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
@@ -152,7 +169,7 @@ public enum Config {
         return plugin.getConfig().getString(path);
     }
 
-    public String asStringTranslated() {
+    public @NotNull String asStringTranslated() {
         return PluginUtils.translate(asString());
     }
 
@@ -168,7 +185,7 @@ public enum Config {
         return (float) asDouble();
     }
 
-    public List<String> asStringList() {
+    public @NotNull List<String> asStringList() {
         return plugin.getConfig().getStringList(path);
     }
 }

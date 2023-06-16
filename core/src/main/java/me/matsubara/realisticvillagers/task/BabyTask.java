@@ -10,7 +10,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BabyTask extends BukkitRunnable {
@@ -24,7 +26,7 @@ public class BabyTask extends BukkitRunnable {
     private boolean success = false;
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    public BabyTask(RealisticVillagers plugin, Villager villager, Player player) {
+    public BabyTask(@NotNull RealisticVillagers plugin, Villager villager, Player player) {
         this.plugin = plugin;
         this.villager = plugin.getConverter().getNPC(villager).get();
         this.player = player;
@@ -48,14 +50,15 @@ public class BabyTask extends BukkitRunnable {
                 .title(Config.BABY_TITLE.asStringTranslated().replace("%sex%", isBoy ? Config.BOY.asString() : Config.GIRL.asString()))
                 .text(text)
                 .itemLeft(new ItemStack(Material.PAPER))
-                .onComplete(completion -> {
-                    String result = completion.getText();
+                .onClick((slot, snapshot) -> {
+                    if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
 
-                    if (!plugin.getTracker().isValidName(result)) return RealisticVillagers.CLOSE_RESPONSE;
+                    String result = snapshot.getText();
+
+                    if (result.length() < 3) return RealisticVillagers.CLOSE_RESPONSE;
 
                     long procreation = System.currentTimeMillis();
                     player.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, villager.bukkit().getUniqueId()));
-
 
                     int reputation = Config.BABY_REPUTATION.asInt();
                     if (reputation > 1) villager.addMinorPositive(player.getUniqueId(), reputation);

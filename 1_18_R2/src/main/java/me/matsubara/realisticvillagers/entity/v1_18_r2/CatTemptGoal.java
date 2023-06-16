@@ -10,6 +10,7 @@ import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_18_R2.event.CraftEventFactory;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
@@ -86,7 +87,7 @@ public class CatTemptGoal extends Goal {
                 cat.getBoundingBox().inflate(DISTANCE, DISTANCE, DISTANCE));
     }
 
-    private boolean shouldFollow(LivingEntity living) {
+    private boolean shouldFollow(@NotNull LivingEntity living) {
         return items.test(living.getMainHandItem()) || items.test(living.getOffhandItem());
     }
 

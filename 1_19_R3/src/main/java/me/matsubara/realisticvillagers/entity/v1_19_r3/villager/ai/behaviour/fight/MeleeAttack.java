@@ -11,10 +11,9 @@ import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 public class MeleeAttack extends Behavior<Villager> {
-
-    private static final int COOLDOWN_BETWEEN_ATTACKS = 10;
 
     public MeleeAttack() {
         super(ImmutableMap.of(
@@ -24,13 +23,7 @@ public class MeleeAttack extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        LivingEntity target = getAttackTarget(villager);
-        return villager instanceof VillagerNPC npc
-                && !npc.isAttackingWithTrident()
-                && npc.isHoldingMeleeWeapon()
-                && BlockAttackWithShield.notUsingShield(npc)
-                && BehaviorUtils.canSee(npc, target)
-                && BehaviorUtils.isWithinAttackRange(npc, target, 0);
+        return canAttack(villager, false);
     }
 
     @Override
@@ -47,18 +40,26 @@ public class MeleeAttack extends Behavior<Villager> {
         villager.doHurtTarget(target);
         villager.getMainHandItem().hurtAndBreak(1, villager, npc -> npc.broadcastBreakEvent(InteractionHand.MAIN_HAND));
 
-        int cooldown;
-        if (villager instanceof VillagerNPC npc) {
-            cooldown = npc.getMeleeAttackCooldown();
-        } else {
-            cooldown = COOLDOWN_BETWEEN_ATTACKS;
-        }
+        setAttackCooldown(villager);
+    }
 
+    public static boolean canAttack(Villager villager, boolean ignoreRange) {
+        LivingEntity target = getAttackTarget(villager);
+        return villager instanceof VillagerNPC npc
+                && !npc.isAttackingWithTrident()
+                && npc.isHoldingMeleeWeapon()
+                && BlockAttackWithShield.notUsingShield(npc)
+                && BehaviorUtils.canSee(npc, target)
+                && (ignoreRange || BehaviorUtils.isWithinAttackRange(npc, target, 0));
+    }
+
+    public static void setAttackCooldown(@NotNull Villager villager) {
+        int cooldown = Config.MELEE_ATTACK_COOLDOWN.asInt();
         villager.getBrain().setMemoryWithExpiry(MemoryModuleType.ATTACK_COOLING_DOWN, true, cooldown);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity getAttackTarget(Villager villager) {
+    private static @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
         // Can't be null since the value should be present in the constructor.
         return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
     }

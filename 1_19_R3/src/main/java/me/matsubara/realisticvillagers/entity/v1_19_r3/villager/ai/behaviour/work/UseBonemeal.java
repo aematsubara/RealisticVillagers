@@ -1,6 +1,9 @@
 package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.work;
 
 import com.google.common.collect.ImmutableMap;
+import lombok.Getter;
+import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -17,12 +20,14 @@ import net.minecraft.world.item.BoneMealItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public class UseBonemeal extends Behavior<Villager> {
+public class UseBonemeal extends Behavior<Villager> implements Exchangeable {
 
     private long nextWorkCycleTime;
     private long lastBonemealingSession;
@@ -30,7 +35,7 @@ public class UseBonemeal extends Behavior<Villager> {
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private Optional<BlockPos> cropPos = Optional.empty();
 
-    private ItemStack previousItem;
+    private @Getter ItemStack previousItem;
 
     private static final int BONEMEALING_DURATION = 80;
 
@@ -42,6 +47,7 @@ public class UseBonemeal extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+        if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(ChangeItemType.USING_BONE_MEAL)) return false;
         if (villager.tickCount % 10 != 0) return false;
         if (lastBonemealingSession != 0L && lastBonemealingSession + 160L > villager.tickCount) return false;
 
@@ -79,20 +85,22 @@ public class UseBonemeal extends Behavior<Villager> {
         return pos;
     }
 
-    private boolean validPos(BlockPos pos, ServerLevel level) {
+    private boolean validPos(BlockPos pos, @NotNull ServerLevel level) {
         BlockState state = level.getBlockState(pos);
         Block block = state.getBlock();
-        return block instanceof CropBlock && !((CropBlock) block).isMaxAge(state);
+
+        // For normal crops.
+        if (block instanceof CropBlock crop && !crop.isMaxAge(state)) return true;
+
+        // For other bonemealables (no idea what the boolean does).
+        return block instanceof BonemealableBlock bonemealable && bonemealable.isValidBonemealTarget(level, pos, state, false);
     }
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (villager instanceof VillagerNPC npc) npc.setUsingBoneMeal(true);
-
-        if (villager.isHolding(item -> !item.isEmpty())) {
-            previousItem = villager.getMainHandItem();
-        } else {
-            previousItem = ItemStack.EMPTY;
+        if (villager instanceof VillagerNPC npc) {
+            npc.setUsingBoneMeal(true);
+            previousItem = npc.getMainHandItem();
         }
 
         setCurrentCropAsTarget(villager);
@@ -101,22 +109,21 @@ public class UseBonemeal extends Behavior<Villager> {
         timeWorkedSoFar = 0;
     }
 
+    @Override
+    public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setUsingBoneMeal(false);
+            npc.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
+        }
+        lastBonemealingSession = villager.tickCount;
+    }
+
     private void setCurrentCropAsTarget(Villager villager) {
         cropPos.ifPresent((pos) -> {
             BlockPosTracker time = new BlockPosTracker(pos);
             villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, time);
             villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(time, 0.5f, 1));
         });
-    }
-
-    @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
-        if (!ItemStack.matches(villager.getMainHandItem(), previousItem)) {
-            villager.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
-        }
-        lastBonemealingSession = villager.tickCount;
-
-        if (villager instanceof VillagerNPC npc) npc.setUsingBoneMeal(false);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")

@@ -12,6 +12,8 @@ import org.bukkit.Tag;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -44,7 +46,7 @@ public final class GiftManager {
         data.sort(Comparator.comparingInt(GiftCategory::reputation));
     }
 
-    public Set<Gift> getGiftsFromCategory(String path) {
+    public @NotNull Set<Gift> getGiftsFromCategory(String path) {
         Set<Gift> tags = new HashSet<>();
         for (String materialOrTag : plugin.getConfig().getStringList(path)) {
 
@@ -108,20 +110,22 @@ public final class GiftManager {
         return tags;
     }
 
-    private void log(String path, String materialOrTag) {
+    private void log(@NotNull String path, String materialOrTag) {
         boolean isWantedItems = path.equals("default-wanted-items");
         String[] data;
         String categoryName = isWantedItems ? path : (data = path.split("\\.")).length == 3 ? data[1] : path;
         plugin.getLogger().info("Invalid material for " + (isWantedItems ? "" : "gift category ") + "{" + categoryName + "}! " + materialOrTag);
     }
 
-    private Gift createGift(int amount, Material material, boolean inventoryLootOnly, @Nullable Predicate<IVillagerNPC> predicate) {
+    @Contract("_, _, _, _ -> new")
+    private @NotNull Gift createGift(int amount, Material material, boolean inventoryLootOnly, @Nullable Predicate<IVillagerNPC> predicate) {
         return predicate != null ?
                 new Gift.GiftWithCondition(amount, material, inventoryLootOnly, predicate) :
                 new Gift(amount, material, inventoryLootOnly);
     }
 
-    private boolean addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, boolean inventoryLootOnly, int amount, String... registries) {
+    @SuppressWarnings("SameParameterValue")
+    private boolean addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, boolean inventoryLootOnly, int amount, String @NotNull ... registries) {
         boolean found = false;
         for (String registry : registries) {
             Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase()), Material.class);
@@ -146,7 +150,7 @@ public final class GiftManager {
         return selected;
     }
 
-    private void addAndOverride(Set<Gift> gifts, Gift newGift) {
+    private void addAndOverride(Set<Gift> gifts, @NotNull Gift newGift) {
         Material type = newGift.getType();
         if (getGift(gifts, type, true) != null) return;
 
@@ -159,7 +163,7 @@ public final class GiftManager {
         gifts.add(newGift);
     }
 
-    private Gift getGift(Set<Gift> gifts, Material type, boolean condition) {
+    private @Nullable Gift getGift(@NotNull Set<Gift> gifts, Material type, boolean condition) {
         for (Gift gift : gifts) {
             if (gift.is(type) && (!condition || gift instanceof Gift.GiftWithCondition)) return gift;
         }

@@ -27,6 +27,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -109,18 +111,26 @@ public final class InventoryUpdate {
      * @param player   whose inventory will be updated.
      * @param newTitle the new title for the inventory.
      */
+    @SuppressWarnings("UnstableApiUsage")
     public static void updateInventory(Player player, String newTitle) {
         Preconditions.checkArgument(player != null, "Cannot update inventory to null player.");
         Preconditions.checkArgument(newTitle != null, "The new title can't be null.");
 
         try {
-            // Get EntityPlayer from CraftPlayer.
-            Object craftPlayer = CRAFT_PLAYER.cast(player);
-            Object entityPlayer = getHandle.invoke(craftPlayer);
-
             if (newTitle.length() > 32) {
                 newTitle = newTitle.substring(0, 32);
             }
+
+            if (ReflectionUtils.supports(20)) {
+                InventoryView open = player.getOpenInventory();
+                if (UNOPENABLES.contains(open.getType().name())) return;
+                open.setTitle(newTitle);
+                return;
+            }
+
+            // Get EntityPlayer from CraftPlayer.
+            Object craftPlayer = CRAFT_PLAYER.cast(player);
+            Object entityPlayer = getHandle.invoke(craftPlayer);
 
             // Create new title.
             Object title;
@@ -158,7 +168,7 @@ public final class InventoryUpdate {
             if (container == null) return;
 
             // If the container was added in a newer version than the current, return.
-            if (container.getContainerVersion() > ReflectionUtils.VER && useContainers()) {
+            if (container.getContainerVersion() > ReflectionUtils.MINOR_NUMBER && useContainers()) {
                 PLUGIN.getLogger().warning("This container doesn't work on your current version.");
                 return;
             }
@@ -186,7 +196,7 @@ public final class InventoryUpdate {
         }
     }
 
-    private static MethodHandle getField(Class<?> refc, Class<?> instc, String name, String... extraNames) {
+    private static @Nullable MethodHandle getField(Class<?> refc, Class<?> instc, String name, String... extraNames) {
         MethodHandle handle = getFieldHandle(refc, instc, name);
         if (handle != null) return handle;
 
@@ -198,7 +208,7 @@ public final class InventoryUpdate {
         return null;
     }
 
-    private static String[] removeFirst(String[] array) {
+    private static String @NotNull [] removeFirst(String @NotNull [] array) {
         int length = array.length;
 
         String[] result = new String[length - 1];
@@ -207,7 +217,7 @@ public final class InventoryUpdate {
         return result;
     }
 
-    private static MethodHandle getFieldHandle(Class<?> refc, Class<?> inscofc, String name) {
+    private static @Nullable MethodHandle getFieldHandle(@NotNull Class<?> refc, Class<?> inscofc, String name) {
         try {
             for (Field field : refc.getFields()) {
                 field.setAccessible(true);
@@ -224,7 +234,7 @@ public final class InventoryUpdate {
         }
     }
 
-    private static MethodHandle getConstructor(Class<?> refc, Class<?>... types) {
+    private static @Nullable MethodHandle getConstructor(@NotNull Class<?> refc, Class<?>... types) {
         try {
             Constructor<?> constructor = refc.getDeclaredConstructor(types);
             constructor.setAccessible(true);
@@ -239,7 +249,7 @@ public final class InventoryUpdate {
         return getMethod(refc, name, type, false);
     }
 
-    private static MethodHandle getMethod(Class<?> refc, String name, MethodType type, boolean isStatic) {
+    private static @Nullable MethodHandle getMethod(Class<?> refc, String name, MethodType type, boolean isStatic) {
         try {
             if (isStatic) return LOOKUP.findStatic(refc, name, type);
             return LOOKUP.findVirtual(refc, name, type);
@@ -255,7 +265,7 @@ public final class InventoryUpdate {
      * @return whether to use containers.
      */
     private static boolean useContainers() {
-        return ReflectionUtils.VER > 13;
+        return ReflectionUtils.MINOR_NUMBER > 13;
     }
 
     /**
@@ -311,7 +321,7 @@ public final class InventoryUpdate {
          * @param type type of inventory.
          * @return the container.
          */
-        public static Containers getType(InventoryType type, int size) {
+        public static @Nullable Containers getType(InventoryType type, int size) {
             if (type == InventoryType.CHEST) {
                 return Containers.valueOf("GENERIC_9X" + size / 9);
             }
@@ -330,10 +340,10 @@ public final class InventoryUpdate {
          *
          * @return a Containers object if 1.14+, otherwise, a String.
          */
-        public Object getObject() {
+        public @Nullable Object getObject() {
             try {
                 if (!useContainers()) return getMinecraftName();
-                int version = ReflectionUtils.VER;
+                int version = ReflectionUtils.MINOR_NUMBER;
                 String name = (version == 14 && this == CARTOGRAPHY_TABLE) ? "CARTOGRAPHY" : name();
                 // Since 1.17, containers go from "a" to "x".
                 if (version > 16) name = String.valueOf(alphabet[ordinal()]);

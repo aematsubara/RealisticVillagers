@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.entity;
 
 import me.matsubara.realisticvillagers.data.ExpectingType;
+import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
@@ -26,6 +27,8 @@ public interface IVillagerNPC {
     int getReputation(UUID uuid);
 
     IVillagerNPC getPartner();
+
+    List<IVillagerNPC> getPartners();
 
     boolean isPartnerVillager();
 
@@ -64,6 +67,10 @@ public interface IVillagerNPC {
 
     void setSkinTextureId(int skinTextureId);
 
+    int getKidSkinTextureId();
+
+    void setKidSkinTextureId(int skinTextureId);
+
     boolean isExpectingGift();
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -75,7 +82,7 @@ public interface IVillagerNPC {
 
     boolean isExpectingBed();
 
-    boolean handleBedHome(Block block);
+    HandleHomeResult handleBedHome(Block block);
 
     boolean isTarget(EntityType type);
 
@@ -130,7 +137,14 @@ public interface IVillagerNPC {
 
     boolean isExpectingGiftFrom(UUID uuid);
 
+    @SuppressWarnings("unused")
     boolean isExpectingBedFrom(UUID uuid);
+
+    boolean isExpecting();
+
+    ExpectingType getExpectingType();
+
+    UUID getExpectingFrom();
 
     boolean isInteracting();
 
@@ -144,7 +158,7 @@ public interface IVillagerNPC {
 
     boolean hasPartner();
 
-    void setPartner(UUID uuid, boolean isPartnerVillager);
+    void setPartner(@Nullable UUID uuid, boolean isPartnerVillager);
 
     int getFoodLevel();
 
@@ -177,4 +191,6 @@ public interface IVillagerNPC {
     void causeFoodExhaustion(float exhaustion, VillagerExhaustionEvent.ExhaustionReason reason);
 
     boolean isWasInfected();
+
+    void stopExchangeables();
 }

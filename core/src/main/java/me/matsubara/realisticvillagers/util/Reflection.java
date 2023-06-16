@@ -1,5 +1,7 @@
 package me.matsubara.realisticvillagers.util;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
@@ -25,7 +27,7 @@ public final class Reflection {
         return getField(clazz, name, false);
     }
 
-    public static MethodHandle getField(Class<?> clazz, String name, boolean isGetter) {
+    public static @Nullable MethodHandle getField(@NotNull Class<?> clazz, String name, boolean isGetter) {
         try {
             Field field = clazz.getDeclaredField(name);
             field.setAccessible(true);
@@ -38,7 +40,7 @@ public final class Reflection {
         }
     }
 
-    public static MethodHandle getConstructor(Class<?> clazz, Class<?>... parameterTypes) {
+    public static @Nullable MethodHandle getConstructor(@NotNull Class<?> clazz, Class<?>... parameterTypes) {
         try {
             Constructor<?> constructor = clazz.getDeclaredConstructor(parameterTypes);
             constructor.setAccessible(true);
@@ -50,7 +52,7 @@ public final class Reflection {
         }
     }
 
-    public static MethodHandle getMethod(Class<?> refc, String name, Class<?> parameterTypes) {
+    public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, Class<?> parameterTypes) {
         MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
         try {
             Method method = refc.getDeclaredMethod(name, parameterTypes);
@@ -62,7 +64,7 @@ public final class Reflection {
         }
     }
 
-    public static void setFieldUsingUnsafe(Field field, Object object, Object newValue) {
+    public static void setFieldUsingUnsafe(@NotNull Field field, Object object, Object newValue) {
         try {
             field.setAccessible(true);
             int fieldModifiersMask = field.getModifiers();

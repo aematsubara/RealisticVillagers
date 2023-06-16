@@ -7,112 +7,55 @@ import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
 import me.matsubara.realisticvillagers.npc.NPC;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * A modifier for modifying the metadata of a player.
- */
 public class MetadataModifier extends NPCModifier {
 
-    /**
-     * The queued metadata.
-     */
     private final List<WrappedWatchableObject> metadata = new ArrayList<>();
 
-    /**
-     * Creates a new modifier.
-     *
-     * @param npc The npc this modifier is for.
-     * @see NPC#metadata()
-     */
-    @ApiStatus.Internal
-    public MetadataModifier(@NotNull NPC npc) {
+    public MetadataModifier(NPC npc) {
         super(npc);
     }
 
-    /**
-     * Queues the change of a specific metadata.
-     *
-     * @param metadata The modifier which should get changed.
-     * @param value    The new value of the metadata.
-     * @param <I>      The input type of the meta modifier.
-     * @param <O>      The output type of the meta modifier.
-     * @return The same instance of this class, for chaining.
-     */
-    @NotNull
-    public <I, O> MetadataModifier queue(@NotNull EntityMetadata<I, O> metadata, @NotNull I value) {
-        if (!metadata.getAvailabilitySupplier().get()) {
-            return this;
-        }
+    public <I, O> MetadataModifier queue(@NotNull EntityMetadata<I, O> metadata, I value) {
+        if (!metadata.getAvailabilitySupplier().get()) return this;
 
         for (EntityMetadata<I, Object> relatedMetadata : metadata.getRelatedMetadata()) {
-            if (!relatedMetadata.getAvailabilitySupplier().get()) {
-                continue;
-            }
-            this.queue(relatedMetadata.getIndex(), relatedMetadata.getMapper().apply(value),
+            if (relatedMetadata.getAvailabilitySupplier().get()) queue(
+                    relatedMetadata.getIndex(),
+                    relatedMetadata.getMapper().apply(value),
                     relatedMetadata.getOutputType());
         }
-        return this
-                .queue(metadata.getIndex(), metadata.getMapper().apply(value), metadata.getOutputType());
+        return queue(metadata.getIndex(), metadata.getMapper().apply(value), metadata.getOutputType());
     }
 
-    /**
-     * Queues the change of a specific metadata.
-     *
-     * @param index The index of the metadata to change.
-     * @param value The new value of the metadata.
-     * @param clazz The class of the output type.
-     * @param <T>   The type of the value.
-     * @return The same instance of this class, for chaining.
-     */
-    @NotNull
-    public <T> MetadataModifier queue(int index, @NotNull T value, @NotNull Class<T> clazz) {
-        return this
-                .queue(index, value, MINECRAFT_VERSION < 9 ? null : WrappedDataWatcher.Registry.get(clazz));
+    public <T> MetadataModifier queue(int index, T value, Class<T> clazz) {
+        return queue(index, value, MINECRAFT_VERSION < 9 ? null : WrappedDataWatcher.Registry.get(clazz));
     }
 
-    /**
-     * Queues the change of a specific metadata.
-     *
-     * @param index      The index of the metadata to change.
-     * @param value      The new value of the metadata.
-     * @param serializer The serializer of the data watcher entry.
-     * @param <T>        The output type of the meta modified.
-     * @return The same instance of this class, for chaining.
-     */
-    @NotNull
-    public <T> MetadataModifier queue(
-            int index,
-            @NotNull T value,
-            @Nullable WrappedDataWatcher.Serializer serializer
-    ) {
-        this.metadata.add(serializer == null
-                ? new WrappedWatchableObject(index, value)
-                : new WrappedWatchableObject(
-                new WrappedDataWatcher.WrappedDataWatcherObject(index, serializer), value));
+    public <T> MetadataModifier queue(int index, T value, WrappedDataWatcher.Serializer serializer) {
+        metadata.add(serializer == null ?
+                new WrappedWatchableObject(index, value) :
+                new WrappedWatchableObject(new WrappedDataWatcher.WrappedDataWatcherObject(index, serializer), value));
         return this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void send(@NotNull Iterable<? extends Player> players) {
-        super.queueInstantly((targetNpc, target) -> {
+        queueInstantly((npc, layer) -> {
             PacketContainer container = new PacketContainer(Server.ENTITY_METADATA);
-            container.getIntegers().write(0, targetNpc.getEntityId());
+            container.getIntegers().write(0, npc.getEntityId());
 
-            if (NPC.IS_1_19_3) {
-                List<WrappedDataValue> wrappedDataValues = new ArrayList<>(this.metadata.size());
-                for (WrappedWatchableObject object : this.metadata) {
+            if (PluginUtils.IS_1_19_3_OR_NEW) {
+                List<WrappedDataValue> wrappedDataValues = new ArrayList<>(metadata.size());
+                for (WrappedWatchableObject object : metadata) {
                     if (object != null) wrappedDataValues.add(new WrappedDataValue(
                             object.getIndex(),
                             object.getWatcherObject().getSerializer(),
@@ -120,53 +63,40 @@ public class MetadataModifier extends NPCModifier {
                 }
                 container.getDataValueCollectionModifier().write(0, wrappedDataValues);
             } else {
-                container.getWatchableCollectionModifier().write(0, this.metadata);
+                container.getWatchableCollectionModifier().write(0, metadata);
             }
 
             return container;
         });
+
         super.send(players);
     }
 
-    /**
-     * A wrapper for entity metadata.
-     *
-     * @param <I> The input type of this metadata modifier.
-     * @param <O> The output type of this metadata modifier.
-     */
+    @SuppressWarnings("unchecked")
     public static class EntityMetadata<I, O> {
 
         private static final Class<?> COMPOUND_TAG_CLASS = ReflectionUtils.getNMSClass("nbt", "NBTTagCompound");
 
-        /**
-         * An entity metadata for modifying the sneaking state.
-         */
-        @SuppressWarnings("unchecked")
+        @SuppressWarnings("unused")
         public static final EntityMetadata<Boolean, Byte> SNEAKING = new EntityMetadata<>(
                 0,
                 Byte.class,
                 Collections.emptyList(),
                 input -> (byte) (input ? 0x02 : 0),
-                // with 1.16+, we have to change the pose too to make the NPC sneak
+                // With 1.16+, we have to change the pose too to make the NPC sneak.
                 new EntityMetadata<>(
                         6,
                         (Class<Object>) EnumWrappers.getEntityPoseClass(),
                         Collections.emptyList(),
-                        input -> (input ? EnumWrappers.EntityPose.CROUCHING : EnumWrappers.EntityPose.STANDING)
-                                .toNms(),
+                        input -> (input ? EnumWrappers.EntityPose.CROUCHING : EnumWrappers.EntityPose.STANDING).toNms(),
                         () -> MINECRAFT_VERSION >= 14));
-        /**
-         * An entity metadata for modifying the skin layer state (show everything except cape).
-         */
+
         public static final EntityMetadata<Boolean, Byte> SKIN_LAYERS = new EntityMetadata<>(
                 10,
                 Byte.class,
                 Arrays.asList(9, 9, 10, 14, 14, 15, 17),
                 input -> (byte) (input ? 126 : 0));
-        /**
-         * An entity metadata for modifying the pose.
-         */
-        @SuppressWarnings("unchecked")
+
         public static final EntityMetadata<EnumWrappers.EntityPose, Object> POSE = new EntityMetadata<>(
                 6,
                 (Class<Object>) EnumWrappers.getEntityPoseClass(),
@@ -174,7 +104,6 @@ public class MetadataModifier extends NPCModifier {
                 EnumWrappers.EntityPose::toNms,
                 () -> MINECRAFT_VERSION >= 14);
 
-        @SuppressWarnings("unchecked")
         public static final EntityMetadata<Object, Object> SHOULDER_ENTITY_LEFT = new EntityMetadata<>(
                 19,
                 (Class<Object>) COMPOUND_TAG_CLASS,
@@ -182,7 +111,6 @@ public class MetadataModifier extends NPCModifier {
                 object -> object,
                 () -> MINECRAFT_VERSION >= 18);
 
-        @SuppressWarnings("unchecked")
         public static final EntityMetadata<Object, Object> SHOULDER_ENTITY_RIGHT = new EntityMetadata<>(
                 20,
                 (Class<Object>) COMPOUND_TAG_CLASS,
@@ -190,50 +118,18 @@ public class MetadataModifier extends NPCModifier {
                 object -> object,
                 () -> MINECRAFT_VERSION >= 18);
 
-        /**
-         * The base index of the metadata in the data watcher object.
-         */
         private final int baseIndex;
-        /**
-         * The output mapper class.
-         */
         private final Class<O> outputType;
-        /**
-         * The mapper which maps the input value type to the writeable output type for the data watcher
-         * object.
-         */
         private final Function<I, O> mapper;
-        /**
-         * The versions in which the data watcher index was shifted and must be modified.
-         */
         private final Collection<Integer> shiftVersions;
-        /**
-         * A supplier returning if the entity metadata is available for this server version.
-         */
         private final Supplier<Boolean> availabilitySupplier;
-        /**
-         * The metadata which is related to this metadata, will be applied too if this metadata is
-         * applied.
-         */
         private final Collection<EntityMetadata<I, Object>> relatedMetadata;
 
-        /**
-         * Creates a new metadata instance.
-         *
-         * @param baseIndex            The base index of the metadata in the data watcher object.
-         * @param outputType           The output mapper class.
-         * @param shiftVersions        The versions in which the data watcher index was shifted and must
-         *                             be modified.
-         * @param mapper               The mapper which maps the input value type to the writeable
-         *                             output type for the data watcher object.
-         * @param availabilitySupplier A supplier returning if the entity metadata is available for this
-         *                             server version.
-         * @param relatedMetadata      The metadata which is related to this metadata, will be applied
-         *                             too if this metadata is applied.
-         */
-        @SafeVarargs
-        public EntityMetadata(int baseIndex, Class<O> outputType, Collection<Integer> shiftVersions,
-                              Function<I, O> mapper, Supplier<Boolean> availabilitySupplier,
+        public EntityMetadata(int baseIndex,
+                              Class<O> outputType,
+                              Collection<Integer> shiftVersions,
+                              Function<I, O> mapper,
+                              Supplier<Boolean> availabilitySupplier,
                               EntityMetadata<I, Object>... relatedMetadata) {
             this.baseIndex = baseIndex;
             this.outputType = outputType;
@@ -243,72 +139,28 @@ public class MetadataModifier extends NPCModifier {
             this.relatedMetadata = Arrays.asList(relatedMetadata);
         }
 
-        /**
-         * Creates a new metadata instance.
-         *
-         * @param baseIndex       The base index of the metadata in the data watcher object.
-         * @param outputType      The output mapper class.
-         * @param shiftVersions   The versions in which the data watcher index was shifted and must be
-         *                        modified.
-         * @param mapper          The mapper which maps the input value type to the writeable output
-         *                        type for the data watcher object.
-         * @param relatedMetadata The metadata which is related to this metadata, will be applied too if
-         *                        this metadata is applied.
-         */
-        @SafeVarargs
-        public EntityMetadata(int baseIndex, Class<O> outputType, Collection<Integer> shiftVersions,
-                              Function<I, O> mapper, EntityMetadata<I, Object>... relatedMetadata) {
+        public EntityMetadata(int baseIndex, Class<O> outputType, Collection<Integer> shiftVersions, Function<I, O> mapper, EntityMetadata<I, Object>... relatedMetadata) {
             this(baseIndex, outputType, shiftVersions, mapper, () -> true, relatedMetadata);
         }
 
-        /**
-         * Get the index in the data watcher object for the minecraft version of the current server
-         * instance.
-         *
-         * @return the index in the data watcher object to modify.
-         */
         public int getIndex() {
-            return this.baseIndex + Math.toIntExact(
-                    this.shiftVersions.stream().filter(minor -> MINECRAFT_VERSION >= minor)
-                            .count());
+            return baseIndex + Math.toIntExact(shiftVersions.stream().filter(minor -> MINECRAFT_VERSION >= minor).count());
         }
 
-        /**
-         * Get the type of the output value.
-         *
-         * @return the type of the output value.
-         */
-        @NotNull
         public Class<O> getOutputType() {
-            return this.outputType;
+            return outputType;
         }
 
-        /**
-         * Get the mapper of this modifier converting the input type to a writeable object for a data
-         * watcher.
-         *
-         * @return the mapper of this modifier converting the input type.
-         */
-        @NotNull
         public Function<I, O> getMapper() {
-            return this.mapper;
+            return mapper;
         }
 
-        /**
-         * @return A supplier returning if the entity metadata is available for this server version.
-         */
-        @NotNull
         public Supplier<Boolean> getAvailabilitySupplier() {
-            return this.availabilitySupplier;
+            return availabilitySupplier;
         }
 
-        /**
-         * @return The metadata which is related to this metadata, will be applied too if this metadata
-         * is applied.
-         */
-        @NotNull
         public Collection<EntityMetadata<I, Object>> getRelatedMetadata() {
-            return this.relatedMetadata;
+            return relatedMetadata;
         }
     }
 }

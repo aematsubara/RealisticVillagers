@@ -36,6 +36,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.FishHook;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -151,7 +152,7 @@ public class DummyFishingHook extends FishingHook {
     }
 
     @Override
-    protected boolean canHitEntity(Entity entity) {
+    protected boolean canHitEntity(@NotNull Entity entity) {
         boolean item = entity.isAlive() && entity instanceof ItemEntity;
         if (entity.isSpectator() || !entity.isAlive() || !entity.isPickable()) return item;
 
@@ -268,7 +269,7 @@ public class DummyFishingHook extends FishingHook {
         reapplyPosition();
     }
 
-    private VillagerFishEvent callEvent(@Nullable Entity entity, VillagerFishEvent.State state) {
+    private @NotNull VillagerFishEvent callEvent(@Nullable Entity entity, VillagerFishEvent.State state) {
         VillagerFishEvent fishEvent = new VillagerFishEvent(
                 getNPCOwner(),
                 entity != null ? entity.getBukkitEntity() : null,
@@ -279,7 +280,7 @@ public class DummyFishingHook extends FishingHook {
         return fishEvent;
     }
 
-    private void catchingFish(BlockPos pos) {
+    private void catchingFish(@NotNull BlockPos pos) {
         ServerLevel level = (ServerLevel) this.level;
 
         int i = 1;
@@ -399,7 +400,7 @@ public class DummyFishingHook extends FishingHook {
                 0.20000000298023224d);
     }
 
-    private boolean shouldStopFishing(VillagerNPC npc) {
+    private boolean shouldStopFishing(@NotNull VillagerNPC npc) {
         ItemStack mainHand = npc.getMainHandItem();
         ItemStack offHand = npc.getOffhandItem();
 
@@ -429,14 +430,15 @@ public class DummyFishingHook extends FishingHook {
         for (int i = -1; i <= 2; ++i) {
             OpenWaterType areaType = getOpenWaterTypeForArea(pos.offset(-2, i, -2), pos.offset(2, i, 2));
             switch (areaType.ordinal()) {
-                case 1:
+                case 1 -> {
                     if (type == OpenWaterType.INVALID) return false;
-                    break;
-                case 2:
+                }
+                case 2 -> {
                     if (type == OpenWaterType.ABOVE_WATER) return false;
-                    break;
-                case 3:
+                }
+                case 3 -> {
                     return false;
+                }
             }
             type = areaType;
         }

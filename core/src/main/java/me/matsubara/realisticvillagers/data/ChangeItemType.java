@@ -6,6 +6,8 @@ public enum ChangeItemType {
     TAMING,
     HEALING_GOLEM,
     USING_BONE_MEAL,
+    USING_HOE,
+    USING_FISHING_ROD,
     LOOTING,
     NONE;
 
@@ -27,6 +29,14 @@ public enum ChangeItemType {
 
     public boolean isUsingBoneMeal(boolean usingBoneMeal) {
         return this != USING_BONE_MEAL && usingBoneMeal;
+    }
+
+    public boolean isUsingHoe(boolean usingHoe) {
+        return this != USING_HOE && usingHoe;
+    }
+
+    public boolean isUsingFishingRod(boolean usingFishingRod) {
+        return this != USING_FISHING_ROD && usingFishingRod;
     }
 
     public boolean isLooting(boolean looting) {

@@ -19,6 +19,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 import java.util.Set;
@@ -38,7 +39,7 @@ public class ChestHandler extends PacketAdapter {
     }
 
     @Override
-    public void onPacketSending(PacketEvent event) {
+    public void onPacketSending(@NotNull PacketEvent event) {
         PacketContainer packet = event.getPacket();
         World world = event.getPlayer().getWorld();
 
@@ -100,14 +101,14 @@ public class ChestHandler extends PacketAdapter {
         }
     }
 
-    private boolean isViewer(Chest chest, UUID uuid) {
+    private boolean isViewer(@NotNull Chest chest, UUID uuid) {
         for (HumanEntity viewer : chest.getBlockInventory().getViewers()) {
             if (viewer.getUniqueId().equals(uuid)) return true;
         }
         return false;
     }
 
-    private boolean shouldCancel(Block block) {
+    private boolean shouldCancel(@NotNull Block block) {
         if (block.getType() != Material.CHEST) return false;
 
         Chest chest = (Chest) block.getState();
@@ -116,12 +117,12 @@ public class ChestHandler extends PacketAdapter {
         return (test(doubleChest.getLeftSide())) || test(doubleChest.getRightSide());
     }
 
-    private boolean test(Inventory inventory) {
+    private boolean test(@NotNull Inventory inventory) {
         Location location = inventory.getLocation();
         return location != null && test(location.getBlock());
     }
 
-    private boolean test(Block block) {
+    private boolean test(@NotNull Block block) {
         ChestManager chestManager = plugin.getChestManager();
         Vector vector = block.getLocation().toVector();
 

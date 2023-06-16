@@ -24,6 +24,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -46,11 +48,14 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
 
         LivingEntity target = getTarget(villager);
-        if (target == null || target instanceof Villager) return;
+        if (target == null || target instanceof Villager) {
+            if (hasNearTNT(villager)) handleNormalReaction(brain);
+            return;
+        }
 
         if (target instanceof ServerPlayer player) {
             if (player.isCreative()) return;
@@ -59,6 +64,8 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             boolean atRaid = level.getRaidAt(villager.blockPosition()) != null;
             if (!Config.VILLAGER_ATTACK_PLAYER_DURING_RAID.asBool() && atRaid) return;
         }
+
+        if (villager instanceof VillagerNPC npc) npc.stopAllInteractions();
 
         // Use the same condition as canStillUse(), but the name doesn't mean anything.
         if (canStillUse(level, villager, time)) {
@@ -74,7 +81,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity getTarget(Villager villager) {
+    private @Nullable LivingEntity getTarget(@NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
 
         if (hasHostile(villager)) {
@@ -99,19 +106,19 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         return null;
     }
 
-    private void handleNormalReaction(Brain<Villager> brain) {
+    private void handleNormalReaction(@NotNull Brain<Villager> brain) {
         if (!brain.isActive(Activity.PANIC)) stopWhatWasDoing(brain);
         brain.setActiveActivityIfPossible(Activity.PANIC);
     }
 
-    public static void handleFightReaction(Brain<Villager> brain, LivingEntity target) {
+    public static void handleFightReaction(@NotNull Brain<Villager> brain, LivingEntity target) {
         if (!brain.isActive(Activity.FIGHT)) stopWhatWasDoing(brain);
         brain.setMemory(MemoryModuleType.ATTACK_TARGET, target);
         brain.setDefaultActivity(Activity.FIGHT);
         brain.setActiveActivityIfPossible(Activity.FIGHT);
     }
 
-    private static void stopWhatWasDoing(Brain<Villager> brain) {
+    private static void stopWhatWasDoing(@NotNull Brain<Villager> brain) {
         brain.eraseMemory(MemoryModuleType.PATH);
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
@@ -123,12 +130,16 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         return !(villager instanceof VillagerNPC npc) || !npc.canAttack();
     }
 
-    private boolean hasHostile(LivingEntity entity) {
+    private boolean hasHostile(@NotNull LivingEntity entity) {
         return entity.getBrain().hasMemoryValue(MemoryModuleType.NEAREST_HOSTILE);
     }
 
-    private boolean isHurt(LivingEntity entity) {
+    private boolean isHurt(@NotNull LivingEntity entity) {
         return entity.getBrain().hasMemoryValue(MemoryModuleType.HURT_BY);
+    }
+
+    private boolean hasNearTNT(@NotNull LivingEntity entity) {
+        return entity.getBrain().hasMemoryValue(VillagerNPC.NEAREST_PRIMED_TNT);
     }
 
     public static boolean ignorePlayer(VillagerNPC npc, Player player) {
@@ -151,7 +162,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         return Optional.empty();
     }
 
-    private static boolean isWearingMonsterHead(LivingEntity entity) {
+    private static boolean isWearingMonsterHead(@NotNull LivingEntity entity) {
         ItemStack current = entity.getItemBySlot(EquipmentSlot.HEAD);
         for (Item head : HALLOWEEN_MASKS) {
             if (current.is(head)) return true;

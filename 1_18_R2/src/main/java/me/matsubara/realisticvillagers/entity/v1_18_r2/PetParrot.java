@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftParrot;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
@@ -70,7 +71,7 @@ public class PetParrot extends Parrot implements Pet {
         return super.getOwnerUUID();
     }
 
-    public boolean setEntityOnShoulder(VillagerNPC npc) {
+    public boolean setEntityOnShoulder(@NotNull VillagerNPC npc) {
         CompoundTag tag = new CompoundTag();
         tag.putString("id", getEncodeId());
         saveWithoutId(tag);

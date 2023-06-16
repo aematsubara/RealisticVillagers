@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.entity.schedule.Activity;
+import org.jetbrains.annotations.NotNull;
 
 public class SetRaidStatus extends Behavior<Villager> {
 
@@ -16,12 +17,12 @@ public class SetRaidStatus extends Behavior<Villager> {
     }
 
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(@NotNull ServerLevel level, Villager villager) {
         return level.random.nextInt(20) == 0;
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> rain = villager.getBrain();
 
         if (villager instanceof VillagerNPC npc && npc.isFighting()) return;

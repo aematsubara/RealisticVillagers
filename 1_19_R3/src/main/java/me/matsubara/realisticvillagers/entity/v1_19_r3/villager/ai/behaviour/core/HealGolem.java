@@ -2,7 +2,9 @@ package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.co
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import lombok.Getter;
 import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
@@ -19,19 +21,19 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
 
 @SuppressWarnings("OptionalGetWithoutIsPresent")
-public class HealGolem extends Behavior<Villager> {
+public class HealGolem extends Behavior<Villager> implements Exchangeable {
+
+    private final float speedModifier;
+    private @Getter ItemStack previousItem;
 
     private static final int DISTANCE_TO_HEAL = 2;
     private static final int IRON_INGOT_HEAL_AMOUNT = 25;
-
-    private final float speedModifier;
-    private ItemStack previousItem;
-
     private static final Set<Item> HEAL_ITEM = Sets.newHashSet(Items.IRON_INGOT);
 
     @SuppressWarnings("ConstantConditions")
@@ -62,19 +64,28 @@ public class HealGolem extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (villager instanceof VillagerNPC npc) npc.setHealingGolem(true);
+        if (villager instanceof VillagerNPC npc) {
+            npc.setHealingGolem(true);
+            previousItem = npc.getMainHandItem();
+        }
+
         IronGolem golem = getNearestHurtGolem(villager).get();
         villager.getBrain().setMemory(MemoryModuleType.INTERACTION_TARGET, golem);
         BehaviorUtils.lookAtEntity(villager, golem);
 
-        // Save previous weapon (if any).
-        if (villager.isHolding(item -> !item.isEmpty())) {
-            previousItem = villager.getMainHandItem();
-        } else {
-            previousItem = ItemStack.EMPTY;
+        villager.setItemInHand(InteractionHand.MAIN_HAND, Items.IRON_INGOT.getDefaultInstance());
+    }
+
+    @Override
+    public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setHealingGolem(false);
+            npc.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
         }
 
-        villager.setItemInHand(InteractionHand.MAIN_HAND, Items.IRON_INGOT.getDefaultInstance());
+        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
     }
 
     @Override
@@ -107,29 +118,18 @@ public class HealGolem extends Behavior<Villager> {
         }
     }
 
-    @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
-        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
-
-        villager.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
-
-        if (villager instanceof VillagerNPC npc) npc.setHealingGolem(false);
-    }
-
     private boolean isGolemVisible(Villager villager) {
         return getNearestHurtGolem(villager).isPresent();
     }
 
-    private Optional<IronGolem> getNearestHurtGolem(Villager villager) {
+    private Optional<IronGolem> getNearestHurtGolem(@NotNull Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
                 .get()
                 .findClosest(living -> living instanceof IronGolem golem && golem.getCrackiness() != IronGolem.Crackiness.NONE)
                 .map(living -> (IronGolem) living);
     }
 
-    private boolean isWithinHealingDistance(Villager villager, IronGolem golem) {
+    private boolean isWithinHealingDistance(@NotNull Villager villager, @NotNull IronGolem golem) {
         return villager.blockPosition().closerThan(golem.blockPosition(), DISTANCE_TO_HEAL);
     }
 }

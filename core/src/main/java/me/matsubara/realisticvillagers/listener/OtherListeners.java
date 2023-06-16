@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.jetbrains.annotations.NotNull;
 
 public class OtherListeners implements Listener {
 
@@ -15,7 +16,7 @@ public class OtherListeners implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onLightningStrike(LightningStrikeEvent event) {
+    public void onLightningStrike(@NotNull LightningStrikeEvent event) {
         event.getLightning().setMetadata("Cause", new FixedMetadataValue(plugin, event.getCause()));
     }
 }

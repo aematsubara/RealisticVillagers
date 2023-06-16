@@ -2,7 +2,9 @@ package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import lombok.Getter;
 import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
@@ -16,23 +18,23 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffer;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 
-public class ShowTradesToPlayer extends Behavior<Villager> {
+public class ShowTradesToPlayer extends Behavior<Villager> implements Exchangeable {
 
     private static final int MAX_LOOK_TIME = 900;
     private static final int STARTING_LOOK_TIME = 40;
-    @Nullable
-    private ItemStack playerItemStack;
+    private @Nullable ItemStack playerItemStack;
     private final List<ItemStack> displayItems = Lists.newArrayList();
     private int cycleCounter;
     private int displayIndex;
     private int lookTime;
 
-    private ItemStack previousItem;
+    private @Getter ItemStack previousItem;
 
     public ShowTradesToPlayer(int minDuration, int maxDuration) {
         super(ImmutableMap.of(
@@ -43,7 +45,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
     }
 
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(ServerLevel level, @NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
         if (brain.getMemory(MemoryModuleType.INTERACTION_TARGET).isEmpty()) return false;
 
@@ -75,20 +77,26 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (villager instanceof VillagerNPC npc) npc.setShowingTrades(true);
+        if (villager instanceof VillagerNPC npc) {
+            npc.setShowingTrades(true);
+            previousItem = npc.getMainHandItem();
+        }
 
-        super.start(level, villager, time);
         lookAtTarget(villager);
         cycleCounter = 0;
         displayIndex = 0;
         lookTime = STARTING_LOOK_TIME;
+    }
 
-        // Save previous weapon (if any).
-        if (villager.isHolding(item -> !item.isEmpty())) {
-            previousItem = villager.getMainHandItem();
-        } else {
-            previousItem = ItemStack.EMPTY;
+    @Override
+    public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setShowingTrades(false);
+            clearHeldItem(npc);
         }
+
+        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        playerItemStack = null;
     }
 
     @Override
@@ -104,17 +112,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
         --lookTime;
     }
 
-    @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
-        if (villager instanceof VillagerNPC npc) npc.setShowingTrades(false);
-
-        super.stop(level, villager, time);
-        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-        clearHeldItem(villager);
-        playerItemStack = null;
-    }
-
-    private void findItemsToDisplay(LivingEntity living, Villager villager) {
+    private void findItemsToDisplay(@NotNull LivingEntity living, Villager villager) {
         boolean flag = false;
         ItemStack handItem = living.getMainHandItem();
         if (playerItemStack == null || !ItemStack.isSame(playerItemStack, handItem)) {
@@ -123,12 +121,12 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
             displayItems.clear();
         }
 
-        if (flag && playerItemStack != null && !playerItemStack.isEmpty()) {
-            updateDisplayItems(villager);
-            if (!displayItems.isEmpty()) {
-                lookTime = MAX_LOOK_TIME;
-                displayFirstItem(villager);
-            }
+        if (!flag || playerItemStack == null || playerItemStack.isEmpty()) return;
+
+        updateDisplayItems(villager);
+        if (!displayItems.isEmpty()) {
+            lookTime = MAX_LOOK_TIME;
+            displayFirstItem(villager);
         }
     }
 
@@ -137,7 +135,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
     }
 
     @SuppressWarnings("WhileLoopReplaceableByForEach")
-    private void updateDisplayItems(Villager villager) {
+    private void updateDisplayItems(@NotNull Villager villager) {
         Iterator<MerchantOffer> iterator = villager.getOffers().iterator();
 
         while (iterator.hasNext()) {
@@ -152,7 +150,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
         return playerItemStackMatchesCostOfOffer(offer, playerItemStack);
     }
 
-    private boolean playerItemStackMatchesCostOfOffer(MerchantOffer offer, ItemStack item) {
+    private boolean playerItemStackMatchesCostOfOffer(@NotNull MerchantOffer offer, ItemStack item) {
         return ItemStack.isSame(item, offer.getCostA()) || ItemStack.isSame(item, offer.getCostB());
     }
 
@@ -164,15 +162,13 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
         displayInMainHand(villager, item, 0.0f);
     }
 
-    private void displayInMainHand(Villager villager, ItemStack item, float dropChance) {
-        if (!ItemStack.matches(villager.getMainHandItem(), item)) {
-            villager.setItemSlot(EquipmentSlot.MAINHAND, item);
-        }
+    private void displayInMainHand(@NotNull Villager villager, ItemStack item, float dropChance) {
+        villager.setItemSlot(EquipmentSlot.MAINHAND, item);
         villager.setDropChance(EquipmentSlot.MAINHAND, dropChance);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity lookAtTarget(Villager villager) {
+    private @NotNull LivingEntity lookAtTarget(@NotNull Villager villager) {
         Brain<Villager> brain = villager.getBrain();
         // Can't be null since the value should be present in the constructor.
         LivingEntity target = brain.getMemory(MemoryModuleType.INTERACTION_TARGET).get();
@@ -181,13 +177,14 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
     }
 
     private void displayCyclingItems(Villager villager) {
-        if (displayItems.size() >= 2 && ++cycleCounter >= STARTING_LOOK_TIME) {
-            ++displayIndex;
-            cycleCounter = 0;
-            if (displayIndex > displayItems.size() - 1) {
-                displayIndex = 0;
-            }
-            displayAsHeldItem(villager, displayItems.get(displayIndex));
+        if (displayItems.size() < 2 || ++cycleCounter < STARTING_LOOK_TIME) return;
+
+        ++displayIndex;
+        cycleCounter = 0;
+        if (displayIndex > displayItems.size() - 1) {
+            displayIndex = 0;
         }
+
+        displayAsHeldItem(villager, displayItems.get(displayIndex));
     }
 }

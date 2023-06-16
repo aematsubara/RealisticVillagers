@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>2.0.3</version>
+        <version>3.0</version>
     </parent>
 
     <properties>
@@ -77,8 +77,8 @@
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
         <repository>
-            <id>wolfyscript-private</id>
-            <url>https://maven.wolfyscript.com/repository/public/</url>
+            <id>nms-repo</id>
+            <url>https://repo.codemc.io/repository/nms/</url>
         </repository>
     </repositories>
 
@@ -91,6 +91,7 @@
             <scope>provided</scope>
         </dependency>
         <!-- NMS -->
+        <!--suppress VulnerableLibrariesLocal -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot</artifactId>

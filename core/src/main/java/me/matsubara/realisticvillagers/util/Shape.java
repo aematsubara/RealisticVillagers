@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.ShapelessRecipe;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public final class Shape {
     private final @Getter ItemStack result;
     private final @Getter NamespacedKey key;
 
-    public Shape(RealisticVillagers plugin, String name, boolean shaped, List<String> ingredients, List<String> shape, ItemStack result) {
+    public Shape(RealisticVillagers plugin, String name, boolean shaped, @NotNull List<String> ingredients, List<String> shape, ItemStack result) {
         this.plugin = plugin;
         this.name = name;
         this.shaped = shaped;

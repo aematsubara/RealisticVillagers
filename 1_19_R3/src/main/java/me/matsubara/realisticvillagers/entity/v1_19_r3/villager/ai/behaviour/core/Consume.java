@@ -3,7 +3,9 @@ package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.co
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import lombok.Getter;
 import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.minecraft.server.level.ServerLevel;
@@ -30,15 +32,16 @@ import org.bukkit.Particle;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.function.BiPredicate;
 
-public class Consume extends Behavior<Villager> {
+public class Consume extends Behavior<Villager> implements Exchangeable {
 
     private ConsumeType type;
     private ItemStack food;
-    private ItemStack previousItem;
+    private @Getter ItemStack previousItem;
     private int duration;
 
     private static final Set<MobEffect> HEALTH_EFFECTS = ImmutableSet.of(
@@ -93,27 +96,27 @@ public class Consume extends Behavior<Villager> {
         return type != null;
     }
 
-    private boolean needsFood(VillagerNPC npc) {
+    private boolean needsFood(@NotNull VillagerNPC npc) {
         return npc.getFoodData().needsFood() && npc.getInventory().hasAnyMatching(item -> isSafeFood(item.getItem()));
     }
 
-    private boolean hasHarmfulEffects(VillagerNPC npc) {
+    private boolean hasHarmfulEffects(@NotNull VillagerNPC npc) {
         return hasHarmfulEffects(npc.getActiveEffects()) && npc.getInventory().hasAnyMatching(item -> item.is(Items.MILK_BUCKET));
     }
 
-    private boolean hasHarmfulEffects(Collection<MobEffectInstance> effects) {
+    private boolean hasHarmfulEffects(@NotNull Collection<MobEffectInstance> effects) {
         for (MobEffectInstance effect : effects) {
             if (isHarmful(effect)) return true;
         }
         return false;
     }
 
-    private boolean needsHealthPotion(VillagerNPC npc) {
+    private boolean needsHealthPotion(@NotNull VillagerNPC npc) {
         return npc.getHealth() < npc.getMaxHealth()
                 && npc.getInventory().hasAnyMatching(item -> POTION_PREDICATE.test(item, HEALTH_EFFECTS));
     }
 
-    private boolean needsPowerPotion(VillagerNPC npc) {
+    private boolean needsPowerPotion(@NotNull VillagerNPC npc) {
         Raid raid;
         return npc.checkCurrentActivity(Activity.PRE_RAID)
                 && npc.level instanceof ServerLevel level
@@ -126,8 +129,6 @@ public class Consume extends Behavior<Villager> {
     @Override
     protected void start(ServerLevel level, Villager villager, long time) {
         if (!(villager instanceof VillagerNPC npc)) return;
-
-        previousItem = villager.getMainHandItem().copy();
 
         Optional<ItemStack> food;
         if (type.isFood()) {
@@ -148,6 +149,8 @@ public class Consume extends Behavior<Villager> {
         if (food.isEmpty()) return;
 
         npc.setEating(true);
+        previousItem = villager.getMainHandItem();
+
         villager.setItemInHand(InteractionHand.MAIN_HAND, food.get());
 
         duration = food.get().getUseDuration();
@@ -155,8 +158,18 @@ public class Consume extends Behavior<Villager> {
     }
 
     @Override
+    protected void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setEating(false);
+            npc.setItemInHand(InteractionHand.MAIN_HAND, previousItem);
+        }
+        type = null;
+        duration = 0;
+    }
+
+    @Override
     protected void tick(ServerLevel level, Villager villager, long time) {
-        if (!(villager instanceof VillagerNPC npc)) return;
+        if (!(villager instanceof VillagerNPC npc) || food == null) return;
 
         handleEffects(npc);
 
@@ -229,17 +242,10 @@ public class Consume extends Behavior<Villager> {
 
     @Override
     protected boolean canStillUse(ServerLevel level, Villager villager, long time) {
-        return duration > 0;
+        return duration > 0 && food != null;
     }
 
-    @Override
-    protected void stop(ServerLevel level, Villager villager, long time) {
-        villager.setItemInHand(InteractionHand.MAIN_HAND, previousItem);
-        if (villager instanceof VillagerNPC npc) npc.setEating(false);
-        type = null;
-    }
-
-    public static boolean isSafeFood(Item item) {
+    public static boolean isSafeFood(@NotNull Item item) {
         FoodProperties properties = item.getFoodProperties();
         if (properties == null) return false;
 
@@ -250,7 +256,7 @@ public class Consume extends Behavior<Villager> {
         return true;
     }
 
-    private static boolean isHarmful(MobEffectInstance instance) {
+    private static boolean isHarmful(@NotNull MobEffectInstance instance) {
         return instance.getEffect().getCategory() == MobEffectCategory.HARMFUL;
     }
 

@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.behaviour.co
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.manager.ChestManager;
@@ -37,10 +38,11 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-public class LootChest extends Behavior<Villager> {
+public class LootChest extends Behavior<Villager> implements Exchangeable {
 
     private Chest chest;
     private boolean chestOpen;
@@ -164,15 +166,15 @@ public class LootChest extends Behavior<Villager> {
     }
 
     @Override
-    public void tick(ServerLevel level, Villager villager, long time) {
+    public void tick(ServerLevel level, @NotNull Villager villager, long time) {
         BlockPos pos = ((CraftChest) chest).getPosition();
         if (chest.getLocation().distance(villager.getBukkitEntity().getLocation()) > 3 || !(villager instanceof VillagerNPC npc)) {
-            BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, Villager.SPEED_MODIFIER, 1);
+            BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, VillagerNPC.WALK_SPEED.get(), 1);
             return;
         }
 
         // Look at chest all the time.
-        BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, Villager.SPEED_MODIFIER, 1);
+        BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, VillagerNPC.WALK_SPEED.get(), 1);
 
         Inventory inventory = chest.getInventory();
         boolean isOpen = isOpen();
@@ -297,7 +299,7 @@ public class LootChest extends Behavior<Villager> {
         count = 0;
     }
 
-    private boolean canStoreItems(VillagerNPC npc) {
+    private boolean canStoreItems(@NotNull VillagerNPC npc) {
         Inventory inventory = npc.getBukkitEntity().getInventory();
         if (inventory.firstEmpty() != -1) return true;
 
@@ -310,7 +312,7 @@ public class LootChest extends Behavior<Villager> {
         return false;
     }
 
-    private void containerAction(VillagerNPC npc, ServerLevel level, boolean open, boolean isOpen) {
+    private void containerAction(@NotNull VillagerNPC npc, ServerLevel level, boolean open, boolean isOpen) {
         ChestManager chestManager = npc.getPlugin().getChestManager();
         Map<Vector, UUID> chests = chestManager.getVillagerChests();
         if (open) {
@@ -349,7 +351,7 @@ public class LootChest extends Behavior<Villager> {
         level.getWorld().playSound(location, sound, SoundCategory.BLOCKS, 0.5f, level.random.nextFloat() * 0.1f + 0.9f);
     }
 
-    public BlockFace getCounterClockWise(BlockFace face) {
+    public BlockFace getCounterClockWise(@NotNull BlockFace face) {
         return switch (face) {
             case NORTH -> BlockFace.WEST;
             case SOUTH -> BlockFace.EAST;
@@ -359,7 +361,7 @@ public class LootChest extends Behavior<Villager> {
         };
     }
 
-    public BlockFace getClockWise(BlockFace face) {
+    public BlockFace getClockWise(@NotNull BlockFace face) {
         return switch (face) {
             case NORTH -> BlockFace.EAST;
             case SOUTH -> BlockFace.WEST;
@@ -369,7 +371,7 @@ public class LootChest extends Behavior<Villager> {
         };
     }
 
-    private Vector vector() {
+    private @NotNull Vector vector() {
         return chest.getLocation().toVector();
     }
 
@@ -383,7 +385,7 @@ public class LootChest extends Behavior<Villager> {
                 System.currentTimeMillis() + Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong());
     }
 
-    private boolean alreadyLooted(VillagerNPC npc, ItemStack check) {
+    private boolean alreadyLooted(@NotNull VillagerNPC npc, ItemStack check) {
         EquipmentSlot checkItemSlot = ItemStackUtils.getSlotByItem(check);
         boolean isCheckSword = ItemStackUtils.isSword(check);
         boolean isCheckAxe = ItemStackUtils.isAxe(check);
@@ -415,7 +417,12 @@ public class LootChest extends Behavior<Villager> {
         return false;
     }
 
-    public static boolean canReach(Villager villager, long time) {
+    @Override
+    public Object getPreviousItem() {
+        return null;
+    }
+
+    public static boolean canReach(@NotNull Villager villager, long time) {
         Long cantReachTime = villager.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE).orElse(null);
         if (cantReachTime == null) return true;
 

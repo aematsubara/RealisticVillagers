@@ -1,5 +1,7 @@
 package me.matsubara.realisticvillagers.data;
 
+import org.jetbrains.annotations.NotNull;
+
 @SuppressWarnings("unused")
 public enum GUIInteractType {
     CHAT,
@@ -44,7 +46,7 @@ public enum GUIInteractType {
         return this == GIFT;
     }
 
-    public String getName() {
+    public @NotNull String getName() {
         if (isBeProudOf()) return "proud-of";
         return name().toLowerCase();
     }

@@ -1,5 +1,8 @@
 package me.matsubara.realisticvillagers.listener;
 
+import com.comphenix.protocol.wrappers.Pair;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.GUIInteractType;
 import me.matsubara.realisticvillagers.data.InteractionTargetType;
@@ -7,12 +10,10 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
+import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Raid;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
@@ -23,28 +24,47 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 public final class PlayerListeners implements Listener {
 
     private final RealisticVillagers plugin;
+    private final Multimap<UUID, Pair<Long, Integer>> babyGrowCount = ArrayListMultimap.create();
 
     public PlayerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
     }
 
+    @EventHandler
+    public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
+        // Should add support for ItemsAdder?
+        discoverRecipes(event.getPlayer(), plugin.getRing().getKey(), plugin.getWhistle().getKey());
+    }
+
+    @EventHandler
+    public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
+        babyGrowCount.removeAll(event.getPlayer().getUniqueId());
+    }
+
+    private void discoverRecipes(Player player, NamespacedKey @NotNull ... keys) {
+        for (NamespacedKey key : keys) {
+            if (key != null) player.discoverRecipe(key);
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onEntityTargetLivingEntity(EntityTargetLivingEntityEvent event) {
+    public void onEntityTargetLivingEntity(@NotNull EntityTargetLivingEntityEvent event) {
         if (!(event.getEntity() instanceof IronGolem)) return;
         if (!(event.getTarget() instanceof Player player)) return;
 
@@ -58,7 +78,7 @@ public final class PlayerListeners implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerMove(PlayerMoveEvent event) {
+    public void onPlayerMove(@NotNull PlayerMoveEvent event) {
         Location to = event.getTo();
         if (to == null) return;
 
@@ -101,14 +121,39 @@ public final class PlayerListeners implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerInteract(PlayerInteractEntityEvent event) {
+    public void onPlayerInteract(@NotNull PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Villager villager)) return;
 
         if (plugin.getTracker().isInvalid(villager, true)) return;
 
-        ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
-        if (item == null) return;
-        if (item.getType() == Material.NAME_TAG) event.setCancelled(true);
+        Player player = event.getPlayer();
+
+        ItemStack item = player.getInventory().getItem(event.getHand());
+        if (item == null || item.getType() != Material.NAME_TAG) return;
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasDisplayName()) return;
+
+        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
+        if (npc.isEmpty()) return;
+
+        // Prevent renaming villager, we'll do it ourself.
+        event.setCancelled(true);
+
+        if (!InventoryListeners.canModifyName(npc.get(), player)) {
+            plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_RENAME_NOT_ALLOWED);
+            return;
+        }
+
+        String name = ChatColor.stripColor(meta.getDisplayName());
+        if (name.length() < 3) return;
+
+        npc.get().setVillagerName(name);
+        plugin.getTracker().refreshNPCSkin(villager, false);
+
+        player.getInventory().removeItem(new ItemBuilder(item.clone())
+                .setAmount(1)
+                .build());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -141,7 +186,7 @@ public final class PlayerListeners implements Listener {
         }
     }
 
-    private void handleWhistle(PlayerInteractEvent event) {
+    private void handleWhistle(@NotNull PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
         ItemStack item = event.getItem();
@@ -156,7 +201,7 @@ public final class PlayerListeners implements Listener {
         plugin.openWhistleGUI(player, null);
     }
 
-    private void handleBabySpawn(PlayerInteractEvent event) {
+    private void handleBabySpawn(@NotNull PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
         ItemStack item = event.getItem();
@@ -179,7 +224,7 @@ public final class PlayerListeners implements Listener {
         EquipmentSlot hand = event.getHand();
         if (hand == null) return;
 
-        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
+        if (!plugin.isEnabledIn(player.getWorld())) return;
 
         Messages messages = plugin.getMessages();
 
@@ -198,9 +243,43 @@ public final class PlayerListeners implements Listener {
 
         Block spawnAt = clicked.getRelative(BlockFace.UP);
         if (!spawnAt.isPassable() || !spawnAt.getRelative(BlockFace.UP).isPassable()) {
-            messages.send(player, Messages.Message.CAN_NOT_SPAWN_BABY);
+            messages.send(player, Messages.Message.BABY_CAN_NOT_SPAWN);
             return;
         }
+
+        UUID playerUUID = player.getUniqueId();
+
+        // If player isn't in map, add new entry with this baby.
+        if (!babyGrowCount.containsKey(playerUUID)) {
+            babyGrowCount.put(playerUUID, new Pair<>(procreation, 3));
+        }
+
+        Collection<Pair<Long, Integer>> pairs = babyGrowCount.get(playerUUID);
+
+        // If player is already in map, but this baby isn't in, add it.
+        boolean existsInList = pairs.stream().anyMatch(longIntegerPair -> longIntegerPair.getFirst() == procreation);
+        if (!existsInList) babyGrowCount.put(playerUUID, new Pair<>(procreation, 3));
+
+        // Check for counts and send messages.
+        Pair<Long, Integer> pairToRemove = null;
+        for (Pair<Long, Integer> pair : pairs) {
+            if (pair.getFirst() != procreation) continue;
+
+            int count = pair.getSecond();
+            if (count > 0) {
+                messages.send(player, Messages.Message.BABY_COUNTDOWN, string -> string.replace("%countdown%", String.valueOf(count)));
+                pair.setSecond(count - 1);
+                return;
+            }
+
+            pairToRemove = pair;
+            break;
+        }
+        if (pairToRemove != null) {
+            babyGrowCount.remove(playerUUID, pairToRemove);
+        }
+
+        messages.send(player, Messages.Message.BABY_SPAWNED, string -> string.replace("%baby-name%", Objects.requireNonNullElse(childName, "???")));
 
         plugin.getConverter().createBaby(
                 spawnAt.getLocation(),
@@ -209,6 +288,6 @@ public final class PlayerListeners implements Listener {
                 motherUUID,
                 player);
 
-        event.getPlayer().getInventory().setItem(hand, null);
+        player.getInventory().setItem(hand, null);
     }
 }

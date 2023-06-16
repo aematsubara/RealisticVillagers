@@ -1,5 +1,7 @@
 package me.matsubara.realisticvillagers.nms;
 
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.PropertyMap;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.Location;
 import org.bukkit.Raid;
@@ -35,4 +37,10 @@ public interface INMSConverter {
     ItemStack randomVanillaEnchantments(Location location, ItemStack item);
 
     Raid getRaidAt(Location location);
+
+    PropertyMap changePlayerSkin(Player player, String texture, String signature);
+
+    GameProfile getPlayerProfile(Player player);
+
+    boolean isBeingTracked(Player player, int villagerId);
 }

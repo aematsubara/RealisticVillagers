@@ -8,10 +8,10 @@ import me.matsubara.realisticvillagers.util.EntityHead;
 import me.matsubara.realisticvillagers.util.InventoryUpdate;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.ArrayUtils;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public final class CombatGUI extends InteractGUI {
 
         previous = getGUIItem("previous");
         search = getGUIItem("search");
-        clearSearch = getGUIItem("clear-search");
+        clearSearch = keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : null;
         close = getGUIItem("close");
         next = getGUIItem("next");
         enabled = getGUIItem("enabled");
@@ -64,25 +64,15 @@ public final class CombatGUI extends InteractGUI {
             this.heads.removeIf(head -> !head.name().toLowerCase().contains(keyword.toLowerCase()));
         }
 
+        updateInventory();
         player.openInventory(inventory);
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, this::updateInventory);
+        InventoryUpdate.updateInventory(player, getTitle());
     }
 
     public void updateInventory() {
-        inventory.clear();
+        clear(SLOTS, STATUS_SLOTS, HOTBAR);
 
         pages = (int) (Math.ceil((double) heads.size() / SLOTS.length));
-
-        ItemStack background = new ItemBuilder(Material.GRAY_STAINED_GLASS_PANE)
-                .setDisplayName("&7")
-                .build();
-
-        for (int i = 0; i < 44; i++) {
-            if (ArrayUtils.contains(SLOTS, i)
-                    || ArrayUtils.contains(STATUS_SLOTS, i)
-                    || ArrayUtils.contains(HOTBAR, i)) continue;
-            inventory.setItem(i, background);
-        }
 
         if (current > 0) inventory.setItem(28, previous);
         inventory.setItem(31, keyword != null ? clearSearch : pages > 1 ? search : null);
@@ -116,6 +106,7 @@ public final class CombatGUI extends InteractGUI {
 
             // Set item in the respective slot.
             inventory.setItem(slotIndex.get(index), builder
+                    .setData(plugin.getEntityTypeKey(), PersistentDataType.STRING, skull.name())
                     .replace("%entity-type%", name)
                     .build());
 
@@ -128,7 +119,7 @@ public final class CombatGUI extends InteractGUI {
     }
 
     @Override
-    protected String getTitle() {
+    protected @NotNull String getTitle() {
         return super.getTitle()
                 .replace("%page%", String.valueOf(current + 1))
                 .replace("%max-page%", String.valueOf(pages == 0 ? 1 : pages));

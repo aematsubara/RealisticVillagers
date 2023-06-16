@@ -1,7 +1,9 @@
 package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
+import lombok.Getter;
 import me.matsubara.realisticvillagers.data.ChangeItemType;
+import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.PetCat;
@@ -30,6 +32,7 @@ import net.minecraft.world.item.ItemStack;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
@@ -37,9 +40,9 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 @SuppressWarnings("OptionalGetWithoutIsPresent")
-public class TameOrFeedPet extends Behavior<Villager> {
+public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
 
-    private ItemStack previousItem;
+    private @Getter ItemStack previousItem;
     private final int distanceToTame;
     private final int tameChance;
     private final float speedModifier;
@@ -110,21 +113,17 @@ public class TameOrFeedPet extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        started = true;
+        if (villager instanceof VillagerNPC npc) {
+            npc.setTaming(true);
+            previousItem = npc.getMainHandItem();
+        }
 
-        if (villager instanceof VillagerNPC npc) npc.setTaming(true);
+        started = true;
 
         LivingEntity tamable = get(villager);
 
         villager.getBrain().setMemory(MemoryModuleType.INTERACTION_TARGET, tamable);
         BehaviorUtils.lookAtEntity(villager, tamable);
-
-        // Save previous weapon (if any).
-        if (villager.isHolding(item -> !item.isEmpty())) {
-            previousItem = villager.getMainHandItem();
-        } else {
-            previousItem = ItemStack.EMPTY;
-        }
 
         SimpleContainer inventory = villager.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -136,6 +135,25 @@ public class TameOrFeedPet extends Behavior<Villager> {
         }
 
         villager.setItemInHand(InteractionHand.MAIN_HAND, food.getDefaultInstance());
+    }
+
+    @Override
+    public void stop(ServerLevel level, Villager villager, long time) {
+        if (villager instanceof VillagerNPC npc) {
+            npc.setTaming(false);
+            npc.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
+        }
+
+        started = false;
+        tryAgain = 0;
+
+        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+
+        villager.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
+
+        if (villager instanceof VillagerNPC npc) npc.setTaming(false);
     }
 
     @Override
@@ -191,32 +209,18 @@ public class TameOrFeedPet extends Behavior<Villager> {
     }
 
     @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
-        started = false;
-        tryAgain = 0;
-
-        villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
-
-        villager.setItemSlot(EquipmentSlot.MAINHAND, previousItem);
-
-        if (villager instanceof VillagerNPC npc) npc.setTaming(false);
-    }
-
-    @Override
     protected boolean timedOut(long time) {
         return false;
     }
 
-    private Optional<LivingEntity> getNearestUntamedOrAbandoned(Villager villager) {
+    private Optional<LivingEntity> getNearestUntamedOrAbandoned(@NotNull Villager villager) {
         Optional<NearestVisibleLivingEntities> nearest = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return Optional.empty();
 
         return nearest.get().findClosest(tameFilter.or(living -> ABANDONED.test(villager, living)));
     }
 
-    private Optional<LivingEntity> getNearestHungry(Villager villager) {
+    private Optional<LivingEntity> getNearestHungry(@NotNull Villager villager) {
         Optional<NearestVisibleLivingEntities> nearest = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return Optional.empty();
 
@@ -226,11 +230,11 @@ public class TameOrFeedPet extends Behavior<Villager> {
                 && animal.getHealth() < animal.getMaxHealth());
     }
 
-    private boolean isWithinTamingDistance(Villager villager, LivingEntity tamable) {
+    private boolean isWithinTamingDistance(@NotNull Villager villager, @NotNull LivingEntity tamable) {
         return villager.blockPosition().closerThan(tamable.blockPosition(), distanceToTame);
     }
 
-    private LivingEntity get(Villager villager) {
+    private @NotNull LivingEntity get(Villager villager) {
         return isTame ? getNearestUntamedOrAbandoned(villager).get() : getNearestHungry(villager).get();
     }
 }

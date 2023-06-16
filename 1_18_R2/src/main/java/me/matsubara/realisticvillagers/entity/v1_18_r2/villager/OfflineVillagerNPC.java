@@ -4,14 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
+import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.DoubleTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
+import net.minecraft.nbt.*;
 import net.minecraft.world.entity.EntityType;
 import org.bukkit.Bukkit;
 import org.bukkit.Particle;
@@ -20,9 +19,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.BiFunction;
 
 @SuppressWarnings("unused")
 @Getter
@@ -32,7 +34,8 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     private final UUID uuid;
     private @Setter CompoundTag tag;
-    private final List<IVillagerNPC> childrens;
+    private final List<IVillagerNPC> partners = new ArrayList<>();
+    private final List<IVillagerNPC> childrens = new ArrayList<>();
     private final Set<EntityType<?>> targetEntities;
     private final LastKnownPosition lastKnownPosition;
 
@@ -40,9 +43,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String NAME = "Name";
     public static final String SEX = "Sex";
     public static final String PARTNER = "Partner";
+    public static final String PARTNERS = "Partners";
     public static final String IS_PARTNER_VILLAGER = "IsPartnerVillager";
     public static final String LAST_PROCREATION = "LastProcreation";
     public static final String SKIN_TEXTURE_ID = "SkinTextureId";
+    public static final String KID_SKIN_TEXTURE_ID = "KidSkinTextureId";
     public static final String FATHER = "Father";
     public static final String MOTHER = "Mother";
     public static final String IS_FATHER_VILLAGER = "IsFatherVillager";
@@ -57,29 +62,34 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
     public static final String DEAD = "Dead";
+    public static final BiFunction<VillagerTracker, Tag, IVillagerNPC> OFFLINE_MAPPER = (tracker, input) -> input instanceof CompoundTag compound ?
+            OfflineVillagerNPC.from(compound) :
+            tracker.getOffline(NbtUtils.loadUUID(input));
 
     public OfflineVillagerNPC(UUID uuid, CompoundTag tag, LastKnownPosition lastKnownPosition) {
         this.uuid = uuid;
         this.tag = tag;
         this.lastKnownPosition = lastKnownPosition;
-        this.childrens = new ArrayList<>();
-        VillagerNPC.fillCollection(childrens, input -> {
-            if (input instanceof CompoundTag compound) {
-                return OfflineVillagerNPC.from(compound);
-            } else {
-                UUID childUUID = NbtUtils.loadUUID(input);
-                return plugin.getTracker().getOffline(childUUID);
-            }
-        }, CHILDRENS, tag);
+        VillagerNPC.fillCollection(
+                partners,
+                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(plugin.getTracker(), input),
+                PARTNERS,
+                tag);
+        VillagerNPC.fillCollection(
+                childrens,
+                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(plugin.getTracker(), input),
+                CHILDRENS,
+                tag);
         this.targetEntities = new HashSet<>();
         VillagerNPC.fillCollection(targetEntities, input -> EntityType.byString(input.getAsString()).orElse(null), TARGET_ENTITIES, tag);
     }
 
-    public static OfflineVillagerNPC from(UUID uuid, CompoundTag tag, String world, double x, double y, double z) {
+    @Contract("_, _, _, _, _, _ -> new")
+    public static @NotNull OfflineVillagerNPC from(UUID uuid, CompoundTag tag, String world, double x, double y, double z) {
         return new OfflineVillagerNPC(uuid, tag, new LastKnownPosition(world, x, y, z));
     }
 
-    public static OfflineVillagerNPC from(CompoundTag tag) {
+    public static @NotNull OfflineVillagerNPC from(CompoundTag tag) {
         LastKnownPosition position = lastPositionFrom(tag);
         return new OfflineVillagerNPC(tag.getUUID("UUID"), tag, position);
     }
@@ -92,7 +102,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         return tag;
     }
 
-    private ListTag newDoubleList(double... nums) {
+    private @NotNull ListTag newDoubleList(double @NotNull ... nums) {
         ListTag list = new ListTag();
         for (double num : nums) {
             list.add(DoubleTag.valueOf(num));
@@ -125,6 +135,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public List<IVillagerNPC> getPartners() {
+        return partners;
+    }
+
+    @Override
     public boolean isPartnerVillager() {
         return tag.getBoolean(IS_PARTNER_VILLAGER);
     }
@@ -144,7 +159,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         return getFamily(tag, MOTHER);
     }
 
-    private IVillagerNPC getFamily(CompoundTag tag, String who) {
+    private @Nullable IVillagerNPC getFamily(@NotNull CompoundTag tag, String who) {
         if (!tag.contains(who)) return null;
 
         if (tag.hasUUID(who)) {
@@ -226,6 +241,16 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public int getKidSkinTextureId() {
+        return tag.getInt(KID_SKIN_TEXTURE_ID);
+    }
+
+    @Override
+    public void setKidSkinTextureId(int skinTextureId) {
+
+    }
+
+    @Override
     public boolean isExpectingGift() {
         return false;
     }
@@ -251,8 +276,8 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public boolean handleBedHome(Block block) {
-        return false;
+    public HandleHomeResult handleBedHome(Block block) {
+        return null;
     }
 
     @Override
@@ -406,6 +431,21 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public boolean isExpecting() {
+        return false;
+    }
+
+    @Override
+    public ExpectingType getExpectingType() {
+        return null;
+    }
+
+    @Override
+    public UUID getExpectingFrom() {
+        return null;
+    }
+
+    @Override
     public boolean isInteracting() {
         return false;
     }
@@ -436,7 +476,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public void setPartner(UUID uuid, boolean isPartnerVillager) {
+    public void setPartner(@Nullable UUID uuid, boolean isPartnerVillager) {
 
     }
 
@@ -515,6 +555,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         return false;
     }
 
+    @Override
+    public void stopExchangeables() {
+
+    }
+
     public boolean isMarkedAsDead() {
         return tag.contains(DEAD);
     }
@@ -523,7 +568,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         tag.putLong(DEAD, System.currentTimeMillis());
     }
 
-    private static LastKnownPosition lastPositionFrom(CompoundTag tag) {
+    private static @NotNull LastKnownPosition lastPositionFrom(@NotNull CompoundTag tag) {
         String world = tag.getString("World");
         ListTag list = tag.getList("Pos", 6);
         double x = list.getDouble(0);

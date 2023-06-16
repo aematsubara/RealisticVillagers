@@ -19,6 +19,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.bukkit.entity.AbstractVillager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
@@ -48,7 +49,7 @@ public class TradeWithVillager extends Behavior<Villager> {
                 .isPresent();
     }
 
-    private boolean isEntityVisible(Brain<Villager> brain, LivingEntity living) {
+    private boolean isEntityVisible(@NotNull Brain<Villager> brain, LivingEntity living) {
         Optional<NearestVisibleLivingEntities> optional = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         return optional.isPresent() && optional.get().contains(living);
     }
@@ -59,18 +60,18 @@ public class TradeWithVillager extends Behavior<Villager> {
     }
 
     @Override
-    protected void start(ServerLevel level, Villager villager, long time) {
+    protected void start(ServerLevel level, @NotNull Villager villager, long time) {
         Villager target = (Villager) villager.getBrain().getMemory(MemoryModuleType.INTERACTION_TARGET).get();
-        BehaviorUtils.lockGazeAndWalkToEachOther(villager, target, Villager.SPEED_MODIFIER);
+        BehaviorUtils.lockGazeAndWalkToEachOther(villager, target, VillagerNPC.WALK_SPEED.get());
         trades = figureOutWhatIAmWillingToTrade(villager, target);
     }
 
     @Override
-    protected void tick(ServerLevel level, Villager villager, long time) {
+    protected void tick(ServerLevel level, @NotNull Villager villager, long time) {
         Villager target = (Villager) villager.getBrain().getMemory(MemoryModuleType.INTERACTION_TARGET).get();
         if (villager.distanceToSqr(target) > INTERACT_DIST_SQR) return;
 
-        BehaviorUtils.lockGazeAndWalkToEachOther(villager, target, Villager.SPEED_MODIFIER);
+        BehaviorUtils.lockGazeAndWalkToEachOther(villager, target, VillagerNPC.WALK_SPEED.get());
         villager.gossip(level, target, time);
 
         // Target should have at least 1 slot empty before giving food.
@@ -91,22 +92,22 @@ public class TradeWithVillager extends Behavior<Villager> {
         }
     }
 
-    private boolean isFarmer(Villager villager) {
+    private boolean isFarmer(@NotNull Villager villager) {
         return villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
     }
 
     @Override
-    protected void stop(ServerLevel level, Villager villager, long time) {
+    protected void stop(ServerLevel level, @NotNull Villager villager, long time) {
         villager.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
     }
 
-    private static Set<Item> figureOutWhatIAmWillingToTrade(Villager villager, Villager target) {
+    private static Set<Item> figureOutWhatIAmWillingToTrade(@NotNull Villager villager, @NotNull Villager target) {
         ImmutableSet<Item> targetItems = target.getVillagerData().getProfession().getRequestedItems();
         ImmutableSet<Item> villagerItems = villager.getVillagerData().getProfession().getRequestedItems();
         return targetItems.stream().filter((item) -> !villagerItems.contains(item)).collect(Collectors.toSet());
     }
 
-    private static void throwHalfStack(Villager villager, Set<Item> items, LivingEntity target) {
+    private static void throwHalfStack(@NotNull Villager villager, Set<Item> items, LivingEntity target) {
         SimpleContainer inventory = villager.getInventory();
 
         for (int i = 0; i < inventory.getContainerSize(); i++) {

@@ -1,8 +1,12 @@
 package me.matsubara.realisticvillagers.nms.v1_19_r3;
 
 import com.google.common.base.Preconditions;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.PetCat;
@@ -22,10 +26,19 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
@@ -48,14 +61,17 @@ import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Instruments;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import org.apache.commons.lang.ArrayUtils;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Raid;
 import org.bukkit.craftbukkit.v1_19_R3.CraftRaid;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_19_R3.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftVillager;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
@@ -65,6 +81,8 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -72,9 +90,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unchecked")
@@ -91,6 +107,9 @@ public class NMSConverter implements INMSConverter {
     private static final MethodHandle MEMORY_MODULE_TYPE = Reflection.getConstructor(MemoryModuleType.class, Optional.class);
     private static final MethodHandle SENSOR_TYPE = Reflection.getConstructor(SensorType.class, Supplier.class);
     private static final MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
+
+    // Other.
+    private static final MethodHandle TRACKED_ENTITY_FIELD = Reflection.getFieldGetter(ChunkMap.TrackedEntity.class, "c");
 
     private static final RandomSource RANDOM = RandomSource.create();
 
@@ -155,7 +174,7 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public void createBaby(Location location, String name, String sex, UUID motherUUID, Player father) {
+    public void createBaby(@NotNull Location location, String name, String sex, UUID motherUUID, Player father) {
         Preconditions.checkNotNull(location.getWorld());
         ServerLevel level = ((CraftWorld) location.getWorld()).getHandle();
 
@@ -202,7 +221,7 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public void loadDataFromTag(Villager villager, String tag) {
+    public void loadDataFromTag(Villager villager, @NotNull String tag) {
         try {
             CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseTag(tag);
 
@@ -301,7 +320,7 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public Raid getRaidAt(Location location) {
+    public Raid getRaidAt(@NotNull Location location) {
         if (location.getWorld() == null) return null;
 
         BlockPos pos = BlockPos.containing(location.getX(), location.getY(), location.getZ());
@@ -310,7 +329,107 @@ public class NMSConverter implements INMSConverter {
         return raid != null ? new CraftRaid(raid) : null;
     }
 
-    private void checkMCAFile(File entityFile) throws IOException {
+    @Override
+    public PropertyMap changePlayerSkin(@NotNull Player player, String texture, String signature) {
+        GameProfile profile = ((CraftPlayer) player).getProfile();
+
+        // Keep copy of old properties.
+        PropertyMap oldProperties = new PropertyMap();
+        oldProperties.putAll("textures", profile.getProperties().get("textures"));
+
+        profile.getProperties().removeAll("textures");
+        profile.getProperties().put("textures", new Property("textures", texture, signature));
+
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        ServerLevel level = handle.getLevel();
+
+        ClientboundRespawnPacket respawnPacket = new ClientboundRespawnPacket(
+                level.dimensionTypeId(),
+                level.dimension(),
+                BiomeManager.obfuscateSeed(level.getSeed()),
+                handle.gameMode.getGameModeForPlayer(),
+                handle.gameMode.getPreviousGameModeForPlayer(),
+                level.isDebug(),
+                level.isFlat(),
+                (byte) 3, // Keep all data.
+                handle.getLastDeathLocation());
+
+        Location location = player.getLocation();
+
+        ClientboundPlayerPositionPacket positionPacket = new ClientboundPlayerPositionPacket(
+                location.getX(),
+                location.getY(),
+                location.getZ(),
+                location.getYaw(),
+                location.getPitch(),
+                new HashSet<>(),
+                0);
+
+        GameMode gameMode = player.getGameMode();
+        boolean allowFlight = player.getAllowFlight();
+        boolean flying = player.isFlying();
+        int xpLevel = player.getLevel();
+        float xpPoints = player.getExp();
+        int helSlot = player.getInventory().getHeldItemSlot();
+
+        sendPacket(handle, new ClientboundPlayerInfoRemovePacket(Collections.singletonList(handle.getUUID())));
+        sendPacket(handle, ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(Collections.singletonList(handle)));
+        sendPacket(handle, respawnPacket);
+        sendPacket(handle, positionPacket);
+
+        player.setGameMode(gameMode);
+        player.setAllowFlight(allowFlight);
+        player.setFlying(flying);
+        player.teleport(location);
+        player.updateInventory();
+        player.setLevel(xpLevel);
+        player.setExp(xpPoints);
+        player.getInventory().setHeldItemSlot(helSlot);
+
+        ((CraftPlayer) player).updateScaledHealth();
+        handle.onUpdateAbilities();
+        handle.resetSentInfo();
+
+        return oldProperties;
+    }
+
+    @Override
+    public GameProfile getPlayerProfile(Player player) {
+        return ((CraftPlayer) player).getHandle().getGameProfile();
+    }
+
+    @SuppressWarnings("WhileLoopReplaceableByForEach")
+    @Override
+    public boolean isBeingTracked(Player player, int villagerId) {
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+
+        ObjectIterator<ChunkMap.TrackedEntity> entityIterator = handle.getLevel().getChunkSource().chunkMap.entityMap.values().iterator();
+        while (entityIterator.hasNext()) {
+            try {
+                ChunkMap.TrackedEntity tracked = entityIterator.next();
+
+                Entity entity = (Entity) TRACKED_ENTITY_FIELD.invoke(tracked);
+                if (entity.getId() != villagerId) continue;
+
+                Iterator<ServerPlayerConnection> seenByIterator = tracked.seenBy.iterator();
+                while (seenByIterator.hasNext()) {
+                    ServerPlayerConnection connection = seenByIterator.next();
+                    if (connection.getPlayer().is(handle)) return true;
+                }
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        }
+        return false;
+    }
+
+    private void sendPacket(ServerPlayer player, Packet<?> @NotNull ... packets) {
+        for (Packet<?> packet : packets) {
+            player.connection.send(packet);
+        }
+    }
+
+    private void checkMCAFile(@NotNull File entityFile) throws IOException {
         RegionFile region = new RegionFile(entityFile.toPath(), entityFile.getParentFile().toPath(), false);
         String world = entityFile.getParentFile().getParentFile().getName();
 
@@ -323,7 +442,7 @@ public class NMSConverter implements INMSConverter {
         region.close();
     }
 
-    private void checkRegion(RegionFile region, String world, int x, int z) throws IOException {
+    private void checkRegion(@NotNull RegionFile region, String world, int x, int z) throws IOException {
         ChunkPos chunkPos = new ChunkPos(x, z);
         if (!region.hasChunk(chunkPos)) return;
 
@@ -387,7 +506,7 @@ public class NMSConverter implements INMSConverter {
     }
 
     @SuppressWarnings("unused")
-    public static ScheduleBuilder registerSchedule(String name) {
+    public static @NotNull ScheduleBuilder registerSchedule(String name) {
         Schedule schedule = register(BuiltInRegistries.SCHEDULE, name, new Schedule());
         return new ScheduleBuilder(schedule);
     }
@@ -396,7 +515,7 @@ public class NMSConverter implements INMSConverter {
         return registerMemoryType(name, null);
     }
 
-    public static <U> MemoryModuleType<U> registerMemoryType(String name, Codec<U> codec) {
+    public static <U> @Nullable MemoryModuleType<U> registerMemoryType(String name, Codec<U> codec) {
         Preconditions.checkNotNull(MEMORY_MODULE_TYPE);
         try {
             return register(BuiltInRegistries.MEMORY_MODULE_TYPE, name, (MemoryModuleType<U>) MEMORY_MODULE_TYPE.invoke(Optional.ofNullable(codec)));
@@ -406,7 +525,7 @@ public class NMSConverter implements INMSConverter {
         }
     }
 
-    public static <U extends Sensor<?>> SensorType<U> registerSensor(String name, Supplier<U> sensor) {
+    public static <U extends Sensor<?>> @Nullable SensorType<U> registerSensor(String name, Supplier<U> sensor) {
         Preconditions.checkNotNull(SENSOR_TYPE);
         try {
             return register(BuiltInRegistries.SENSOR_TYPE, name, (SensorType<U>) SENSOR_TYPE.invoke(sensor));
@@ -416,7 +535,7 @@ public class NMSConverter implements INMSConverter {
         }
     }
 
-    public static Activity registerActivity(String name) {
+    public static @Nullable Activity registerActivity(String name) {
         Preconditions.checkNotNull(ACTIVITY);
         try {
             return register(BuiltInRegistries.ACTIVITY, name, (Activity) ACTIVITY.invoke(name));
@@ -441,11 +560,11 @@ public class NMSConverter implements INMSConverter {
         }
     }
 
-    public static CompoundTag getOrCreateBukkitTag(CompoundTag base) {
+    public static CompoundTag getOrCreateBukkitTag(@NotNull CompoundTag base) {
         return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
     }
 
-    public static void updateTamedData(CompoundTag tag, NamespacedKey key, LivingEntity living, boolean tamedByPlayer) {
+    public static void updateTamedData(CompoundTag tag, @NotNull NamespacedKey key, LivingEntity living, boolean tamedByPlayer) {
         CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
         bukkit.putBoolean(key.toString(), tamedByPlayer);
 
@@ -454,7 +573,7 @@ public class NMSConverter implements INMSConverter {
         updateBukkitValues(tag, key.getNamespace(), living);
     }
 
-    public static void updateBukkitValues(CompoundTag tag, String namespace, LivingEntity living) {
+    public static void updateBukkitValues(CompoundTag tag, String namespace, @NotNull LivingEntity living) {
         // Remove previous data associated from THIS plugin only in the container.
         PersistentDataContainer container = living.getBukkitEntity().getPersistentDataContainer();
         for (NamespacedKey key : container.getKeys()) {

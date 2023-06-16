@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ShieldItem;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Random;
 
@@ -24,17 +25,17 @@ public class BlockAttackWithShield extends Behavior<Villager> {
     }
 
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(ServerLevel level, @NotNull Villager villager) {
         return villager.getOffhandItem().getItem() instanceof ShieldItem;
     }
 
     @Override
-    public boolean canStillUse(ServerLevel level, Villager villager, long time) {
+    public boolean canStillUse(ServerLevel level, @NotNull Villager villager, long time) {
         return villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET) && checkExtraStartConditions(level, villager);
     }
 
     @Override
-    public void tick(ServerLevel level, Villager villager, long time) {
+    public void tick(@NotNull ServerLevel level, @NotNull Villager villager, long time) {
         Random random = level.getRandom();
         if (villager.isUsingItem() && villager.getUsedItemHand() == InteractionHand.OFF_HAND) {
             if (--delay <= 0) {
@@ -62,12 +63,12 @@ public class BlockAttackWithShield extends Behavior<Villager> {
         return false;
     }
 
-    private void stopBlocking(Villager villager) {
+    private void stopBlocking(@NotNull Villager villager) {
         if (villager.isUsingItem() && villager.getUsedItemHand() == InteractionHand.OFF_HAND)
             villager.releaseUsingItem();
     }
 
-    public static boolean notUsingShield(Villager villager) {
+    public static boolean notUsingShield(@NotNull Villager villager) {
         return !(villager.getOffhandItem().getItem() instanceof ShieldItem)
                 || !villager.isUsingItem()
                 || villager.getUsedItemHand() != InteractionHand.OFF_HAND;

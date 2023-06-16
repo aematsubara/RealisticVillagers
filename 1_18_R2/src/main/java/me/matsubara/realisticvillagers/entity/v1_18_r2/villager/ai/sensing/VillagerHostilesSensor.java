@@ -19,6 +19,7 @@ import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
@@ -81,7 +82,7 @@ public class VillagerHostilesSensor extends NearestVisibleLivingEntitySensor {
         return isClosest(closest, current, distance * multiplier);
     }
 
-    private boolean isClosest(LivingEntity first, LivingEntity second, double distance) {
+    private boolean isClosest(@NotNull LivingEntity first, LivingEntity second, double distance) {
         return first.distanceToSqr(second) <= distance;
     }
 
@@ -96,7 +97,7 @@ public class VillagerHostilesSensor extends NearestVisibleLivingEntitySensor {
                 .filter(player -> npc.isFamily(player.getUUID(), true));
     }
 
-    private Optional<Player> getNearestHero(Villager villager) {
+    private Optional<Player> getNearestHero(@NotNull Villager villager) {
         return villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_PLAYER)
                 .filter(player -> {
                     if (player.hasEffect(MobEffects.HERO_OF_THE_VILLAGE)) return true;

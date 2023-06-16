@@ -12,6 +12,7 @@ import net.minecraft.world.entity.ai.behavior.EntityTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -59,7 +60,7 @@ public class SetEntityLookTarget extends Behavior<LivingEntity> {
     }
 
     @Override
-    public void start(ServerLevel level, LivingEntity living, long time) {
+    public void start(ServerLevel level, @NotNull LivingEntity living, long time) {
         living.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(nearestEntityMatchingTest.get(), true));
         nearestEntityMatchingTest = Optional.empty();
     }

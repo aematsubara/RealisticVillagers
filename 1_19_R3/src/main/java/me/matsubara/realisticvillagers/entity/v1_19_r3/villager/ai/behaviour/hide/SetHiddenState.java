@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -33,7 +34,7 @@ public class SetHiddenState extends Behavior<Villager> {
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     @Override
-    public void start(ServerLevel level, Villager villager, long game) {
+    public void start(ServerLevel level, @NotNull Villager villager, long game) {
         Brain<Villager> brain = villager.getBrain();
 
         Optional<Long> heardTime = brain.getMemory(heardMemory);

@@ -14,12 +14,15 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.level.pathfinder.Path;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
 public class YieldJobSite {
 
-    public static BehaviorControl<Villager> create(float speedModifier) {
+    @Contract("_ -> new")
+    public static @NotNull BehaviorControl<Villager> create(float speedModifier) {
         return BehaviorBuilder.create((behaviorBuilder) -> behaviorBuilder
                 .group(
                         behaviorBuilder.present(MemoryModuleType.POTENTIAL_JOB_SITE),
@@ -58,7 +61,7 @@ public class YieldJobSite {
                 }));
     }
 
-    private static boolean nearbyWantsJobsite(Holder<PoiType> type, Villager villager, BlockPos pos) {
+    private static boolean nearbyWantsJobsite(Holder<PoiType> type, @NotNull Villager villager, BlockPos pos) {
         if (villager.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).isPresent()) {
             return false;
         }
@@ -71,7 +74,7 @@ public class YieldJobSite {
         return false;
     }
 
-    private static boolean canReachPos(PathfinderMob mob, BlockPos pos, PoiType type) {
+    private static boolean canReachPos(@NotNull PathfinderMob mob, BlockPos pos, @NotNull PoiType type) {
         Path path = mob.getNavigation().createPath(pos, type.validRange());
         return path != null && path.canReach();
     }

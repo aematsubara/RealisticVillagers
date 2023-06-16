@@ -7,6 +7,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.schedule.Activity;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
@@ -17,7 +18,7 @@ public class BackToStay extends Behavior<Villager> {
     }
 
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(@NotNull ServerLevel level, Villager villager) {
         return level.random.nextInt(20) == 0;
     }
 
@@ -28,18 +29,13 @@ public class BackToStay extends Behavior<Villager> {
         Brain<Villager> brain = npc.getBrain();
 
         Optional<Activity> activity = brain.getActiveNonCoreActivity();
-        if (activity.isPresent() && is(activity.get(), Activity.RAID, Activity.PRE_RAID, Activity.FIGHT)) return;
+        if (activity.isPresent() && npc.checkCurrentActivity(Activity.RAID, Activity.PRE_RAID, Activity.FIGHT)) {
+            return;
+        }
 
         if (!brain.hasMemoryValue(VillagerNPC.STAY_PLACE)) return;
 
         brain.setDefaultActivity(VillagerNPC.STAY);
         brain.setActiveActivityIfPossible(VillagerNPC.STAY);
-    }
-
-    private boolean is(Activity toCheck, Activity... activities) {
-        for (Activity activity : activities) {
-            if (toCheck.equals(activity)) return true;
-        }
-        return false;
     }
 }

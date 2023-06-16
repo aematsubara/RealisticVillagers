@@ -17,6 +17,7 @@ import org.bukkit.block.Barrel;
 import org.bukkit.craftbukkit.v1_19_R3.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.inventory.Inventory;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,31 +41,30 @@ public class WorkAtBarrel extends WorkAtPoi {
     }
 
     @Override
-    public void useWorkstation(ServerLevel level, Villager villager) {
+    public void useWorkstation(ServerLevel level, @NotNull Villager villager) {
         Optional<GlobalPos> optional = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
         if (optional.isEmpty()) return;
 
         GlobalPos pos = optional.get();
+
         BlockState state = level.getBlockState(pos.pos());
+        if (!state.is(Blocks.BARREL)) return;
 
-        if (state.is(Blocks.BARREL)) {
-
-            List<ItemStack> save = new ArrayList<>();
-            for (ItemStack item : villager.getInventory().getContents()) {
-                if (!SAVE_ITEMS.contains(item.getItem())) continue;
-                save.add(item.copy());
-                item.shrink(item.getCount());
-            }
-
-            if (save.isEmpty()) return;
-
-            Barrel barrel = (Barrel) CraftBlock.at(level, pos.pos()).getState();
-            Inventory inventory = barrel.getSnapshotInventory();
-            for (ItemStack item : save) {
-                inventory.addItem(CraftItemStack.asBukkitCopy(item));
-            }
-            barrel.setBlockData(barrel.getBlockData());
-            barrel.update();
+        List<ItemStack> save = new ArrayList<>();
+        for (ItemStack item : villager.getInventory().getContents()) {
+            if (!SAVE_ITEMS.contains(item.getItem())) continue;
+            save.add(item.copy());
+            item.shrink(item.getCount());
         }
+
+        if (save.isEmpty()) return;
+
+        Barrel barrel = (Barrel) CraftBlock.at(level, pos.pos()).getState();
+        Inventory inventory = barrel.getSnapshotInventory();
+        for (ItemStack item : save) {
+            inventory.addItem(CraftItemStack.asBukkitCopy(item));
+        }
+        barrel.setBlockData(barrel.getBlockData());
+        barrel.update();
     }
 }

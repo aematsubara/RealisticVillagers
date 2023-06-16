@@ -15,6 +15,7 @@ import net.minecraft.world.level.GameRules;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
 import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @Getter
@@ -45,7 +46,7 @@ public class VillagerFoodData {
         this.saturationLevel = Math.min(this.saturationLevel + (float) foodLevel * saturationModifier * 2.0f, (float) this.foodLevel);
     }
 
-    public void eat(Item item, ItemStack stack) {
+    public void eat(@NotNull Item item, ItemStack stack) {
         FoodProperties properties = item.getFoodProperties();
         if (properties == null) return;
 
@@ -98,7 +99,7 @@ public class VillagerFoodData {
         }
     }
 
-    public void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(@NotNull CompoundTag tag) {
         if (!tag.contains("foodLevel", 99)) return;
         foodLevel = tag.getInt("foodLevel");
         tickTimer = tag.getInt("foodTickTimer");
@@ -106,7 +107,7 @@ public class VillagerFoodData {
         exhaustionLevel = tag.getFloat("foodExhaustionLevel");
     }
 
-    public void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(@NotNull CompoundTag tag) {
         tag.putInt("foodLevel", foodLevel);
         tag.putInt("foodTickTimer", tickTimer);
         tag.putFloat("foodSaturationLevel", saturationLevel);
@@ -121,7 +122,7 @@ public class VillagerFoodData {
         this.exhaustionLevel = Math.min(this.exhaustionLevel + exhaustionLevel, 40.0f);
     }
 
-    private VillagerFoodLevelChangeEvent callEvent(int level, @Nullable ItemStack item) {
+    private @NotNull VillagerFoodLevelChangeEvent callEvent(int level, @Nullable ItemStack item) {
         VillagerFoodLevelChangeEvent event = new VillagerFoodLevelChangeEvent(
                 npc,
                 level,

@@ -3,9 +3,11 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.st
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.schedule.Activity;
+import org.jetbrains.annotations.NotNull;
 
 public class ResetStayStatus extends Behavior<Villager> {
 
@@ -14,7 +16,7 @@ public class ResetStayStatus extends Behavior<Villager> {
     }
 
     @Override
-    public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
+    public boolean checkExtraStartConditions(@NotNull ServerLevel level, Villager villager) {
         return level.random.nextInt(20) == 0;
     }
 
@@ -22,12 +24,13 @@ public class ResetStayStatus extends Behavior<Villager> {
     public void start(ServerLevel level, Villager villager, long game) {
         if (!(villager instanceof VillagerNPC npc)) return;
         if (!npc.isStayingInPlace()) return;
+        if (level.getPlayerByUUID(npc.getInteractingWith()) != null) return;
 
-        if (level.getPlayerByUUID(npc.getInteractingWith()) == null) {
-            npc.stopInteracting();
-            npc.getBrain().eraseMemory(VillagerNPC.STAY_PLACE);
-            npc.getBrain().setDefaultActivity(Activity.IDLE);
-            npc.getBrain().updateActivityFromSchedule(npc.level.getDayTime(), npc.level.getGameTime());
-        }
+        npc.stopInteracting();
+
+        Brain<Villager> brain = npc.getBrain();
+        brain.eraseMemory(VillagerNPC.STAY_PLACE);
+        brain.setDefaultActivity(Activity.IDLE);
+        brain.updateActivityFromSchedule(level.getDayTime(), level.getGameTime());
     }
 }

@@ -18,6 +18,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import org.jetbrains.annotations.NotNull;
 
 public class RangeWeaponAttack extends Behavior<Villager> {
 
@@ -44,13 +45,13 @@ public class RangeWeaponAttack extends Behavior<Villager> {
                 && BehaviorUtils.isWithinAttackRange(villager, target, 0);
     }
 
-    private boolean isHoldingUsableProjectileWeapon(Villager villager) {
+    private boolean isHoldingUsableProjectileWeapon(@NotNull Villager villager) {
         return villager.isHolding((stack) -> stack.getItem() instanceof ProjectileWeaponItem item
                 && villager instanceof VillagerNPC npc && npc.canFireProjectileWeapon(item));
     }
 
     @Override
-    public void start(ServerLevel level, Villager villager, long time) {
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
         weapon = villager.getMainHandItem();
         hand = ProjectileUtil.getWeaponHoldingHand(villager, weapon.getItem());
         isCrossbow = weapon.is(Items.CROSSBOW);
@@ -62,7 +63,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     }
 
     @Override
-    public boolean canStillUse(ServerLevel level, Villager villager, long time) {
+    public boolean canStillUse(ServerLevel level, @NotNull Villager villager, long time) {
         return villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET) && checkExtraStartConditions(level, villager);
     }
 
@@ -74,7 +75,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     }
 
     @Override
-    public void stop(ServerLevel level, Villager villager, long time) {
+    public void stop(ServerLevel level, @NotNull Villager villager, long time) {
         if (villager.isUsingItem()) villager.stopUsingItem();
 
         if (villager.isHolding(weapon.getItem())) {
@@ -147,7 +148,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
         }
     }
 
-    private void addChargedProjectiles(ItemStack weapon, ItemStack projectile) {
+    private void addChargedProjectiles(@NotNull ItemStack weapon, ItemStack projectile) {
         CompoundTag weaponTag = weapon.getOrCreateTag();
 
         ListTag projectiles = new ListTag();
@@ -160,17 +161,17 @@ public class RangeWeaponAttack extends Behavior<Villager> {
         weaponTag.put("ChargedProjectiles", projectiles);
     }
 
-    private void stopCharging(VillagerNPC npc) {
+    private void stopCharging(@NotNull VillagerNPC npc) {
         npc.releaseUsingItem();
         npc.setChargingCrossbow(false);
     }
 
-    private void lookAtTarget(Mob mob, LivingEntity target) {
+    private void lookAtTarget(@NotNull Mob mob, LivingEntity target) {
         mob.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private LivingEntity getAttackTarget(LivingEntity target) {
+    private @NotNull LivingEntity getAttackTarget(@NotNull LivingEntity target) {
         // Can't be null since the value should be present in the constructor.
         return target.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
     }
