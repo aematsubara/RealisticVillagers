@@ -119,7 +119,7 @@ public class SkinGUI extends PaginatedGUI {
 
     public static void openMenu(@NotNull RealisticVillagers plugin, Player player, @NotNull String sex, boolean isAdult, @Nullable Integer page, @Nullable String keyword) {
         boolean isMale = sex.equals("male");
-        if ((sex.equals("male") ? SkinGUI.CACHE_MALE_HEADS : SkinGUI.CACHE_FEMALE_HEADS).isEmpty()) {
+        if ((isMale ? SkinGUI.CACHE_MALE_HEADS : SkinGUI.CACHE_FEMALE_HEADS).isEmpty()) {
             plugin.getMessages().send(player, Messages.Message.NO_SKIN_CACHED);
         }
         CompletableFuture.supplyAsync((Supplier<List<ItemStack>>) () -> {

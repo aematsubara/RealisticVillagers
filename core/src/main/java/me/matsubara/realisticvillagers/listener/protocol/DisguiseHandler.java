@@ -5,18 +5,19 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.PlayerInfoData;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.*;
 import com.google.common.collect.Multimap;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class DisguiseHandler extends PacketAdapter {
 
@@ -31,6 +32,9 @@ public class DisguiseHandler extends PacketAdapter {
     public void onPacketSending(@NotNull PacketEvent event) {
         if (event.isCancelled()) return;
 
+        Map<UUID, Pair<Integer, PropertyMap>> oldProperties = plugin.getTracker().getOldProperties();
+        if (oldProperties.isEmpty()) return;
+
         PacketContainer container = event.getPacket();
         boolean modern = PluginUtils.IS_1_19_3_OR_NEW;
 
@@ -42,15 +46,13 @@ public class DisguiseHandler extends PacketAdapter {
         List<PlayerInfoData> datas = new ArrayList<>();
         int infoDataIndex = modern ? 1 : 0;
 
-        for (PlayerInfoData data : container.getPlayerInfoDataLists().read(infoDataIndex)) {
+        StructureModifier<List<PlayerInfoData>> dataLists = container.getPlayerInfoDataLists();
+        for (PlayerInfoData data : dataLists.read(infoDataIndex)) {
             WrappedGameProfile profile = data.getProfile();
+            UUID profileId = data.getProfileId();
 
-            // Don't cancel for the self player.
-            if (profile.getUUID().equals(event.getPlayer().getUniqueId())) {
-                return;
-            }
-
-            if (!plugin.getTracker().getOldProperties().containsKey(data.getProfileId())) {
+            // Don't cancel for the player being disguised.
+            if (profileId.equals(event.getPlayer().getUniqueId()) || !oldProperties.containsKey(profileId)) {
                 datas.add(data);
                 continue;
             }
@@ -59,26 +61,30 @@ public class DisguiseHandler extends PacketAdapter {
             properties.removeAll("textures");
 
             // Replace textures with the original ones.
-            Property property = plugin.getTracker().getOldProperties().get(data.getProfileId()).getSecond().get("textures").iterator().next();
+            Property property = oldProperties.get(profileId).getSecond().get("textures").iterator().next();
             properties.put("textures", WrappedSignedProperty.fromHandle(property));
+
+            int latency = data.getLatency();
+            EnumWrappers.NativeGameMode gameMode = data.getGameMode();
+            WrappedChatComponent displayName = data.getDisplayName();
 
             datas.add(modern ?
                     new PlayerInfoData(
-                            data.getProfileId(),
-                            data.getLatency(),
+                            profileId,
+                            latency,
                             data.isListed(),
-                            data.getGameMode(),
+                            gameMode,
                             profile,
-                            data.getDisplayName(),
+                            displayName,
                             data.getRemoteChatSessionData()) :
                     new PlayerInfoData(
                             profile,
-                            20,
-                            EnumWrappers.NativeGameMode.CREATIVE,
-                            null));
+                            latency,
+                            gameMode,
+                            displayName));
         }
 
-        container.getPlayerInfoDataLists().write(infoDataIndex, datas);
+        dataLists.write(infoDataIndex, datas);
         event.setPacket(container);
     }
 }

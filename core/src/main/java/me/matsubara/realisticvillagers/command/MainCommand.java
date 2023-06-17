@@ -175,10 +175,6 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            if ((sex.equals("male") ? SkinGUI.CACHE_MALE_HEADS : SkinGUI.CACHE_FEMALE_HEADS).isEmpty()) {
-                messages.send(sender, Messages.Message.NO_SKIN_CACHED);
-            }
-
             SkinGUI.openMenu(plugin, (Player) sender, sex, isAdult, page - 1, null);
             return true;
         }
