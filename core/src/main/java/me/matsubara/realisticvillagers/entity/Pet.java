@@ -6,7 +6,7 @@ public interface Pet {
 
     void tameByVillager(IVillagerNPC npc);
 
-    boolean isTamedByPlayer();
+    boolean isTamedByVillager();
 
     UUID getOwnerUniqueId();
 }

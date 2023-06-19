@@ -209,11 +209,12 @@ public final class ExpectingManager implements Listener {
     public void onPlayerInteract(@NotNull PlayerInteractEvent event) {
         Player player = event.getPlayer();
 
-        if (event.getHand() != EquipmentSlot.HAND) return;
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-
         IVillagerNPC npc = get(player.getUniqueId());
         if (npc == null || !npc.isExpectingBed()) return;
+
+        // Prevent all except physical.
+        if (event.getAction() != Action.PHYSICAL) event.setCancelled(true);
+        if (event.getHand() != EquipmentSlot.HAND) return;
 
         Block block = event.getClickedBlock();
         Messages messages = plugin.getMessages();
@@ -229,17 +230,17 @@ public final class ExpectingManager implements Listener {
         HandleHomeResult result;
         if (occupied || (result = npc.handleBedHome(bed.getPart() == Bed.Part.HEAD ? block : block.getRelative(bed.getFacing()))) == HandleHomeResult.OCCUPIED) {
             messages.send(player, Messages.Message.BED_OCCUPIED);
+            return;
         } else if (result == HandleHomeResult.INVALID) {
             messages.send(player, Messages.Message.BED_INVALID);
+            return;
         } else if (result == HandleHomeResult.SUCCESS) {
             messages.send(player, Messages.Message.BED_ESTABLISHED);
             messages.send(player, npc, Messages.Message.SET_HOME_SUCCESS);
         }
 
-        getVillagerExpectingCache().remove(player.getUniqueId());
+        villagerExpectingCache.remove(player.getUniqueId());
         npc.stopExpecting();
-
-        event.setCancelled(true);
     }
 
     private void handleGift(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull ItemStack gift) {
@@ -343,9 +344,5 @@ public final class ExpectingManager implements Listener {
 
     public void remove(UUID uuid) {
         villagerExpectingCache.remove(uuid);
-    }
-
-    public Map<UUID, IVillagerNPC> getVillagerExpectingCache() {
-        return villagerExpectingCache;
     }
 }

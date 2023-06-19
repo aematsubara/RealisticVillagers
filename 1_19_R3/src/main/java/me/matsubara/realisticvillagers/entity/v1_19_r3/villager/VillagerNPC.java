@@ -596,13 +596,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void releasePoi(@NotNull MemoryModuleType<GlobalPos> memory) {
-        level.broadcastEntityEvent(this, (byte) 13);
-        if (memory.equals(MemoryModuleType.HOME)) {
-            Optional<GlobalPos> pos = getBrain().getMemory(memory);
-            if (pos.isPresent() && pos.get().pos().equals(bedHome)) {
-                bedHome = null;
-                bedHomeWorld = null;
-            }
+        Optional<GlobalPos> pos;
+        if (memory.equals(MemoryModuleType.HOME)
+                && (pos = getBrain().getMemory(memory)).isPresent()
+                && pos.get().pos().equals(bedHome)) {
+            bedHome = null;
+            bedHomeWorld = null;
         }
         super.releasePoi(memory);
     }
@@ -2104,26 +2103,25 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             poiManager.add(bedPosition, poi.get());
         }
 
-        // Bed already setted in same position.
-        Optional<GlobalPos> previousHome = getBrain().getMemory(MemoryModuleType.HOME);
-        if (previousHome.isPresent()) {
-            Optional<BlockPos> temp = poiManager.find(predicate, pos -> pos.equals(bedPosition), bedPosition, 1, PoiManager.Occupancy.ANY);
-            if (temp.isPresent() && temp.get().equals(previousHome.get().pos())) {
-                releasePoi(MemoryModuleType.HOME);
-            }
+        // Bed already established in the same position, we release it, so we can take it again.
+        Optional<BlockPos> previousHome = getBrain().getMemory(MemoryModuleType.HOME).map(GlobalPos::pos), temp;
+        if (previousHome.isPresent()
+                && (temp = poiManager.find(predicate, pos -> pos.equals(bedPosition), bedPosition, 1, PoiManager.Occupancy.ANY)).isPresent()
+                && temp.get().equals(previousHome.get())) {
+            releasePoi(MemoryModuleType.HOME);
         }
 
         Optional<BlockPos> takePos = poiManager.take(predicate, (holder, pos) -> pos.equals(bedPosition), bedPosition, 1);
-        if (takePos.isPresent()) {
-            // Release previous POI.
-            releasePoi(MemoryModuleType.HOME);
-        } else {
+        if (takePos.isEmpty()) {
             if (poiManager
                     .getInRange(predicate, bedPosition, 1, PoiManager.Occupancy.IS_OCCUPIED)
                     .anyMatch((record) -> record.getPos().equals(bedPosition))) return HandleHomeResult.OCCUPIED;
             plugin.getLogger().warning("An error occurred when trying to acquire a POI at " + bedPosition + ".");
             return HandleHomeResult.INVALID;
         }
+
+        // Release previous POI.
+        releasePoi(MemoryModuleType.HOME);
 
         GlobalPos bedHome = GlobalPos.of(level.dimension(), bedPosition);
         getBrain().setMemory(MemoryModuleType.HOME, bedHome);

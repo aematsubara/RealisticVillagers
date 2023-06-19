@@ -58,7 +58,7 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
             villager instanceof VillagerNPC npc
                     && living instanceof Pet pet
                     && pet.getOwnerUniqueId() != null
-                    && !pet.isTamedByPlayer()
+                    && pet.isTamedByVillager()
                     && Config.VILLAGER_ADOPTS_ABANDONED_PET.asBool()
                     // In this case, we don't need an updated offline; we just need to know if the villager is alive.
                     && npc.getPlugin().getTracker().getOfflineByUUID(pet.getOwnerUniqueId()) == null;

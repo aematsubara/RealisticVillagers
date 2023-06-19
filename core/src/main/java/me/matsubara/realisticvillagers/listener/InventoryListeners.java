@@ -280,7 +280,6 @@ public final class InventoryListeners implements Listener {
         boolean isPartner = npc.isPartner(playerUUID);
 
         Messages messages = plugin.getMessages();
-        ExpectingManager expectingManager = plugin.getExpectingManager();
 
         if (current.isSimilar(main.getFollow())) {
             int required = Config.REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW.asInt();
@@ -308,21 +307,7 @@ public final class InventoryListeners implements Listener {
             runTask(() -> new EquipmentGUI(plugin, npc, player));
             return;
         } else if (current.isSimilar(main.getGift())) {
-            if (!npc.isExpectingGift()) {
-                IVillagerNPC other = expectingManager.get(playerUUID);
-                if (other != null && other.isExpectingGift()) {
-                    messages.send(player, Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_GIFT);
-                } else if (plugin.getCooldownManager().canInteract(player, npc.bukkit(), "gift")) {
-                    npc.startExpectingFrom(ExpectingType.GIFT, playerUUID, Config.TIME_TO_EXPECT.asInt());
-                    messages.send(player, Messages.Message.THROW_GIFT, REPLACE_TIME);
-                    messages.send(player, npc, Messages.Message.GIFT_EXPECTING);
-                    expectingManager.expect(playerUUID, npc);
-                } else {
-                    messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
-                }
-            } else {
-                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_GIFT_FROM_SOMEONE);
-            }
+            handleExpecting(player, npc, ExpectingType.GIFT, Messages.Message.THROW_GIFT, Messages.Message.GIFT_EXPECTING);
         } else if (current.isSimilar(main.getProcreate())) {
             // Return if it's a kid.
             if (conditionNotMet(player, npc.bukkit().isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
@@ -387,18 +372,7 @@ public final class InventoryListeners implements Listener {
             return;
         } else if (current.isSimilar(main.getHome())) {
             if (conditionNotMet(player, isFamily, Messages.Message.INTERACT_FAIL_NOT_FAMILY)) return;
-
-            IVillagerNPC other = expectingManager.get(playerUUID);
-            if (other != null && other.isExpectingBed()) {
-                messages.send(player, Messages.Message.INTERACT_FAIL_OTHER_EXPECTING_BED);
-            } else if (!npc.isExpectingBed()) {
-                npc.startExpectingFrom(ExpectingType.BED, playerUUID, Config.TIME_TO_EXPECT.asInt());
-                messages.send(player, Messages.Message.SELECT_BED, REPLACE_TIME);
-                messages.send(player, npc, Messages.Message.SET_HOME_EXPECTING);
-                expectingManager.expect(playerUUID, npc);
-            } else {
-                messages.send(player, Messages.Message.INTERACT_FAIL_EXPECTING_BED_FROM_SOMEONE);
-            }
+            handleExpecting(player, npc, ExpectingType.BED, Messages.Message.SELECT_BED, Messages.Message.SET_HOME_EXPECTING);
         } else if (current.isSimilar(main.getPapers())) {
             // If it's (ask) papers item, then the villager is INDEED a cleric.
             if (!plugin.isMarried(player)) {
@@ -461,6 +435,39 @@ public final class InventoryListeners implements Listener {
         }
 
         closeInventory(player);
+
+    }
+
+    private void handleExpecting(Player player, @NotNull IVillagerNPC npc, ExpectingType checkType, Messages.Message fromServer, Messages.Message fromVillager) {
+        Messages messages = plugin.getMessages();
+        ExpectingManager expectingManager = plugin.getExpectingManager();
+
+        // This villager is already expecting something from a player.
+        if (npc.isExpecting()) {
+            messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_EXPECTING_" + checkType + "_FROM_SOMEONE"));
+            return;
+        }
+
+        UUID playerUUID = player.getUniqueId();
+        IVillagerNPC other = expectingManager.get(playerUUID);
+
+        // Other villager is expecting something from this player.
+        if (other != null && other.isExpecting()) {
+            messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_OTHER_EXPECTING_" + other.getExpectingType()));
+            return;
+        }
+
+        // Player is in cooldown.
+        if (!plugin.getCooldownManager().canInteract(player, npc.bukkit(), checkType.name().toLowerCase())) {
+            messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
+            return;
+        }
+
+        // Start expecting.
+        npc.startExpectingFrom(checkType, playerUUID, Config.TIME_TO_EXPECT.asInt());
+        messages.send(player, fromServer, REPLACE_TIME);
+        messages.send(player, npc, fromVillager);
+        expectingManager.expect(playerUUID, npc);
     }
 
     private boolean removeDivorcePapers(@NotNull Inventory inventory) {

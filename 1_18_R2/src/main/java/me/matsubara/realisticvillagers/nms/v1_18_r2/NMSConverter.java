@@ -320,68 +320,19 @@ public class NMSConverter implements INMSConverter {
         return raid != null ? new CraftRaid(raid) : null;
     }
 
-    @Override
-    public PropertyMap changePlayerSkin(@NotNull Player player, String texture, String signature) {
-        GameProfile profile = ((CraftPlayer) player).getProfile();
+    @SuppressWarnings("deprecation")
+    public static void updateTamedData(@NotNull RealisticVillagers plugin, CompoundTag tag, LivingEntity living, boolean tamedByVillager) {
+        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
 
-        // Keep copy of old properties.
-        PropertyMap oldProperties = new PropertyMap();
-        oldProperties.putAll("textures", profile.getProperties().get("textures"));
+        NamespacedKey byVillager = plugin.getTamedByVillagerKey();
+        bukkit.putBoolean(byVillager.toString(), tamedByVillager);
 
-        profile.getProperties().removeAll("textures");
-        profile.getProperties().put("textures", new Property("textures", texture, signature));
+        // Remove previous key, not used anymore.
+        bukkit.remove(plugin.getTamedByPlayerKey().toString());
 
-        ServerPlayer handle = ((CraftPlayer) player).getHandle();
-        ServerLevel level = handle.getLevel();
+        tag.put("BukkitValues", bukkit);
 
-        ClientboundRespawnPacket respawnPacket = new ClientboundRespawnPacket(
-                level.dimensionTypeRegistration(),
-                level.dimension(),
-                BiomeManager.obfuscateSeed(level.getSeed()),
-                handle.gameMode.getGameModeForPlayer(),
-                handle.gameMode.getPreviousGameModeForPlayer(),
-                level.isDebug(),
-                level.isFlat(),
-                true);
-
-        Location location = player.getLocation();
-
-        ClientboundPlayerPositionPacket positionPacket = new ClientboundPlayerPositionPacket(
-                location.getX(),
-                location.getY(),
-                location.getZ(),
-                location.getYaw(),
-                location.getPitch(),
-                new HashSet<>(),
-                0,
-                false);
-
-        GameMode gameMode = player.getGameMode();
-        boolean allowFlight = player.getAllowFlight();
-        boolean flying = player.isFlying();
-        int xpLevel = player.getLevel();
-        float xpPoints = player.getExp();
-        int helSlot = player.getInventory().getHeldItemSlot();
-
-        sendPacket(handle, new ClientboundPlayerInfoPacket(ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER, handle));
-        sendPacket(handle, new ClientboundPlayerInfoPacket(ClientboundPlayerInfoPacket.Action.ADD_PLAYER, handle));
-        sendPacket(handle, respawnPacket);
-        sendPacket(handle, positionPacket);
-
-        player.setGameMode(gameMode);
-        player.setAllowFlight(allowFlight);
-        player.setFlying(flying);
-        player.teleport(location);
-        player.updateInventory();
-        player.setLevel(xpLevel);
-        player.setExp(xpPoints);
-        player.getInventory().setHeldItemSlot(helSlot);
-
-        ((CraftPlayer) player).updateScaledHealth();
-        handle.onUpdateAbilities();
-        handle.resetSentInfo();
-
-        return oldProperties;
+        updateBukkitValues(tag, byVillager.getNamespace(), living);
     }
 
     @Override
@@ -544,13 +495,68 @@ public class NMSConverter implements INMSConverter {
         return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
     }
 
-    public static void updateTamedData(CompoundTag tag, @NotNull NamespacedKey key, LivingEntity living, boolean tamedByPlayer) {
-        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
-        bukkit.putBoolean(key.toString(), tamedByPlayer);
+    @Override
+    public PropertyMap changePlayerSkin(@NotNull Player player, String texture, String signature) {
+        GameProfile profile = ((CraftPlayer) player).getProfile();
 
-        tag.put("BukkitValues", bukkit);
+        // Keep copy of old properties.
+        PropertyMap oldProperties = new PropertyMap();
+        oldProperties.putAll("textures", profile.getProperties().get("textures"));
 
-        updateBukkitValues(tag, key.getNamespace(), living);
+        profile.getProperties().removeAll("textures");
+        profile.getProperties().put("textures", new Property("textures", texture, signature));
+
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        ServerLevel level = handle.getLevel();
+
+        ClientboundRespawnPacket respawnPacket = new ClientboundRespawnPacket(
+                level.dimensionTypeRegistration(),
+                level.dimension(),
+                BiomeManager.obfuscateSeed(level.getSeed()),
+                handle.gameMode.getGameModeForPlayer(),
+                handle.gameMode.getPreviousGameModeForPlayer(),
+                level.isDebug(),
+                level.isFlat(),
+                true);
+
+        Location location = player.getLocation();
+
+        ClientboundPlayerPositionPacket positionPacket = new ClientboundPlayerPositionPacket(
+                location.getX(),
+                location.getY(),
+                location.getZ(),
+                location.getYaw(),
+                location.getPitch(),
+                new HashSet<>(),
+                0,
+                false);
+
+        GameMode gameMode = player.getGameMode();
+        boolean allowFlight = player.getAllowFlight();
+        boolean flying = player.isFlying();
+        int xpLevel = player.getLevel();
+        float xpPoints = player.getExp();
+        int heldSlot = player.getInventory().getHeldItemSlot();
+
+        sendPacket(handle, new ClientboundPlayerInfoPacket(ClientboundPlayerInfoPacket.Action.REMOVE_PLAYER, handle));
+        sendPacket(handle, new ClientboundPlayerInfoPacket(ClientboundPlayerInfoPacket.Action.ADD_PLAYER, handle));
+        sendPacket(handle, respawnPacket);
+        sendPacket(handle, positionPacket);
+
+        player.setGameMode(gameMode);
+        player.setAllowFlight(allowFlight);
+        player.setFlying(flying);
+        player.teleport(location);
+        player.updateInventory();
+        player.setLevel(xpLevel);
+        player.setExp(xpPoints);
+        player.getInventory().setHeldItemSlot(heldSlot);
+
+        ((CraftPlayer) player).updateScaledHealth();
+        handle.onUpdateAbilities();
+        handle.resetSentInfo();
+
+        return oldProperties;
     }
 
     public static void updateBukkitValues(CompoundTag tag, String namespace, @NotNull LivingEntity living) {

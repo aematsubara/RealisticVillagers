@@ -273,6 +273,7 @@ public final class VillagerListeners implements Listener {
 
         messages.send(player, npc, Messages.Message.valueOf((expecting.isGift() ? "GIFT_EXPECTING" : "SET_HOME") + "_FAIL"));
         npc.stopExpecting();
+        plugin.getCooldownManager().removeCooldown(player, checkType.name().toLowerCase());
         return true;
     }
 

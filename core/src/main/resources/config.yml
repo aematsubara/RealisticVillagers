@@ -268,6 +268,7 @@ interact-cooldown:
   insult: 2
   divorce-papers: 900
   gift: 5
+  bed: 5
 
 # Whether to display the title in the villager's chat messages.
 # For example: James the Armorer / Juliet the Weaponsmith / etc.

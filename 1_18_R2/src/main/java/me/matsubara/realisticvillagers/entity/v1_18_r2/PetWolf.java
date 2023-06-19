@@ -37,7 +37,7 @@ public class PetWolf extends Wolf implements Pet {
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     @Getter
-    private @Setter boolean tamedByPlayer;
+    private @Setter boolean tamedByVillager;
 
     public PetWolf(EntityType<? extends Wolf> type, Level level) {
         super(type, level);
@@ -73,7 +73,7 @@ public class PetWolf extends Wolf implements Pet {
     public void tameByVillager(@NotNull IVillagerNPC npc) {
         setTame(true);
         setOwnerUUID(npc.bukkit().getUniqueId());
-        setTamedByPlayer(false);
+        setTamedByVillager(true);
         getNavigation().stop();
         setTarget(null);
         setPersistenceRequired();
@@ -87,24 +87,19 @@ public class PetWolf extends Wolf implements Pet {
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        NMSConverter.updateTamedData(tag, plugin.getTamedByPlayerKey(), this, tamedByPlayer);
+        NMSConverter.updateTamedData(plugin, tag, this, tamedByVillager);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-
-        if (tag.contains("TamedByPlayer")) {
-            tamedByPlayer = tag.getBoolean("TamedByPlayer");
-        } else {
-            tamedByPlayer = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByPlayerKey().toString());
-        }
+        tamedByVillager = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByVillagerKey().toString());
     }
 
     @Nullable
     @Override
     public LivingEntity getOwner() {
-        if (tamedByPlayer) return super.getOwner();
+        if (!tamedByVillager) return super.getOwner();
 
         UUID ownerUUID = getOwnerUUID();
         return ownerUUID != null ? (LivingEntity) ((ServerLevel) level).getEntity(ownerUUID) : null;

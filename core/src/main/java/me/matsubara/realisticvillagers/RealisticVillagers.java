@@ -80,7 +80,8 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey zombieTransformKey = key("ZombieTransform");
     private final NamespacedKey fishedKey = key("Fished");
     private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
-    private final NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
+    private final @Deprecated NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
+    private final NamespacedKey tamedByVillagerKey = key("TamedByVillager");
     private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
     private final NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
     private final NamespacedKey villagerNameKey = key("VillagerName");
