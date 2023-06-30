@@ -2,7 +2,7 @@ package me.matsubara.realisticvillagers;
 
 import com.comphenix.protocol.wrappers.Pair;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
 import lombok.Getter;
 import lombok.Setter;
@@ -115,23 +115,8 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public static final List<AnvilGUI.ResponseAction> CLOSE_RESPONSE = Collections.singletonList(AnvilGUI.ResponseAction.close());
     private static final List<String> FILTER_TYPES = List.of("WHITELIST", "BLACKLIST");
-    private static final List<String> SPECIAL_SECTIONS = Lists.newArrayList("baby", "spawn-loot", "wedding-ring", "whistle", "divorce-papers", "change-skin", "gui.main.frame");
+    private static final Set<String> SPECIAL_SECTIONS = Sets.newHashSet("baby", "spawn-loot", "wedding-ring", "whistle", "divorce-papers", "change-skin", "gui.main.frame");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
-    private static final List<String> ITEMS_SECTIONS = List.of(
-            "slot",
-            "material",
-            "display-name",
-            "lore",
-            "url",
-            "flags",
-            "model-data",
-            "crafting",
-            "enchantments",
-            "leather-color",
-            "damage",
-            "tipped",
-            "amount",
-            "firework");
 
     @Override
     public void onLoad() {
@@ -213,15 +198,13 @@ public final class RealisticVillagers extends JavaPlugin {
         }
     }
 
-    private void fillIgnoredSections() {
+    private void fillIgnoredSections(FileConfiguration config) {
         for (String guiType : GUI_TYPES) {
-            ConfigurationSection section = getConfig().getConfigurationSection("gui." + guiType + ".items");
+            ConfigurationSection section = config.getConfigurationSection("gui." + guiType + ".items");
             if (section == null) continue;
 
             for (String key : section.getKeys(false)) {
-                for (String itemSettingType : ITEMS_SECTIONS) {
-                    SPECIAL_SECTIONS.add("gui." + guiType + ".items." + key + "." + itemSettingType);
-                }
+                SPECIAL_SECTIONS.add("gui." + guiType + ".items." + key);
             }
         }
     }
@@ -251,7 +234,6 @@ public final class RealisticVillagers extends JavaPlugin {
                 "config.yml",
                 file -> {
                     reloadConfig();
-                    fillIgnoredSections();
                     tracker = new VillagerTracker(this);
                     worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
                 },
@@ -313,11 +295,17 @@ public final class RealisticVillagers extends JavaPlugin {
                 1);
 
         try {
+            List<String> toIgnore;
+            if (fileName.equals("config.yml")) {
+                fillIgnoredSections(config);
+                toIgnore = SPECIAL_SECTIONS.stream().filter(config::contains).toList();
+            } else toIgnore = Collections.emptyList();
+
             ConfigUpdater.update(
                     this,
                     fileName,
                     file,
-                    fileName.equals("config.yml") ? SPECIAL_SECTIONS.stream().filter(config::contains).toList() : null);
+                    toIgnore);
         } catch (IOException exception) {
             exception.printStackTrace();
         }

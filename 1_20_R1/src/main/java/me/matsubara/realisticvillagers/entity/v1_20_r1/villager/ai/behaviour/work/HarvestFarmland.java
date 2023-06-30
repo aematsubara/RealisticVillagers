@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
@@ -34,7 +35,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.GameEvent.Context;
 import org.apache.commons.lang3.tuple.Triple;
-import org.bukkit.craftbukkit.v1_20_R1.event.CraftEventFactory;
+import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.v1_20_R1.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_20_R1.block.data.CraftBlockData;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -209,7 +213,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
         }
 
         // Above is a grown crop, try to remove block.
-        if (isValidCrop(aboveState) && !CraftEventFactory.callEntityChangeBlockEvent(villager, aboveFarmlandPos, Blocks.AIR.defaultBlockState()).isCancelled()) {
+        if (isValidCrop(aboveState) && !callEntityChangeBlockEvent(villager, aboveFarmlandPos, Blocks.AIR.defaultBlockState()).isCancelled()) {
             level.destroyBlock(aboveFarmlandPos, true, villager);
         }
 
@@ -308,7 +312,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
             if (item.isEmpty()) continue;
 
             BlockState newState = getNewState(item);
-            if (newState == null || (checkEvent && CraftEventFactory.callEntityChangeBlockEvent(villager, aboveFarmlandPos, newState).isCancelled())) {
+            if (newState == null || (checkEvent && callEntityChangeBlockEvent(villager, aboveFarmlandPos, newState).isCancelled())) {
                 continue;
             }
 
@@ -321,5 +325,12 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
     @Override
     public boolean canStillUse(ServerLevel level, Villager villager, long time) {
         return timeWorkedSoFar < HARVEST_DURATION;
+    }
+
+    private static @NotNull EntityChangeBlockEvent callEntityChangeBlockEvent(@NotNull Entity entity, @NotNull BlockPos position, BlockState newBlock) {
+        // Fixes "boolean cannot be dereferenced".
+        EntityChangeBlockEvent event = new EntityChangeBlockEvent(entity.getBukkitEntity(), CraftBlock.at(entity.level(), position), CraftBlockData.fromData(newBlock));
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
     }
 }

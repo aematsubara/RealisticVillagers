@@ -48,17 +48,10 @@ public class NPCPool implements Listener {
                     World npcWorld = npcLocation.getWorld();
                     if (npcWorld == null) continue;
 
-                    if (!npcWorld.equals(playerLocation.getWorld())) {
-                        // Hide NPC if the NPC isn't in the same world of the player.
-                        if (npc.isShownFor(player)) {
-                            npc.hide(player);
-                        }
-                        continue;
-                    } else if (!npcWorld.isChunkLoaded(npcLocation.getBlockX() >> 4, npcLocation.getBlockZ() >> 4)) {
-                        // Hide NPC if the NPC isn't on a loaded chunk.
-                        if (npc.isShownFor(player)) {
-                            npc.hide(player);
-                        }
+                    if (!npcWorld.equals(playerLocation.getWorld())
+                            || !npcWorld.isChunkLoaded(npcLocation.getBlockX() >> 4, npcLocation.getBlockZ() >> 4)) {
+                        // Hide NPC if the NPC isn't in the same world of the player or the NPC isn't on a loaded chunk.
+                        if (npc.isShownFor(player)) npc.hide(player);
                         continue;
                     }
 

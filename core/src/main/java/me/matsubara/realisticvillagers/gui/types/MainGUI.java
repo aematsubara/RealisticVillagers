@@ -38,12 +38,27 @@ import java.util.function.Function;
 public final class MainGUI extends InteractGUI {
 
     private final Player player;
+    private int currentTrade = 0;
     private ItemStack chat, greet, story,
             joke, flirt, proud,
             insult, follow, stay,
             inspect, gift, procreate,
             home, divorce, combat,
             papers, info, trade, noTrades;
+    private final Function<String, ItemStack> tradeItem = itemName -> {
+        List<MerchantRecipe> recipes = npc.bukkit().getRecipes().stream()
+                .filter(recipe -> recipe.getUses() < recipe.getMaxUses())
+                .toList();
+
+        if (currentTrade >= recipes.size()) currentTrade = 0;
+
+        ItemStack item = new ItemBuilder(getGUIItem(itemName))
+                .setType(recipes.get(currentTrade).getResult().getType())
+                .build();
+
+        currentTrade++;
+        return item;
+    };
 
     private static final Map<String, Settings> ITEM_SETTINGS = Map.of(
             "procreate", Settings.ONLY_IF_MARRIED,
@@ -91,34 +106,17 @@ public final class MainGUI extends InteractGUI {
         player.openInventory(inventory);
     }
 
-    private int currentTrade = 0;
-
     public void updateRequiredItems() {
         // In this case, info item needs to be updated.
         info = setItemInSlot("information", name -> createInfoItem(getGUIItem(name)));
 
+        // Iterate through all trades (if possible).
         if (outOfFullStock(npc.bukkit().getRecipes())) {
-            int slot = getItemSlot("no-trades");
-            inventory.setItem(slot, noTrades = getGUIItem("no-trades"));
+            noTrades = setGUIItemInSlot("no-trades");
             return;
         }
 
-        int slot = getItemSlot("trade");
-
-        List<MerchantRecipe> recipes = npc.bukkit().getRecipes().stream()
-                .filter(recipe -> recipe.getUses() < recipe.getMaxUses())
-                .toList();
-
-        ItemStack tradeItem = getGUIItem("trade");
-        if (!recipes.isEmpty()) {
-            if (currentTrade >= recipes.size()) currentTrade = 0;
-            tradeItem = new ItemBuilder(tradeItem)
-                    .setType(recipes.get(currentTrade).getResult().getType())
-                    .build();
-            currentTrade++;
-        }
-
-        inventory.setItem(slot, trade = tradeItem);
+        trade = setItemInSlot("trade", tradeItem);
     }
 
     private ItemStack setChatItemInSlot(String itemName) {
