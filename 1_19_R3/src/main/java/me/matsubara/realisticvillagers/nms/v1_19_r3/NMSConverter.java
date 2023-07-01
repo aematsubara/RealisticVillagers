@@ -358,6 +358,7 @@ public class NMSConverter implements INMSConverter {
         while (entityIterator.hasNext()) {
             try {
                 ChunkMap.TrackedEntity tracked = entityIterator.next();
+                if (tracked == null) continue;
 
                 Entity entity = (Entity) TRACKED_ENTITY_FIELD.invoke(tracked);
                 if (entity.getId() != villagerId) continue;
@@ -365,6 +366,7 @@ public class NMSConverter implements INMSConverter {
                 Iterator<ServerPlayerConnection> seenByIterator = tracked.seenBy.iterator();
                 while (seenByIterator.hasNext()) {
                     ServerPlayerConnection connection = seenByIterator.next();
+                    if (connection == null) continue;
                     if (connection.getPlayer().is(handle)) return true;
                 }
             } catch (Throwable throwable) {

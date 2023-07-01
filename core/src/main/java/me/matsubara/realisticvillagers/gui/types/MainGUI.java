@@ -161,6 +161,7 @@ public final class MainGUI extends InteractGUI {
 
         int x = parseInt(data[0]);
         int y = parseInt(data[1]);
+        if (x == -1 || y == -1) return -1;
 
         return Math.max(0, Math.max(0, y - 1) * 9 + x - 1);
     }
