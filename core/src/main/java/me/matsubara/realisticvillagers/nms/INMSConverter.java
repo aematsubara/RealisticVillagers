@@ -18,7 +18,7 @@ public interface INMSConverter {
 
     Optional<IVillagerNPC> getNPC(Villager villager);
 
-    void registerEntity();
+    void registerEntities();
 
     String getNPCTag(LivingEntity entity, boolean isInfection);
 
@@ -43,4 +43,6 @@ public interface INMSConverter {
     GameProfile getPlayerProfile(Player player);
 
     boolean isBeingTracked(Player player, int villagerId);
+
+    void refreshSchedules();
 }

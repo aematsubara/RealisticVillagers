@@ -19,7 +19,6 @@ import org.bukkit.World;
 import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
@@ -431,9 +430,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (previous == current) return;
 
         for (World world : plugin.getServer().getWorlds()) {
-            for (Entity entity : world.getEntities()) {
-                if (!(entity instanceof Villager villager)) continue;
-
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
                 Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
                 if (npc.isEmpty()) continue;
 

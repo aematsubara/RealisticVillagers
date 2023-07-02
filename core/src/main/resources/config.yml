@@ -1228,3 +1228,22 @@ speed-modifier:
 # NOTE 2: If you see that baby villagers look higher than adults, you should change this value to a negative number, -0.5 used to work fine in older versions.
 # NOTE 3: This is only necessary when skins are enabled, that means, {@disable-skins = false}.
 baby-look-height-offset: 0.0
+
+# Here you can modify the schedule of the villagers and their respective activities whether they're babies or adults.
+# For more information, take a look at: https://minecraft.fandom.com/wiki/Villager#Schedules
+#
+# NOTE: Don't touch this if you don't know what you're doing!
+# Available activities: IDLE, PLAY, WORK, MEET, REST.
+schedules:
+  baby:
+    10: IDLE
+    3000: PLAY
+    6000: IDLE
+    10000: PLAY
+    12000: REST
+  default:
+    10: IDLE
+    2000: WORK
+    9000: MEET
+    11000: IDLE
+    12000: REST

@@ -70,9 +70,7 @@ public final class PluginUtils {
         ROMAN_NUMERALS.put(4, "IV");
         ROMAN_NUMERALS.put(1, "I");
 
-        Field[] fields = Color.class.getDeclaredFields();
-
-        for (Field field : fields) {
+        for (Field field : Color.class.getDeclaredFields()) {
             if (!field.getType().equals(Color.class)) continue;
 
             try {

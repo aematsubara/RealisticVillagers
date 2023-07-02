@@ -57,6 +57,7 @@ import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
+import net.minecraft.world.entity.schedule.Timeline;
 import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Instruments;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -64,10 +65,12 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Raid;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.craftbukkit.v1_20_R1.CraftRaid;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R1.block.CraftBlock;
@@ -110,8 +113,24 @@ public class NMSConverter implements INMSConverter {
 
     // Other.
     private static final MethodHandle TRACKED_ENTITY_FIELD = Reflection.getFieldGetter(ChunkMap.TrackedEntity.class, "c");
+    private static final MethodHandle TIMELINES = Reflection.getFieldGetter(Schedule.class, "g");
 
     private static final RandomSource RANDOM = RandomSource.create();
+    private static final Map<String, Activity> ACTIVITIES;
+
+    static {
+        Map<String, Activity> activities = new HashMap<>();
+        for (Field field : Activity.class.getDeclaredFields()) {
+            if (!field.getType().equals(Activity.class)) continue;
+
+            try {
+                Activity activity = (Activity) field.get(null);
+                activities.put(activity.getName(), activity);
+            } catch (IllegalAccessException ignored) {
+            }
+        }
+        ACTIVITIES = Collections.unmodifiableMap(activities);
+    }
 
     public NMSConverter(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -124,7 +143,7 @@ public class NMSConverter implements INMSConverter {
 
     @SuppressWarnings("JavaReflectionMemberAccess")
     @Override
-    public void registerEntity() {
+    public void registerEntities() {
         try {
             // "factory" field.
             Field field = EntityType.class.getDeclaredField("bA");
@@ -374,6 +393,34 @@ public class NMSConverter implements INMSConverter {
             }
         }
         return false;
+    }
+
+    @Override
+    public void refreshSchedules() {
+        refreshSchedule("baby");
+        refreshSchedule("default");
+    }
+
+    private void refreshSchedule(@NotNull String name) {
+        try {
+            Schedule schedule = name.equals("baby") ? VillagerNPC.VILLAGER_BABY : VillagerNPC.VILLAGER_DEFAULT;
+
+            ConfigurationSection section = plugin.getConfig().getConfigurationSection("schedules." + name);
+            if (section == null) return;
+
+            Map<Activity, Timeline> timelines = (Map<Activity, Timeline>) TIMELINES.invoke(schedule);
+            timelines.clear();
+
+            ScheduleBuilder builder = new ScheduleBuilder(schedule);
+            for (int time : section.getKeys(false).stream().filter(NumberUtils::isCreatable).map(Integer::valueOf).sorted().toList()) {
+                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase());
+                if (activity != null) builder.changeActivityAt(time, activity);
+            }
+
+            builder.build();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
     }
 
     private void sendPacket(ServerPlayer player, Packet<?> @NotNull ... packets) {

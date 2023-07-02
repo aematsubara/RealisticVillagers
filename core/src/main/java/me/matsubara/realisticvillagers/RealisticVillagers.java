@@ -115,7 +115,15 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public static final List<AnvilGUI.ResponseAction> CLOSE_RESPONSE = Collections.singletonList(AnvilGUI.ResponseAction.close());
     private static final List<String> FILTER_TYPES = List.of("WHITELIST", "BLACKLIST");
-    private static final Set<String> SPECIAL_SECTIONS = Sets.newHashSet("baby", "spawn-loot", "wedding-ring", "whistle", "divorce-papers", "change-skin", "gui.main.frame");
+    private static final Set<String> SPECIAL_SECTIONS = Sets.newHashSet(
+            "baby",
+            "spawn-loot",
+            "wedding-ring",
+            "whistle",
+            "divorce-papers",
+            "change-skin",
+            "gui.main.frame",
+            "schedules");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
 
     @Override
@@ -125,7 +133,7 @@ public final class RealisticVillagers extends JavaPlugin {
             Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
             converter = (INMSConverter) converterConstructor.newInstance(this);
-            converter.registerEntity();
+            converter.registerEntities();
         } catch (ReflectiveOperationException exception) {
             getLogger().severe("NMSConverter couldn't find a valid implementation for this server version.");
             exception.printStackTrace();
@@ -234,8 +242,21 @@ public final class RealisticVillagers extends JavaPlugin {
                 "config.yml",
                 file -> {
                     reloadConfig();
-                    tracker = new VillagerTracker(this);
-                    worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
+
+                    // Refresh schedules.
+                    converter.refreshSchedules();
+
+                    // Refresh brains sync to prevent issues.
+                    getServer().getScheduler().runTask(this, () -> {
+                        for (World world : getServer().getWorlds()) {
+                            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                                converter.getNPC(villager).ifPresent(IVillagerNPC::refreshBrain);
+                            }
+                        }
+                    });
+
+                    if (tracker == null) tracker = new VillagerTracker(this);
+                    if (worlds == null) worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
                 },
                 file -> saveDefaultConfig());
 

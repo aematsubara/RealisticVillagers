@@ -193,4 +193,6 @@ public interface IVillagerNPC {
     boolean isWasInfected();
 
     void stopExchangeables();
+
+    void refreshBrain();
 }

@@ -634,9 +634,7 @@ public final class InventoryListeners implements Listener {
 
             // Remove skin from villagers.
             for (World world : plugin.getServer().getWorlds()) {
-                for (Entity entity : world.getEntities()) {
-                    if (!(entity instanceof Villager villager)) continue;
-
+                for (Villager villager : world.getEntitiesByClass(Villager.class)) {
                     Optional<IVillagerNPC> online = plugin.getConverter().getNPC(villager);
                     if (online.isEmpty() || online.get().getSkinTextureId() != id) continue;
 

@@ -13,6 +13,8 @@ import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.UnaryOperator;
 
@@ -220,8 +222,12 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder replace(String target, @NotNull Object replace) {
-        String text = PluginUtils.translate(replace.toString());
+        String text = PluginUtils.translate((replace instanceof Double number ? fixedDouble(number) : replace).toString());
         return replaceName(target, text).replaceLore(target, text);
+    }
+
+    private double fixedDouble(double value) {
+        return new BigDecimal(value).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
 
     public ItemBuilder replace(UnaryOperator<String> operator) {

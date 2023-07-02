@@ -267,6 +267,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             NEAREST_ITEMS != null ? NEAREST_ITEMS : SensorType.NEAREST_ITEMS,
             SECONDARY_POIS != null ? SECONDARY_POIS : SensorType.SECONDARY_POIS);
 
+    public static final Schedule VILLAGER_BABY = NMSConverter.registerSchedule("rv_villager_baby").build();
+    public static final Schedule VILLAGER_DEFAULT = NMSConverter.registerSchedule("rv_villager_default").build();
+
     public static final Supplier<Float> EAT_SPEED = Config.SPEED_MODIFIER_EAT::asFloat;
     public static final Supplier<Float> WALK_SPEED = Config.SPEED_MODIFIER_WALK::asFloat;
     public static final Supplier<Float> SPRINT_SPEED = Config.SPEED_MODIFIER_SPRINT::asFloat;
@@ -333,10 +336,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         // We can use VillagerGoalPackages for PANIC, PLAY & PRE_RAID activities since we don't modify any behavior.
         VillagerProfession profession = getProfession();
         if (isBaby()) {
-            brain.setSchedule(Schedule.VILLAGER_BABY);
+            brain.setSchedule(VILLAGER_BABY);
             brain.addActivity(Activity.PLAY, VillagerGoalPackages.getPlayPackage(VillagerNPC.WALK_SPEED.get()));
         } else {
-            brain.setSchedule(Schedule.VILLAGER_DEFAULT);
+            brain.setSchedule(VILLAGER_DEFAULT);
             brain.addActivityWithConditions(
                     Activity.WORK,
                     VillagerNPCGoalPackages.getWorkPackage(profession),
@@ -1023,6 +1026,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 throwable.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public void refreshBrain() {
+        refreshBrain((ServerLevel) level);
     }
 
     private void stopExchangeable(long time, BehaviorControl<? super Villager> behavior) {

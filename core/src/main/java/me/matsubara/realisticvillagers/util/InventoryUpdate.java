@@ -307,7 +307,7 @@ public final class InventoryUpdate {
         private final String minecraftName;
         private final String[] inventoryTypesNames;
 
-        private static final char[] alphabet = "abcdefghijklmnopqrstuvwxyz".toCharArray();
+        private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 
         Containers(int containerVersion, String minecraftName, String... inventoryTypesNames) {
             this.containerVersion = containerVersion;
@@ -346,7 +346,7 @@ public final class InventoryUpdate {
                 int version = ReflectionUtils.MINOR_NUMBER;
                 String name = (version == 14 && this == CARTOGRAPHY_TABLE) ? "CARTOGRAPHY" : name();
                 // Since 1.17, containers go from "a" to "x".
-                if (version > 16) name = String.valueOf(alphabet[ordinal()]);
+                if (version > 16) name = String.valueOf(ALPHABET[ordinal()]);
                 Field field = CONTAINERS.getField(name);
                 return field.get(null);
             } catch (ReflectiveOperationException exception) {

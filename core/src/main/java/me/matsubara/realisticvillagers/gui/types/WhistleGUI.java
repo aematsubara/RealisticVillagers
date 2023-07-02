@@ -32,7 +32,7 @@ public class WhistleGUI extends PaginatedGUI {
     private static final int SEARCH_SLOT = 22;
 
     public WhistleGUI(RealisticVillagers plugin, Player player, @NotNull Stream<IVillagerNPC> family, @Nullable String keyword) {
-        super(plugin, null, "whistle", getValidSize(plugin, "skin", 36), player, family
+        super(plugin, null, "whistle", getValidSize(plugin, "whistle", 36), player, family
                 .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(npc -> {
                     String name = npc.getVillagerName();

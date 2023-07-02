@@ -24,8 +24,6 @@ import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +66,7 @@ public final class MainGUI extends InteractGUI {
     private static final int[] NEXT_LEVEL_XP_THRESHOLDS = {0, 10, 70, 150, 250};
 
     public MainGUI(RealisticVillagers plugin, IVillagerNPC npc, @NotNull Player player) {
-        super(plugin, npc, "main", getValidSize(plugin, "skin", 27), title -> title.replace("%reputation%", String.valueOf(npc.getReputation(player.getUniqueId()))));
+        super(plugin, npc, "main", getValidSize(plugin, "main", 27), title -> title.replace("%reputation%", String.valueOf(npc.getReputation(player.getUniqueId()))));
 
         this.player = player;
 
@@ -319,18 +317,16 @@ public final class MainGUI extends InteractGUI {
         }
 
         AttributeInstance maxHealthAttribute = npc.bukkit().getAttribute(Attribute.GENERIC_MAX_HEALTH);
-        @SuppressWarnings("deprecation") double maxHealth = maxHealthAttribute != null ? fixedDecimal(maxHealthAttribute.getValue()) : npc.bukkit().getMaxHealth();
-
         int level = npc.bukkit().getVillagerLevel();
 
-        ItemBuilder builder = new ItemBuilder(item)
+        @SuppressWarnings("deprecation") ItemBuilder builder = new ItemBuilder(item)
                 .replace("%villager-name%", npc.getVillagerName())
                 .replace("%sex%", sex)
                 .replace("%age-stage%", age)
-                .replace("%health%", fixedDecimal(npc.bukkit().getHealth() + npc.bukkit().getAbsorptionAmount()))
-                .replace("%max-health%", maxHealth)
-                .replace("%food-level%", fixedDecimal(npc.getFoodLevel()))
-                .replace("%max-food-level%", fixedDecimal(20))
+                .replace("%health%", npc.bukkit().getHealth() + npc.bukkit().getAbsorptionAmount())
+                .replace("%max-health%", maxHealthAttribute != null ? maxHealthAttribute.getValue() : npc.bukkit().getMaxHealth())
+                .replace("%food-level%", npc.getFoodLevel())
+                .replace("%max-food-level%", 20)
                 .replace("%type%", type)
                 .replace("%profession%", plugin.getProfessionFormatted(npc.bukkit().getProfession()))
                 .replace("%level%", level)
@@ -388,10 +384,6 @@ public final class MainGUI extends InteractGUI {
     @Override
     public boolean shouldStopInteracting() {
         return npc.isConversating() && super.shouldStopInteracting();
-    }
-
-    private double fixedDecimal(double value) {
-        return new BigDecimal(value).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
 
     @Getter
