@@ -39,7 +39,7 @@ public class NPCPool implements Listener {
     }
 
     protected void tick() {
-        Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : ImmutableList.copyOf(Bukkit.getOnlinePlayers())) {
                 for (NPC npc : npcMap.values()) {
                     Location npcLocation = npc.getLocation();
