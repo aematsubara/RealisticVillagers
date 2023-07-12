@@ -97,7 +97,7 @@ public class SkinGUI extends PaginatedGUI {
         female = getGUIItem("female");
         adult = getGUIItem("adult");
         kid = getGUIItem("kid");
-        newSkin = getGUIItem("new-skin");
+        newSkin = getGUIItem("add-new-skin");
 
         ItemBuilder builder = new ItemBuilder(getGUIItem("clear-skin"));
         Pair<Integer, PropertyMap> pair = plugin.getTracker().getOldProperties().get(player.getUniqueId());
@@ -215,7 +215,9 @@ public class SkinGUI extends PaginatedGUI {
     public void addButtons() {
         int extra = 9 * (size == 36 ? 0 : size == 45 ? 1 : 2);
 
-        inventory.setItem(AGE_STAGE_SLOT, keyword != null ? null : isAdult ? adult : kid);
+        inventory.setItem(AGE_STAGE_SLOT, keyword != null ?
+                (!animation.isGuiAnim() ? animation.getDefaultItem() : null) :
+                (isAdult ? adult : kid));
 
         ItemStack professionItem;
         if (professionItems != null) {

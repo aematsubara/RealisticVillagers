@@ -226,21 +226,26 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     skinsDisabled,
                     Config.DISABLE_SKINS.asBool(),
                     (npc, state) -> {
-                        if (tracker.isInvalid(npc.bukkit(), true)) return;
+                        Villager bukkit = npc.bukkit();
+                        if (tracker.isInvalid(bukkit, true)) return;
 
                         if (state) {
-                            tracker.removeNPC(npc.bukkit().getEntityId());
+                            tracker.removeNPC(bukkit.getEntityId());
                             npc.sendSpawnPacket();
                         } else {
                             npc.sendDestroyPacket();
-                            tracker.spawnNPC(npc.bukkit());
+                            tracker.spawnNPC(bukkit);
                         }
                     });
 
             handleChangedOption(
                     nametagsDisabled,
                     Config.DISABLE_NAMETAGS.asBool(),
-                    (npc, state) -> tracker.refreshNPCSkin(npc.bukkit(), false));
+                    (npc, state) -> {
+                        // Only disable nametags if skins are enabled.
+                        Villager bukkit = npc.bukkit();
+                        if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
+                    });
         }));
         return true;
     }
@@ -303,9 +308,8 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 if (bukkit == null) continue;
             }
 
-            Optional<IVillagerNPC> optional = converter.getNPC(bukkit);
-
-            IVillagerNPC npc = optional.orElse(null);
+            // In this case we don't need to ignore invalid villagers.
+            IVillagerNPC npc = converter.getNPC(bukkit).orElse(null);
             if (npc == null) continue;
 
             npc.divorceAndDropRing(player);
@@ -431,10 +435,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
         for (World world : plugin.getServer().getWorlds()) {
             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
-                if (npc.isEmpty()) continue;
-
-                consumer.accept(npc.get(), current);
+                plugin.getConverter().getNPC(villager).ifPresent(npc -> consumer.accept(npc, current));
             }
         }
     }

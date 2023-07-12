@@ -28,6 +28,7 @@ public class BabyTask extends BukkitRunnable {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public BabyTask(@NotNull RealisticVillagers plugin, Villager villager, Player player) {
         this.plugin = plugin;
+        // No need to check if it's invalid, the main GUI can only be opened by valid villagers.
         this.villager = plugin.getConverter().getNPC(villager).get();
         this.player = player;
         this.isBoy = ThreadLocalRandom.current().nextBoolean();

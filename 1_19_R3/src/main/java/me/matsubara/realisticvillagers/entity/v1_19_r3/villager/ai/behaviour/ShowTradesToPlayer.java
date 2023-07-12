@@ -155,16 +155,15 @@ public class ShowTradesToPlayer extends Behavior<Villager> implements Exchangeab
     }
 
     private void clearHeldItem(Villager villager) {
-        displayInMainHand(villager, previousItem, 0.085f);
+        displayInMainHand(villager, previousItem);
     }
 
     private void displayAsHeldItem(Villager villager, ItemStack item) {
-        displayInMainHand(villager, item, 0.0f);
+        displayInMainHand(villager, item);
     }
 
-    private void displayInMainHand(@NotNull Villager villager, ItemStack item, float dropChance) {
+    private void displayInMainHand(@NotNull Villager villager, ItemStack item) {
         villager.setItemSlot(EquipmentSlot.MAINHAND, item);
-        villager.setDropChance(EquipmentSlot.MAINHAND, dropChance);
     }
 
     @SuppressWarnings("OptionalGetWithoutIsPresent")

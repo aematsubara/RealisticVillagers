@@ -137,11 +137,8 @@ public final class VillagerTracker implements Listener {
                 if (!(entity instanceof Vehicle vehicle)) return;
 
                 for (Entity passenger : vehicle.getPassengers()) {
-                    if (!(passenger instanceof Villager villager)) continue;
-                    if (!handler.isInvalidEntity(villager)) continue;
-
-                    Optional<NPC> npc = getNPC(villager.getEntityId());
-                    npc.ifPresent(value -> handler.handleNPCLocation(event, villager, value));
+                    if (!(passenger instanceof Villager villager) || isInvalid(villager)) continue;
+                    getNPC(villager.getEntityId()).ifPresent(value -> handler.handleNPCLocation(event, villager, value));
                 }
             }
         });
@@ -229,7 +226,7 @@ public final class VillagerTracker implements Listener {
     @EventHandler
     public void onEntitiesUnload(@NotNull EntitiesUnloadEvent event) {
         for (Entity entity : event.getEntities()) {
-            if (!(entity instanceof Villager villager) || isInvalid(villager)) continue;
+            if (!(entity instanceof Villager villager) || isInvalid(villager, true)) continue;
             updateData(villager);
             removeNPC(entity.getEntityId());
         }
@@ -278,13 +275,20 @@ public final class VillagerTracker implements Listener {
 
     @EventHandler
     public void onVillagerRemove(@NotNull VillagerRemoveEvent event) {
+        IVillagerNPC npc = event.getNPC();
+        handler.getAllowSpawn().remove(npc.getUniqueId());
+
+        Villager bukkit = npc.bukkit();
+        if (isInvalid(bukkit, true)) return;
+
         VillagerRemoveEvent.RemovalReason reason = event.getReason();
         if (reason != VillagerRemoveEvent.RemovalReason.DISCARDED) {
-            if (reason != VillagerRemoveEvent.RemovalReason.KILLED) updateData(event.getNPC().bukkit());
+            if (reason != VillagerRemoveEvent.RemovalReason.KILLED) updateData(bukkit);
             return;
         }
-        markAsDeath(event.getNPC().bukkit());
-        removeNPC(event.getNPC().bukkit().getEntityId());
+
+        markAsDeath(bukkit);
+        removeNPC(bukkit.getEntityId());
     }
 
     @EventHandler
@@ -341,10 +345,8 @@ public final class VillagerTracker implements Listener {
     }
 
     public boolean isInvalid(@NotNull Villager villager, boolean ignoreSkinsState) {
-        PersistentDataContainer container = villager.getPersistentDataContainer();
         return (!ignoreSkinsState && Config.DISABLE_SKINS.asBool())
-                || villager.hasMetadata("shopkeeper")
-                || container.has(plugin.getIgnoreVillagerKey(), PersistentDataType.INTEGER)
+                || !plugin.getCompatibilityManager().shouldTrack(villager)
                 || !plugin.isEnabledIn(villager.getWorld())
                 || plugin.getConverter().getNPC(villager).isEmpty();
     }

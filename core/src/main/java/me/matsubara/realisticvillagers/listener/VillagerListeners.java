@@ -170,7 +170,8 @@ public final class VillagerListeners implements Listener {
         preventChangeSkinItemUse(event, event.getPlayerItem());
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    // Changed the priority to LOW to support VTL.
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlayerInteractEntity(@NotNull PlayerInteractEntityEvent event) {
         Player player = event.getPlayer();
 
@@ -354,6 +355,7 @@ public final class VillagerListeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(@NotNull EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
+        if (plugin.getTracker().isInvalid(villager, true)) return;
 
         Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
 

@@ -98,6 +98,7 @@ public final class PlayerListeners implements Listener {
 
         for (Entity near : player.getNearbyEntities(range, range, range)) {
             if (!(near instanceof Villager villager)
+                    || plugin.getTracker().isInvalid(villager, true)
                     || villager.isSleeping()
                     || !villager.hasLineOfSight(player)) continue;
 
@@ -181,7 +182,7 @@ public final class PlayerListeners implements Listener {
 
         int range = Config.GOAT_HORN_SEEK_RANGE.asInt();
         for (Entity entity : player.getNearbyEntities(range, range, range)) {
-            if (!(entity instanceof Villager villager)) continue;
+            if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager, true)) continue;
             plugin.getConverter().getNPC(villager).ifPresent(npc -> npc.reactToSeekHorn(player));
         }
     }

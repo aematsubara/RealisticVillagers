@@ -63,7 +63,7 @@
 # FireworkEffect.Type: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/FireworkEffect.Type.html
 
 # Don't touch this!
-config-version: 1
+config-version: 2
 
 # In order to generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
@@ -754,7 +754,7 @@ gui:
         display-name: "&aKid"
         lore:
           - "&7Click to toggle age stage!"
-      new-skin:
+      add-new-skin:
         url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
         material: PLAYER_HEAD
         display-name: "&bNew skin (BETA)"

@@ -17,7 +17,6 @@ import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
-import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.MappedRegistry;
@@ -35,7 +34,6 @@ import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
@@ -143,11 +141,10 @@ public class NMSConverter implements INMSConverter {
                     field,
                     EntityType.VILLAGER,
                     (EntityType.EntityFactory<net.minecraft.world.entity.npc.Villager>) (type, level) -> {
-                        if (PluginUtils.spawnCustom() && level.getWorld() != null && plugin.isEnabledIn(level.getWorld())) {
+                        if (plugin.isEnabledIn(level.getWorld())) {
                             return new VillagerNPC(EntityType.VILLAGER, level);
-                        } else {
-                            return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
                         }
+                        return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
                     });
             Reflection.setFieldUsingUnsafe(field, EntityType.CAT, (EntityType.EntityFactory<Cat>) PetCat::new);
             Reflection.setFieldUsingUnsafe(field, EntityType.PARROT, (EntityType.EntityFactory<Parrot>) PetParrot::new);
@@ -192,9 +189,8 @@ public class NMSConverter implements INMSConverter {
                 EntityType.VILLAGER,
                 level,
                 VillagerType.byBiome(level.getBiome(((CraftBlock) location.getBlock()).getPosition())));
-        baby.finalizeSpawn(level, level.getCurrentDifficultyAt(baby.blockPosition()), MobSpawnType.BREEDING, null, null);
 
-        baby.loadPluginData(new CompoundTag());
+        loadDataFromTag(baby.getBukkitEntity(), "");
         baby.setVillagerName(name);
         baby.setSex(sex);
 
@@ -379,8 +375,8 @@ public class NMSConverter implements INMSConverter {
                     if (connection == null) continue;
                     if (connection.getPlayer().is(handle)) return true;
                 }
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
+            } catch (Throwable ignored) {
+
             }
         }
         return false;
@@ -459,8 +455,11 @@ public class NMSConverter implements INMSConverter {
             double zc = pos.getDouble(2);
 
             UUID uuid = compound.getUUID("UUID");
-            OfflineVillagerNPC npc = OfflineVillagerNPC.from(uuid, data, world, xc, yc, zc);
-            plugin.getTracker().getOfflineVillagers().add(npc);
+
+            Set<IVillagerNPC> offlines = plugin.getTracker().getOfflineVillagers();
+            if (offlines.stream().noneMatch(npc -> npc.getUniqueId().equals(uuid))) {
+                offlines.add(OfflineVillagerNPC.from(uuid, data, world, xc, yc, zc));
+            }
         }
     }
 

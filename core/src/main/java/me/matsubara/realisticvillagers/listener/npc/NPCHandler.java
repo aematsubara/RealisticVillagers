@@ -38,6 +38,7 @@ public class NPCHandler implements SpawnCustomizer {
 
     public NPCHandler(@NotNull RealisticVillagers plugin, Villager villager) {
         this.plugin = plugin;
+        // No need to check if it's invalid, already checked in VillagerTracker#spawnNPC().
         this.villager = plugin.getConverter().getNPC(villager).orElse(null);
     }
 

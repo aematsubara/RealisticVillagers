@@ -23,7 +23,7 @@ public class RainbowAnimation extends BukkitRunnable {
     private final InteractGUI gui;
     private final @Getter ItemStack defaultItem;
     private final Random random;
-    private final boolean guiAnim;
+    private final @Getter boolean guiAnim;
     private final int guiAnimType;
     private final long delay;
     private int count;
@@ -62,7 +62,7 @@ public class RainbowAnimation extends BukkitRunnable {
     @Override
     public void run() {
         // Here we update the lore!
-        if (count % 20 == 0 && gui instanceof MainGUI main) {
+        if (count > 0 && count % 20 == 0 && gui instanceof MainGUI main) {
             main.updateRequiredItems();
         }
 
@@ -110,7 +110,7 @@ public class RainbowAnimation extends BukkitRunnable {
         count++;
     }
 
-    private void createFrame(@Nullable ItemStack item, int start, int limit, IntUnaryOperator operator) {
+    public void createFrame(@Nullable ItemStack item, int start, int limit, IntUnaryOperator operator) {
         for (int i = start; i < limit; i = operator.applyAsInt(i)) {
             List<Integer> ignoreIndexes = new ArrayList<>();
             if (gui instanceof WhistleGUI whistle) {
@@ -134,7 +134,8 @@ public class RainbowAnimation extends BukkitRunnable {
         if (skin == null) return;
 
         for (ItemStack value : skin.values()) {
-            if (gui.getInventory().first(value) != -1) ignoreIndexes.add(gui.getInventory().first(value));
+            int first = gui.getInventory().first(value);
+            if (first != -1) ignoreIndexes.add(first);
         }
     }
 

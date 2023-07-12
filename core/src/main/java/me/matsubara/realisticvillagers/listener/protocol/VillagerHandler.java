@@ -34,6 +34,7 @@ public class VillagerHandler extends PacketAdapter {
 
     private final RealisticVillagers plugin;
     private final @Getter Set<UUID> sleeping = ConcurrentHashMap.newKeySet();
+    private final @Getter Set<UUID> allowSpawn = ConcurrentHashMap.newKeySet();
 
     public static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
             ENTITY_VELOCITY,
@@ -87,17 +88,20 @@ public class VillagerHandler extends PacketAdapter {
         PacketContainer packet = event.getPacket();
 
         Entity entity = packet.getEntityModifier(world).readSafely(0);
-        if (isInvalidEntity(entity)) return;
+        if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager)) return;
+
+        UUID uuid = entity.getUniqueId();
 
         PacketType type = event.getPacketType();
         if (isSpawnPacket(type)) {
-            event.setCancelled(true);
+            if (!allowSpawn.contains(uuid)) event.setCancelled(true);
             return;
         }
 
         StructureModifier<Byte> bytes = packet.getBytes();
 
         if (type == ENTITY_STATUS) {
+            // No need to check if it's invalid, already checked above.
             IVillagerNPC npc = plugin.getConverter().getNPC((Villager) entity).get();
             handleStatus(npc, bytes.readSafely(0));
         }
@@ -186,10 +190,6 @@ public class VillagerHandler extends PacketAdapter {
             default -> particle = null;
         }
         if (particle != null) npc.spawnEntityEventParticle(particle);
-    }
-
-    public boolean isInvalidEntity(Entity entity) {
-        return entity == null || entity.isDead() || !(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager);
     }
 
     @SuppressWarnings("deprecation")

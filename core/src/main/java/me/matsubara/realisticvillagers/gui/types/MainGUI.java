@@ -17,6 +17,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.persistence.PersistentDataType;
@@ -52,6 +53,7 @@ public final class MainGUI extends InteractGUI {
 
         ItemStack item = new ItemBuilder(getGUIItem(itemName))
                 .setType(recipes.get(currentTrade).getResult().getType())
+                .addItemFlags(ItemFlag.values())
                 .build();
 
         currentTrade++;

@@ -39,6 +39,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     private final Set<EntityType<?>> targetEntities;
     private final LastKnownPosition lastKnownPosition;
 
+    public static final String UUID = "UUID";
     public static final String INVENTORY = "Inventory";
     public static final String NAME = "Name";
     public static final String SEX = "Sex";
@@ -91,12 +92,12 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     public static @NotNull OfflineVillagerNPC from(CompoundTag tag) {
         LastKnownPosition position = lastPositionFrom(tag);
-        return new OfflineVillagerNPC(tag.getUUID("UUID"), tag, position);
+        return new OfflineVillagerNPC(tag.getUUID(UUID), tag, position);
     }
 
     public CompoundTag getTag() {
         CompoundTag tag = this.tag.copy();
-        tag.putUUID("UUID", uuid);
+        tag.putUUID(UUID, uuid);
         tag.putString("World", lastKnownPosition.world());
         tag.put("Pos", newDoubleList(lastKnownPosition.x(), lastKnownPosition.y(), lastKnownPosition.z()));
         return tag;
@@ -512,11 +513,6 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public void shakeHead(Player at) {
-
-    }
-
-    @Override
-    public void convertToVanilla() {
 
     }
 

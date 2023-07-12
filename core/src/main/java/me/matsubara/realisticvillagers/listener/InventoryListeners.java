@@ -30,7 +30,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -44,6 +43,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mineskin.data.Skin;
@@ -388,6 +388,9 @@ public final class InventoryListeners implements Listener {
                 messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
             }
         } else if (current.isSimilar(main.getTrade()) || current.isSimilar(main.getNoTrades())) {
+            // VTL support.
+            if (handleVTL(player, npc.bukkit())) return;
+
             if (npc.bukkit().isTrading()) {
                 messages.send(player, Messages.Message.INTERACT_FAIL_TRADING);
             } else {
@@ -435,7 +438,16 @@ public final class InventoryListeners implements Listener {
         }
 
         closeInventory(player);
+    }
 
+    private boolean handleVTL(Player player, Villager villager) {
+        Plugin vtl = plugin.getServer().getPluginManager().getPlugin("VillagerTradeLimiter");
+        if (vtl == null) return false;
+
+        runTask(() -> {
+            if (plugin.getCompatibilityManager().handleVTL(vtl, player, villager)) closeInventory(player);
+        });
+        return true;
     }
 
     private void handleExpecting(Player player, @NotNull IVillagerNPC npc, ExpectingType checkType, Messages.Message fromServer, Messages.Message fromVillager) {
@@ -635,6 +647,9 @@ public final class InventoryListeners implements Listener {
             // Remove skin from villagers.
             for (World world : plugin.getServer().getWorlds()) {
                 for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                    // At this point, invalid villagers shouldn't have a skin.
+                    if (tracker.isInvalid(villager)) continue;
+
                     Optional<IVillagerNPC> online = plugin.getConverter().getNPC(villager);
                     if (online.isEmpty() || online.get().getSkinTextureId() != id) continue;
 
@@ -664,6 +679,7 @@ public final class InventoryListeners implements Listener {
                     closeInventory(online);
                 }
             }
+            closeInventory(player);
             return;
         } else if (click == ClickType.MIDDLE) {
             String fileName = sex + ".yml";
@@ -682,14 +698,16 @@ public final class InventoryListeners implements Listener {
                 // Refresh inventory.
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (online.getOpenInventory().getTopInventory() instanceof SkinGUI) {
-                        openSkinGUI(player, sex, isAdult, null);
+                        openSkinGUI(online, sex, isAdult, null);
                     }
                 }
+                openSkinGUI(player, sex, isAdult, null);
 
                 // Remove skin from villagers if necessary.
                 for (World world : plugin.getServer().getWorlds()) {
-                    for (Entity entity : world.getEntities()) {
-                        if (!(entity instanceof Villager villager)) continue;
+                    for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                        // At this point, invalid villagers shouldn't have a skin.
+                        if (tracker.isInvalid(villager)) continue;
 
                         Optional<IVillagerNPC> online = plugin.getConverter().getNPC(villager);
                         IVillagerNPC npc;

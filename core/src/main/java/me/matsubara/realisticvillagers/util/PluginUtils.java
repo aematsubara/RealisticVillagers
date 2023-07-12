@@ -44,7 +44,6 @@ import java.util.regex.Pattern;
 public final class PluginUtils {
 
     private static final Pattern PATTERN = Pattern.compile("&(#[\\da-fA-F]{6})");
-    private static final Set<String> IGNORE_METHODS = Set.of("spawnLeprechaun", "spawnShop");
     private static final NavigableMap<Integer, String> ROMAN_NUMERALS = new TreeMap<>();
 
     private static final Map<String, Color> COLORS_BY_NAME = new HashMap<>();
@@ -124,7 +123,11 @@ public final class PluginUtils {
     }
 
     public static void applySkin(SkullMeta meta, String texture, boolean isUrl) {
-        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+        applySkin(meta, UUID.randomUUID(), texture, isUrl);
+    }
+
+    public static void applySkin(SkullMeta meta, UUID uuid, String texture, boolean isUrl) {
+        GameProfile profile = new GameProfile(uuid, null);
 
         String textureValue = texture;
         if (isUrl) {
@@ -199,17 +202,6 @@ public final class PluginUtils {
         }
 
         return builder.toString();
-    }
-
-    public static boolean spawnCustom() {
-        for (StackTraceElement stacktrace : new Throwable().getStackTrace()) {
-            String method = stacktrace.getMethodName();
-            if (IGNORE_METHODS.contains(method)) return false;
-
-            String clazz = stacktrace.getClassName();
-            if (method.equals("spawn") && clazz.equals("NPCEntity")) return false;
-        }
-        return true;
     }
 
     public static String[] splitData(String string) {

@@ -7,6 +7,8 @@ import com.tchristofferson.configupdater.ConfigUpdater;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
+import me.matsubara.realisticvillagers.compatibility.CompatibilityManager;
+import me.matsubara.realisticvillagers.compatibility.EMCompatibility;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
@@ -83,7 +85,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final @Deprecated NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
     private final NamespacedKey tamedByVillagerKey = key("TamedByVillager");
     private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
-    private final NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
+    private final @Deprecated NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
     private final NamespacedKey villagerNameKey = key("VillagerName");
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
@@ -102,6 +104,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private ChestManager chestManager;
     private ExpectingManager expectingManager;
     private InteractCooldownManager cooldownManager;
+    private CompatibilityManager compatibilityManager;
 
     private Messages messages;
     private INMSConverter converter;
@@ -128,6 +131,16 @@ public final class RealisticVillagers extends JavaPlugin {
 
     @Override
     public void onLoad() {
+        compatibilityManager = new CompatibilityManager();
+
+        // Shopkeeper, Citizens & (probably) RainbowsPro; for VillagerMarket, the villager shouldn't have AI in order to work properly.
+        compatibilityManager.addCompatibility(villager -> villager.hasAI() && !villager.hasMetadata("shopkeeper") && !villager.hasMetadata("NPC"));
+
+        // EliteMobs.
+        if (getServer().getPluginManager().getPlugin("EliteMobs") != null) {
+            compatibilityManager.addCompatibility(new EMCompatibility());
+        }
+
         String internalName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].toLowerCase();
         try {
             Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
@@ -201,7 +214,8 @@ public final class RealisticVillagers extends JavaPlugin {
 
         for (World world : Bukkit.getWorlds()) {
             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                if (!tracker.isInvalid(villager)) converter.getNPC(villager).ifPresent(IVillagerNPC::stopExchangeables);
+                if (tracker.isInvalid(villager, true)) continue;
+                converter.getNPC(villager).ifPresent(IVillagerNPC::stopExchangeables);
             }
         }
     }
@@ -250,6 +264,7 @@ public final class RealisticVillagers extends JavaPlugin {
                     getServer().getScheduler().runTask(this, () -> {
                         for (World world : getServer().getWorlds()) {
                             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                                if (tracker.isInvalid(villager, true)) continue;
                                 converter.getNPC(villager).ifPresent(IVillagerNPC::refreshBrain);
                             }
                         }
@@ -289,7 +304,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         Predicate<FileConfiguration> noVersion = temp -> !temp.contains("config-version");
 
-        // We need to change the previous %partner% to %current-partner% since now %partner% behaves differently (vX.X{0} -> v3.0{1}).
+        // We need to change the previous %partner% to %current-partner% since now %partner% behaves differently, only for V = X.
         handleConfigChanges(
                 file,
                 config,
@@ -306,7 +321,16 @@ public final class RealisticVillagers extends JavaPlugin {
                 },
                 1);
 
-        // Previously @interact-fail.not-allowed was a single line message, now is a map.
+        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
+        handleConfigChanges(
+                file,
+                config,
+                "config.yml",
+                temp -> temp.getInt("config-version") == 1,
+                temp -> temp.set("gui.new-skin", null),
+                2);
+
+        // Previously @interact-fail.not-allowed was a single line message, now is a map; only for V = X.
         handleConfigChanges(
                 file,
                 config,
@@ -645,17 +669,24 @@ public final class RealisticVillagers extends JavaPlugin {
     }
 
     public void equipVillager(Villager villager, boolean force) {
+        if (invalidLoots()) return;
+
         Optional<IVillagerNPC> npc = converter.getNPC(villager);
-        if (npc.isEmpty() || npc.get().isEquipped() || !force) return;
+        if (npc.isEmpty()
+                || npc.get().isEquipped()
+                || !force
+                || tracker.isInvalid(villager, true)) return;
 
         EntityEquipment equipment = villager.getEquipment();
         if (equipment == null) return;
 
         Map<EquipmentSlot, ItemLoot> equipped = new HashMap<>();
+        npc.get().setEquipped(true);
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             String name = slotName(slot);
             List<ItemLoot> loots = this.loots.get(name);
+            if (loots == null) continue;
 
             double chance = Math.random();
             for (ItemLoot loot : loots) {
@@ -673,8 +704,11 @@ public final class RealisticVillagers extends JavaPlugin {
             }
         }
 
+        List<ItemLoot> loots = this.loots.get("inventory-items");
+        if (loots == null) return;
+
         double chance = Math.random();
-        for (ItemLoot loot : loots.get("inventory-items")) {
+        for (ItemLoot loot : loots) {
             if (chance > loot.chance()) continue;
 
             ItemStack item = loot.getItem();
@@ -696,8 +730,16 @@ public final class RealisticVillagers extends JavaPlugin {
                 villager.getInventory().addItem(item);
             }
         }
+    }
 
-        npc.get().setEquipped(true);
+    private boolean invalidLoots() {
+        if (loots.isEmpty()) return true;
+
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (loots.get(slotName(slot)) != null) return false;
+        }
+
+        return loots.get("inventory-items") == null;
     }
 
     private boolean testBothHand(Map<EquipmentSlot, ItemLoot> equipped, Predicate<ItemStack> predicate) {

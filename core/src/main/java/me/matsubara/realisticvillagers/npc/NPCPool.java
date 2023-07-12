@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.npc;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -65,7 +64,7 @@ public class NPCPool implements Listener {
                     }
                 }
             }
-        }, 20L, 2L);
+        }, 20L, 4L);
     }
 
     protected void takeCareOf(NPC npc) {

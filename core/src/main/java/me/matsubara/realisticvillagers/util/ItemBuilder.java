@@ -37,12 +37,16 @@ public final class ItemBuilder {
     }
 
     public ItemBuilder setHead(String texture, boolean isUrl) {
+        return setHead(UUID.randomUUID(), texture, isUrl);
+    }
+
+    public ItemBuilder setHead(UUID uuid, String texture, boolean isUrl) {
         if (item.getType() != Material.PLAYER_HEAD) {
             setType(Material.PLAYER_HEAD);
         }
 
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        PluginUtils.applySkin(meta, texture, isUrl);
+        PluginUtils.applySkin(meta, uuid, texture, isUrl);
         item.setItemMeta(meta);
         return this;
     }
