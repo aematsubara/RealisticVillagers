@@ -40,6 +40,7 @@ public enum Config {
 
     BAD_GIFT_REPUTATION("bad-gift-reputation"),
     WEDDING_RING_REPUTATION("wedding-ring-reputation"),
+    CROSS_REPUTATION("cross-reputation"),
     BABY_REPUTATION("baby-reputation"),
     CHAT_INTERACT_REPUTATION("chat-interact-reputation"),
 
@@ -118,6 +119,8 @@ public enum Config {
     MELEE_ATTACK_JUMP_CHANCE("melee-attack-jump-chance"),
     BACK_UP_JUMP_CHANCE("back-up-jump-chance"),
     WHO_CAN_MODIFY_VILLAGER_INVENTORY("who-can-modify-villager-inventory"),
+    WHO_CAN_MODIFY_VILLAGER_COMBAT("who-can-modify-villager-combat"),
+    WHO_CAN_MODIFY_VILLAGER_HOME("who-can-modify-villager-home"),
     WHO_CAN_MODIFY_VILLAGER_NAME("who-can-modify-villager-name"),
     DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY("disable-special-prices-if-allowed-to-modify-inventory"),
     MELEE_ATTACK_RANGE("melee-attack-range"),
@@ -133,7 +136,9 @@ public enum Config {
     LOOT_CHEST_PER_CHEST_COOLDOWN("loot-chest.per-chest-cooldown"),
     LOOT_CHEST_ALLOW_BABIES("loot-chest.allow-babies"),
     REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW("reputation-required-to-ask-to-follow"),
+    FAMILY_BYPASS_ASK_TO_FOLLOW("family-bypass-ask-to-follow"),
     REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay"),
+    FAMILY_BYPASS_ASK_TO_STAY("family-bypass-ask-to-stay"),
     INITIAL_REPUTATION_AT_BIRTH("initial-reputation-at-birth"),
     SPAWN_LOOT_FORCE_EQUIP("spawn-loot.force-equip"),
     VILLAGER_ADOPTS_ABANDONED_PET("villager-adopts-abandoned-pet"),
@@ -148,7 +153,20 @@ public enum Config {
     SPEED_MODIFIER_WALK("speed-modifier.walk"),
     SPEED_MODIFIER_SPRINT("speed-modifier.sprint"),
     SPEED_MODIFIER_SWIM("speed-modifier.swim"),
-    BABY_LOOK_HEIGHT_OFFSET("baby-look-height-offset");
+    BABY_LOOK_HEIGHT_OFFSET("baby-look-height-offset"),
+    REVIVE_ENABLED("revive.enabled"),
+    REVIVE_ONLY_AT_NIGHT("revive.only-at-night"),
+    REVIVE_ONLY_WITH_CROSS("revive.only-with-cross"),
+    REVIVE_BREAK_EMERALD_CHANCE("revive.break-emerald-chance"),
+    REVIVE_SPAWN_VALUES_HEALTH("revive.spawn-values.health"),
+    REVIVE_SPAWN_VALUES_FOOD_LEVEL("revive.spawn-values.food-level"),
+    REVIVE_SPAWN_VALUES_POTION_EFFECTS("revive.spawn-values.potion-effects"),
+    REVIVE_BOSSBAR_ENABLED("revive.boss-bar.enabled"),
+    REVIVE_BOSSBAR_TITLE("revive.boss-bar.title"),
+    REVIVE_BOSSBAR_PROGRESS_TYPE("revive.boss-bar.progress-type"),
+    REVIVE_BOSSBAR_COLOR("revive.boss-bar.color"),
+    REVIVE_BOSSBAR_STYLE("revive.boss-bar.style"),
+    REVIVE_BOSSBAR_FLAGS("revive.boss-bar.flags");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
@@ -169,8 +187,16 @@ public enum Config {
         return plugin.getConfig().getString(path);
     }
 
+    public String asString(String defaultValue) {
+        return plugin.getConfig().getString(path, defaultValue);
+    }
+
     public @NotNull String asStringTranslated() {
         return PluginUtils.translate(asString());
+    }
+
+    public @NotNull String asStringTranslated(String defaultValue) {
+        return PluginUtils.translate(asString(defaultValue));
     }
 
     public double asDouble() {

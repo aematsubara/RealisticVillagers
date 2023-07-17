@@ -107,7 +107,9 @@ interact-fail:
     not-a-kid: "&cThis action can only be used with a kid!"
     not-an-adult: "&cThis action can only be used with an adult!"
     only-partner-or-non-family-adult: "&cThis action can only be used with your partner or a non-family adult!"
+    none: "&cThis action is not allowed by the server!"
   rename-not-allowed: "&cYou're not allowed to change the name of this villager!"
+  already-alive: "&cThis villager is already alive!"
 
 reloading: "&6The plugin is being reloaded in another thread, wait a few seconds..."
 reload: "&6The plugin has been reloaded!"

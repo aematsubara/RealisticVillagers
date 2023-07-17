@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.nms.v1_20_r1;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -17,6 +18,7 @@ import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -62,6 +64,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.chunk.storage.RegionFile;
+import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.GameMode;
@@ -83,6 +86,8 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -150,7 +155,7 @@ public class NMSConverter implements INMSConverter {
                     field,
                     EntityType.VILLAGER,
                     (EntityType.EntityFactory<net.minecraft.world.entity.npc.Villager>) (type, level) -> {
-                        if (plugin.isEnabledIn(level.getWorld())) {
+                        if (level.getLevelData() instanceof PrimaryLevelData data && plugin.isEnabledIn(data.getLevelName())) {
                             return new VillagerNPC(EntityType.VILLAGER, level);
                         }
                         return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
@@ -396,6 +401,50 @@ public class NMSConverter implements INMSConverter {
     public void refreshSchedules() {
         refreshSchedule("baby");
         refreshSchedule("default");
+    }
+
+    @Override
+    public IVillagerNPC getNPCFromTag(String tag) {
+        try {
+            return OfflineVillagerNPC.from(TagParser.parseTag(tag));
+        } catch (CommandSyntaxException exception) {
+            exception.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public void spawnFromTag(@NotNull Location location, String tag) {
+        Preconditions.checkArgument(location.getWorld() != null && !tag.isEmpty(), "Either world is null or tag is empty!");
+
+        ServerLevel level = ((CraftWorld) location.getWorld()).getHandle();
+        VillagerNPC villager = new VillagerNPC(EntityType.VILLAGER, level);
+
+        loadDataFromTag(villager.getBukkitEntity(), tag);
+
+        float health = (float) Math.min(villager.getMaxHealth(), Config.REVIVE_SPAWN_VALUES_HEALTH.asDouble());
+        villager.setHealth(health);
+
+        int foodLevel = Math.min(20, Config.REVIVE_SPAWN_VALUES_FOOD_LEVEL.asInt());
+        villager.setFoodLevel(foodLevel);
+
+        for (String effectString : Config.REVIVE_SPAWN_VALUES_POTION_EFFECTS.asStringList()) {
+            if (Strings.isNullOrEmpty(effectString)) continue;
+            String[] data = PluginUtils.splitData(effectString);
+
+            PotionEffectType type = PotionEffectType.getByKey(NamespacedKey.minecraft(data[0].toLowerCase()));
+            if (type != null) {
+                // Default = 5 seconds, level 1 (amplifier 0).
+                int duration = data.length > 1 ? PluginUtils.getRangedAmount(data[1]) : 100;
+                int amplifier = data.length > 2 ? PluginUtils.getRangedAmount(data[2]) - 1 : 0;
+                villager.getBukkitEntity().addPotionEffect(new PotionEffect(type, duration, amplifier));
+            }
+        }
+
+        villager.moveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), 0.0f);
+        villager.setRevivingTicks(60);
+
+        level.addFreshEntity(villager, CreatureSpawnEvent.SpawnReason.DEFAULT);
     }
 
     private void refreshSchedule(@NotNull String name) {

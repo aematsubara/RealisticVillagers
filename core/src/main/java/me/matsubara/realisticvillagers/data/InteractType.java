@@ -2,18 +2,18 @@ package me.matsubara.realisticvillagers.data;
 
 public enum InteractType {
     GUI,
-    FOLLOWING,
-    STAY;
+    FOLLOW_ME,
+    STAY_HERE;
 
     public boolean isGUI() {
         return this == GUI;
     }
 
-    public boolean isFollowing() {
-        return this == FOLLOWING;
+    public boolean isFollowMe() {
+        return this == FOLLOW_ME;
     }
 
-    public boolean isStay() {
-        return this == STAY;
+    public boolean isStayHere() {
+        return this == STAY_HERE;
     }
 }

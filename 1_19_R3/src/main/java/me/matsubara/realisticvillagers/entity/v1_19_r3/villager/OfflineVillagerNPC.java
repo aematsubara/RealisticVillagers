@@ -561,6 +561,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     }
 
+    @Override
+    public boolean isReviving() {
+        return false;
+    }
+
     public boolean isMarkedAsDead() {
         return tag.contains(DEAD);
     }

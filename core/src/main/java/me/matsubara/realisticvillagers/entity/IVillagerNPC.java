@@ -193,4 +193,6 @@ public interface IVillagerNPC {
     void stopExchangeables();
 
     void refreshBrain();
+
+    boolean isReviving();
 }

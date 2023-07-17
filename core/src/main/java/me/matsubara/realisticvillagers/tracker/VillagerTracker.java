@@ -8,7 +8,6 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
-import com.google.gson.JsonParser;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import lombok.Getter;
@@ -17,9 +16,9 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
-import me.matsubara.realisticvillagers.listener.npc.NPCHandler;
-import me.matsubara.realisticvillagers.listener.protocol.DisguiseHandler;
-import me.matsubara.realisticvillagers.listener.protocol.VillagerHandler;
+import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
+import me.matsubara.realisticvillagers.handler.protocol.DisguiseHandler;
+import me.matsubara.realisticvillagers.handler.protocol.VillagerHandler;
 import me.matsubara.realisticvillagers.listener.spawn.BukkitSpawnListeners;
 import me.matsubara.realisticvillagers.listener.spawn.PaperSpawnListeners;
 import me.matsubara.realisticvillagers.npc.NPC;
@@ -347,7 +346,7 @@ public final class VillagerTracker implements Listener {
     public boolean isInvalid(@NotNull Villager villager, boolean ignoreSkinsState) {
         return (!ignoreSkinsState && Config.DISABLE_SKINS.asBool())
                 || !plugin.getCompatibilityManager().shouldTrack(villager)
-                || !plugin.isEnabledIn(villager.getWorld())
+                || plugin.isDisabledIn(villager.getWorld())
                 || plugin.getConverter().getNPC(villager).isEmpty();
     }
 
@@ -593,15 +592,7 @@ public final class VillagerTracker implements Listener {
                 return null;
             }
 
-            // Decode base64.
-            String base64 = new String(Base64.getDecoder().decode(textures.getValue()));
-
-            // Get url from json.
-            String url = JsonParser.parseString(base64).getAsJsonObject()
-                    .getAsJsonObject("textures")
-                    .getAsJsonObject("SKIN")
-                    .get("url")
-                    .getAsString();
+            String url = PluginUtils.getURLFromTexture(textures.getValue());
 
             BufferedImage image = PluginUtils.convertTo64x64(ImageIO.read(new URL(url)));
 

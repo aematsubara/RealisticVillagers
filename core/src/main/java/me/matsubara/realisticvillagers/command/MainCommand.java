@@ -8,6 +8,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.SkinGUI;
+import me.matsubara.realisticvillagers.manager.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -21,6 +22,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.StringUtil;
@@ -48,6 +50,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             "give-ring",
             "give-whistle",
             "give-divorce-papers",
+            "give-cross",
             "force-divorce",
             "add-skin",
             "set-skin",
@@ -59,6 +62,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             "&e/rv give-ring (player) &f- &7Gives a wedding ring.",
             "&e/rv give-whistle (player) &f- &7Gives a whistle.",
             "&e/rv give-divorce-papers (player) &f- &7Gives divorce papers.",
+            "&e/rv give-cross (player) &f- &7Gives a cross.",
             "&e/rv force-divorce (player) &f- &7Forces the divorce of a player.",
             "&e/rv add-skin <sex> <age-stage> <texture> <signature> &f- &7Add a new skin (from the console).",
             "&e/rv set-skin <sex> <id> &f- &7Gives you an item to change the skin of a villager.",
@@ -181,6 +185,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (getItemCommand(sender, args, "give-ring", plugin.getRing())) return true;
         if (getItemCommand(sender, args, "give-whistle", plugin.getWhistle())) return true;
         if (getItemCommand(sender, args, "give-divorce-papers", plugin.getDivorcePapers())) return true;
+        if (getItemCommand(sender, args, "give-cross", plugin.getCross())) return true;
 
         if (!subCommand.equalsIgnoreCase("reload")) {
             messages.send(sender, Messages.Message.INVALID_COMMAND);
@@ -191,6 +196,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
         boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
         boolean nametagsDisabled = Config.DISABLE_NAMETAGS.asBool();
+        boolean reviveEnabled = Config.REVIVE_ENABLED.asBool();
 
         messages.send(sender, Messages.Message.RELOADING);
 
@@ -199,6 +205,13 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             if (!(player.getOpenInventory().getTopInventory() instanceof InteractGUI interact)) continue;
             interact.setShouldStopInteracting(true);
             plugin.getServer().getScheduler().runTask(plugin, player::closeInventory);
+        }
+
+        ReviveManager reviveManager = plugin.getReviveManager();
+
+        // Cancel all revivals.
+        for (ReviveManager.MonumentAnimation animation : reviveManager.getRunningTasks().values()) {
+            plugin.getServer().getScheduler().cancelTask(animation.getTaskId());
         }
 
         SkinGUI.CACHE_MALE_HEADS.clear();
@@ -246,6 +259,15 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                         Villager bukkit = npc.bukkit();
                         if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
                     });
+
+            if (reviveEnabled == Config.REVIVE_ENABLED.asBool()) return;
+
+            // Register or unregister listeners from revive manager depending on the status; if previously was enabled, not it's disabled.
+            if (reviveEnabled) {
+                HandlerList.unregisterAll(reviveManager);
+            } else {
+                Bukkit.getPluginManager().registerEvents(reviveManager, plugin);
+            }
         }));
         return true;
     }

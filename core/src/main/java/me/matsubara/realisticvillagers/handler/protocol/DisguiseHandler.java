@@ -1,4 +1,4 @@
-package me.matsubara.realisticvillagers.listener.protocol;
+package me.matsubara.realisticvillagers.handler.protocol;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.ListenerPriority;

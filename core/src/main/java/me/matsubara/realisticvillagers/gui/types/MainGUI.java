@@ -10,6 +10,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -29,7 +30,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Getter
@@ -62,13 +63,13 @@ public final class MainGUI extends InteractGUI {
 
     private static final Map<String, Settings> ITEM_SETTINGS = Map.of(
             "procreate", Settings.ONLY_IF_MARRIED,
-            "set-home", Settings.ONLY_FOR_FAMILY,
-            "combat", Settings.ONLY_FOR_FAMILY,
+            "set-home", Settings.ONLY_IF_ALLOWED,
+            "combat", Settings.ONLY_IF_ALLOWED,
             "divorce", Settings.ONLY_IF_MARRIED);
     private static final int[] NEXT_LEVEL_XP_THRESHOLDS = {0, 10, 70, 150, 250};
 
     public MainGUI(RealisticVillagers plugin, IVillagerNPC npc, @NotNull Player player) {
-        super(plugin, npc, "main", getValidSize(plugin, "main", 27), title -> title.replace("%reputation%", String.valueOf(npc.getReputation(player.getUniqueId()))));
+        super(plugin, npc, "main", getValidSize(plugin, "main", 27), title -> title.replace("%reputation%", String.valueOf(npc.getReputation(player.getUniqueId()))), true);
 
         this.player = player;
 
@@ -141,7 +142,7 @@ public final class MainGUI extends InteractGUI {
     private boolean checkSettings(String itemName) {
         return !ITEM_SETTINGS.containsKey(itemName)
                 || !getBool(itemName, ITEM_SETTINGS.get(itemName).getName())
-                || !ITEM_SETTINGS.get(itemName).test(npc, player);
+                || ITEM_SETTINGS.get(itemName).getCondition().apply(npc, player, itemName);
     }
 
     private boolean getBool(String itemName, String setting) {
@@ -390,19 +391,24 @@ public final class MainGUI extends InteractGUI {
 
     @Getter
     private enum Settings {
-        ONLY_FOR_FAMILY("only-for-family", (npc, player) -> npc.isFamily(player.getUniqueId(), true)),
-        ONLY_IF_MARRIED("only-if-married", (npc, player) -> npc.isPartner(player.getUniqueId()));
+        ONLY_IF_ALLOWED("only-if-allowed", (npc, player, name) -> {
+            UUID playerUUID = player.getUniqueId();
+            String finalName = (name.equals("set-home") ? "home" : name).toUpperCase();
+            return switch (Config.valueOf("WHO_CAN_MODIFY_VILLAGER_" + finalName).asString("FAMILY").toUpperCase()) {
+                case "FAMILY" -> npc.isFamily(playerUUID, true);
+                case "PARTNER" -> npc.isPartner(playerUUID);
+                case "EVERYONE" -> true;
+                default -> false;
+            };
+        }),
+        ONLY_IF_MARRIED("only-if-married", (npc, player, name) -> npc.isPartner(player.getUniqueId()));
 
         private final String name;
-        private final BiPredicate<IVillagerNPC, Player> predicate;
+        private final TriFunction<IVillagerNPC, Player, String, Boolean> condition;
 
-        Settings(String name, BiPredicate<IVillagerNPC, Player> predicate) {
+        Settings(String name, TriFunction<IVillagerNPC, Player, String, Boolean> condition) {
             this.name = name;
-            this.predicate = predicate;
-        }
-
-        public boolean test(IVillagerNPC npc, Player player) {
-            return predicate.negate().test(npc, player);
+            this.condition = condition;
         }
     }
 }

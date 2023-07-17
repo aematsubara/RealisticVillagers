@@ -26,7 +26,6 @@ import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
-import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.CustomGossipContainer;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.NMSConverter;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.VillagerFoodData;
@@ -156,6 +155,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private ExpectingType expectingType;
     private UUID expectingFrom;
     private int expectingTicks;
+    private int revivingTicks;
     private boolean giftDropped;
     private UUID procreatingWith;
     private IVillagerNPC father;
@@ -627,7 +627,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public boolean isFollowing() {
-        return isInteracting() && interactType.isFollowing();
+        return isInteracting() && interactType.isFollowMe();
     }
 
     @Override
@@ -1227,7 +1227,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return foodData.getFoodLevel();
     }
 
-    @SuppressWarnings("unused")
     public void setFoodLevel(int foodLevel) {
         foodData.setFoodLevel(foodLevel);
         foodData.setLastFoodLevel(foodLevel);
@@ -1301,7 +1300,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @SuppressWarnings("WhileLoopReplaceableByForEach")
     private void updateSpecialPrices(Player player) {
         if (Config.DISABLE_SPECIAL_PRICES.asBool() || (Config.DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY.asBool()
-                && InventoryListeners.canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity()))) {
+                && plugin.getInventoryListeners().canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity()))) {
             return;
         }
 
@@ -1801,6 +1800,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
+    public boolean isReviving() {
+        return revivingTicks > 0;
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -1821,6 +1824,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
 
         if (!collides && !isSleeping()) collides = true;
+
+        if (revivingTicks > 0) {
+            revivingTicks--;
+        }
 
         if (expectingTicks > 0) {
             if (isExpectingBed() || !giftDropped) expectingTicks--;
@@ -1999,7 +2006,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean isStayingInPlace() {
-        return checkCurrentActivity(STAY) && isInteracting() && interactType.isStay();
+        return checkCurrentActivity(STAY) && isInteracting() && interactType.isStayHere();
     }
 
     public boolean checkCurrentActivity(Activity checkActivity) {

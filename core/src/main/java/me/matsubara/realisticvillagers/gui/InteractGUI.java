@@ -23,12 +23,12 @@ public abstract class InteractGUI implements InventoryHolder {
     protected final RealisticVillagers plugin;
     protected final IVillagerNPC npc;
     protected final Inventory inventory;
+    protected final boolean useNPC;
     protected @Setter int taskId;
     protected RainbowAnimation animation;
     private boolean shouldStopInteracting;
 
     private static final UnaryOperator<String> EMPTY = string -> string;
-    public static final String VILLAGER_HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNGNhOGVmMjQ1OGEyYjEwMjYwYjg3NTY1NThmNzY3OWJjYjdlZjY5MWQ0MWY1MzRlZmVhMmJhNzUxMDczMTVjYyJ9fX0=";
     public static final Material[] PANES = {
             Material.WHITE_STAINED_GLASS_PANE,
             Material.ORANGE_STAINED_GLASS_PANE,
@@ -46,10 +46,11 @@ public abstract class InteractGUI implements InventoryHolder {
             Material.RED_STAINED_GLASS_PANE,
             Material.BLACK_STAINED_GLASS_PANE};
 
-    protected InteractGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, @Nullable UnaryOperator<String> operator) {
+    protected InteractGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, @Nullable UnaryOperator<String> operator, boolean useNPC) {
         this.name = name;
         this.plugin = plugin;
         this.npc = npc;
+        this.useNPC = useNPC;
 
         String title = getTitle();
         if (npc != null) title = title.replace("%villager-name%", npc.getVillagerName());
@@ -69,7 +70,9 @@ public abstract class InteractGUI implements InventoryHolder {
     }
 
     protected ItemStack getGUIItem(String itemName, @Nullable UnaryOperator<String> operator) {
-        return plugin.getItem("gui." + name + ".items." + itemName).replace(operator != null ? operator : EMPTY).build();
+        return plugin.getItem("gui." + name + ".items." + itemName, useNPC && npc != null ? npc : null)
+                .replace(operator != null ? operator : EMPTY)
+                .build();
     }
 
     protected void clear(int[] @NotNull ... arrays) {

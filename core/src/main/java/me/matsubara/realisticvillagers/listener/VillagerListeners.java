@@ -13,6 +13,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.Reflection;
 import org.apache.commons.lang3.Validate;
+import org.bukkit.ChatColor;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
 import org.bukkit.entity.*;
@@ -209,7 +210,10 @@ public final class VillagerListeners implements Listener {
                 handleChangeSkinItem(player, npc, handItem);
                 return;
             }
-            if (handItem.getType() == Material.NAME_TAG && meta.hasDisplayName()) return;
+            if (handItem.getType() == Material.NAME_TAG && meta.hasDisplayName()) {
+                handleRename(event);
+                return;
+            }
         }
 
         // Prevent interacting with villager if it's fighting.
@@ -252,6 +256,35 @@ public final class VillagerListeners implements Listener {
 
         // Set interacting with id.
         npc.setInteractingWithAndType(player.getUniqueId(), InteractType.GUI);
+    }
+
+    // All this is checked in the invoker method.
+    @SuppressWarnings({"DataFlowIssue", "OptionalGetWithoutIsPresent"})
+    private void handleRename(@NotNull PlayerInteractEntityEvent event) {
+        Villager villager = (Villager) event.getRightClicked();
+
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItem(event.getHand());
+
+        IVillagerNPC npc = plugin.getConverter().getNPC(villager).get();
+
+        // Prevent renaming villager, we'll do it ourself.
+        event.setCancelled(true);
+
+        if (plugin.getInventoryListeners().notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_NAME)) {
+            plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_RENAME_NOT_ALLOWED);
+            return;
+        }
+
+        String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+        if (name.length() < 3) return;
+
+        npc.setVillagerName(name);
+        plugin.getTracker().refreshNPCSkin(villager, false);
+
+        player.getInventory().removeItem(new ItemBuilder(item.clone())
+                .setAmount(1)
+                .build());
     }
 
     private boolean isExpecting(Player player, @NotNull IVillagerNPC npc, ExpectingType checkType) {

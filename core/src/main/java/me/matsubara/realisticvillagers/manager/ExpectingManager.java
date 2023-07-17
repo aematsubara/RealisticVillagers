@@ -10,6 +10,7 @@ import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
 import org.bukkit.NamespacedKey;
@@ -249,9 +250,11 @@ public final class ExpectingManager implements Listener {
         int reputation = npc.getReputation(playerUUID);
         int repRequiredToMarry = Config.REPUTATION_REQUIRED_TO_MARRY.asInt();
 
-        boolean isRing = gift.isSimilar(plugin.getRing().getResult());
+        boolean isRing = PluginUtils.isItem(gift, plugin.getIsRingKey());
+        boolean isCross = PluginUtils.isItem(gift, plugin.getCrossItemKey());
 
         boolean alreadyMarriedWithPlayer = isRing && npc.isPartner(playerUUID);
+        boolean alreadyHasCross = isCross && PluginUtils.hasAnyOf(npc.bukkit(), plugin.getCrossItemKey());
 
         boolean successByRing = isRing
                 && npc.bukkit().isAdult()
@@ -260,13 +263,26 @@ public final class ExpectingManager implements Listener {
                 && !npc.hasPartner()
                 && !plugin.isMarried(player)
                 && !alreadyMarriedWithPlayer;
+        boolean successByCross = isCross && !alreadyHasCross;
 
         GiftCategory category = plugin.getGiftManager().getCategory(npc, gift);
-        boolean success = successByRing || (!isRing && category != null) || alreadyMarriedWithPlayer;
+        boolean success = successByRing
+                || successByCross
+                || ((!isRing && !isCross) && category != null)
+                || alreadyMarriedWithPlayer
+                || alreadyHasCross;
 
         int amount;
         if (success) {
-            amount = successByRing ? Config.WEDDING_RING_REPUTATION.asInt() : alreadyMarriedWithPlayer ? 0 : category.reputation();
+            if (successByRing) {
+                amount = Config.WEDDING_RING_REPUTATION.asInt();
+            } else if (successByCross) {
+                amount = Config.CROSS_REPUTATION.asInt();
+            } else if (alreadyMarriedWithPlayer || alreadyHasCross) {
+                amount = 0;
+            } else {
+                amount = category.reputation();
+            }
         } else {
             amount = isRing ? 0 : Config.BAD_GIFT_REPUTATION.asInt();
         }
@@ -308,6 +324,13 @@ public final class ExpectingManager implements Listener {
 
             messages.send(player, npc, message);
             dropRing(npc, gift);
+            return;
+        }
+
+        if (successByCross || (success && isCross)) {
+            // For cross, just use a random category.
+            GiftCategory randomCategory = plugin.getGiftManager().getRandomCategory();
+            if (randomCategory != null) messages.sendRandomGiftMessage(player, npc, randomCategory);
             return;
         }
 

@@ -243,6 +243,9 @@ use-villager-sounds: false
 # Amount of reputation when giving a wedding ring. Minimum value: 2; use 1 or less to disable.
 wedding-ring-reputation: 20
 
+# Amount of reputation when giving a cross. Minimum value: 2; use 1 or less to disable.
+cross-reputation: 10
+
 # Amount of reputation when having a baby.  Minimum value: 2; use 1 or less to disable.
 baby-reputation: 20
 
@@ -593,7 +596,7 @@ gui:
         display-name: "&aSet home"
         lore:
           - "&7Give this villager a bed."
-        only-for-family: false
+        only-if-allowed: false
       procreate:
         slot: 3, 4
         material: EGG
@@ -609,10 +612,14 @@ gui:
           - "&7Click to manage combat of this villager."
         flags:
           - HIDE_ATTRIBUTES
-        only-for-family: false
+        only-if-allowed: false
   equipment:
     title: "%villager-name%'s inventory"
     items:
+      villager:
+        url: SELF
+        material: PLAYER_HEAD
+        display-name: "&a%villager-name%"
       close:
         material: BARRIER
         display-name: "&cClose"
@@ -840,6 +847,7 @@ wedding-ring:
       - "G G"
       - "GGG"
 
+# Whistle item.
 whistle:
   material: IRON_INGOT
   display-name: "&bWhistle"
@@ -855,11 +863,19 @@ whistle:
       - "IG "
       - "III"
 
+# Divorce papers item.
 divorce-papers:
   material: PAPER
   display-name: "&aDivorce papers"
+
+# Cross item.
+cross:
+  url: 1b6f0156e28c2ca6c188b2248e72fdab874abaa8d00dba72718e4f8a04e44c27
+  material: PLAYER_HEAD
+  display-name: "&bCross"
   lore:
-    - "&7&oEverything comes to an end."
+    - "&7Give this cross to a villager"
+    - "&7to revive him later."
 
 change-skin:
   # %skin-id% - the skin that'll be applied.
@@ -1011,20 +1027,28 @@ default-wanted-items:
   - IRON_INGOT(2-6)*
 
 # Chance of jumping when attacking with a sword/axe (just to give more "realism").
-# NOTE: It's recommended to leave it at 0 so that villagers are not attacked when jumping (or use a lower value).
+# NOTE: It's recommended to leave it at 0.0 so that villagers are not attacked when jumping (or use a lower value).
 melee-attack-jump-chance: 0.0
 
 # Chance of jumping when attacking with a bow/crossbow and backing up (just to give more "realism").
-back-up-jump-chance: 0.2
+# NOTE: It's recommended to leave it at 0.0 so that villagers are not attacked when jumping (or use a lower value).
+back-up-jump-chance: 0.0
 
-# Who can modify the inventory of a villager (EVERYONE/FAMILY/NONE).
+# Who can modify the inventory of a villager (EVERYONE/FAMILY/PARTNER/NONE).
 # NOTE: Be careful with this.
 # * Some players may give gifts to villagers to increase their reputation and then take the items from these villagers.
 # * The higher the reputation, the greater the discounts.
 # * Check the option below to prevent this.
 who-can-modify-villager-inventory: NONE
 
-# Who can modify the name of a villager using a nametag, where the amount of characters must be at least 3 and no colors can be used (EVERYONE/FAMILY/NONE).
+# Who can modify the target entities of a villager (EVERYONE/FAMILY/PARTNER/NONE).
+who-can-modify-villager-combat: FAMILY
+
+# Who can modify the home (bed) of a villager (EVERYONE/FAMILY/PARTNER/NONE).
+who-can-modify-villager-home: FAMILY
+
+# Who can modify the name of a villager using a nametag (EVERYONE/FAMILY/PARTNER/NONE).
+# NOTE: The amount of characters must be at least 3 and no colors can be used.
 who-can-modify-villager-name: NONE
 
 # Whether special prices are disabled when modifying the villager's inventory.
@@ -1058,8 +1082,14 @@ loot-chest:
 # Reputation required to ask the villager to follow you.
 reputation-required-to-ask-to-follow: 20
 
+# If true, members of the villager's family may ask to be followed regardless of the required reputation in @reputation-required-to-ask-to-follow.
+family-bypass-ask-to-follow: true
+
 # Reputation required to ask the villager to stay.
 reputation-required-to-ask-to-stay: 20
+
+# If true, members of the villager's family may ask the villager to stay regardless of the required reputation in @reputation-required-to-ask-to-stay.
+family-bypass-ask-to-stay: true
 
 # The initial reputation that a villager will have with the player (must be the father) at birth.
 # Minimum reputation value: 2; use 1 or less to disable.
@@ -1247,3 +1277,44 @@ schedules:
     9000: MEET
     11000: IDLE
     12000: REST
+
+# Here you can configure the revival of villagers.
+# NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
+revive:
+  # Whether villagers can be revived.
+  enabled: false
+  # If villagers can only be revived at night.
+  only-at-night: true
+  # If only villagers with a cross can be revived.
+  only-with-cross: true
+  # Chance of an emerald block breaking when struck by lightning.
+  break-emerald-chance: 0.1
+  head-item:
+    url: SELF
+    material: PLAYER_HEAD
+    display-name: "&a%villager-name%"
+  spawn-values:
+    # Health when spawning.
+    health: 20
+    # Food level when spawning.
+    food-level: 20
+    # Effects to apply when spawning.
+    potion-effects:
+      - REGENERATION, 900, 2
+      - ABSORPTION, 100, 2
+      - FIRE_RESISTANCE, 800, 1
+  boss-bar:
+    # Enable or disable the bossbar.
+    enabled: true
+    # %villager-name% - name of the villager.
+    title: "%villager-name%"
+    # If the bossbar increases or decreases (INCREASE/DECREASE).
+    progress-type: INCREASE
+    # Color of the bossbar.
+    color: RED
+    # Style of the bossbar.
+    style: SOLID
+    # Flags of the bossbar.
+    flags:
+      - CREATE_FOG
+      - DARKEN_SKY

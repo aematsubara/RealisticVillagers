@@ -45,4 +45,8 @@ public interface INMSConverter {
     boolean isBeingTracked(Player player, int villagerId);
 
     void refreshSchedules();
+
+    IVillagerNPC getNPCFromTag(String tag);
+
+    void spawnFromTag(Location location, String tag);
 }

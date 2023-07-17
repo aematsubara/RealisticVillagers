@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.0.5</version>
+        <version>3.0.6</version>
     </parent>
 
     <pluginRepositories>
@@ -57,10 +57,6 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.mineskin</pattern>
-                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>com.jeff_media</pattern>
                                     <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
                                 </relocation>
                             </relocations>
@@ -138,10 +134,6 @@
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
-        <repository>
-            <id>jeff-media-public</id>
-            <url>https://hub.jeff-media.com/nexus/repository/jeff-media-public/</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -183,12 +175,6 @@
             <groupId>com.github.aematsubara</groupId>
             <artifactId>MineskinClient</artifactId>
             <version>master-SNAPSHOT</version>
-        </dependency>
-        <!-- CustomBlockData -->
-        <dependency>
-            <groupId>com.jeff_media</groupId>
-            <artifactId>CustomBlockData</artifactId>
-            <version>2.2.0</version>
         </dependency>
         <!-- EliteMobs -->
         <dependency>

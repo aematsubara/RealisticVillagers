@@ -19,9 +19,9 @@ public class NewSkinGUI extends InteractGUI {
 
     public NewSkinGUI(RealisticVillagers plugin, @NotNull Player player, boolean isMale, boolean isAdult) {
         super(plugin, null, "new-skin", 27, title -> title
-                .replace("%sex%", isMale ? Config.MALE.asString() : Config.FEMALE.asString())
-                .replace("%age-stage%", isAdult ? Config.ADULT.asString() : Config.KID.asString())
-        );
+                        .replace("%sex%", isMale ? Config.MALE.asString() : Config.FEMALE.asString())
+                        .replace("%age-stage%", isAdult ? Config.ADULT.asString() : Config.KID.asString()),
+                false);
 
         this.player = player;
         this.isMale = isMale;

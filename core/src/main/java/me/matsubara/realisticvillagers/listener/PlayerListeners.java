@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.listener;
 
 import com.comphenix.protocol.wrappers.Pair;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.GUIInteractType;
@@ -10,7 +11,6 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
-import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.*;
@@ -24,7 +24,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -32,15 +35,15 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public final class PlayerListeners implements Listener {
 
     private final RealisticVillagers plugin;
     private final Multimap<UUID, Pair<Long, Integer>> babyGrowCount = ArrayListMultimap.create();
+    private final List<String> ignoredActivities = ImmutableList.of("hide", "panic", "fight");
+
+    private static final String EMPTY = "";
 
     public PlayerListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -102,9 +105,11 @@ public final class PlayerListeners implements Listener {
                     || villager.isSleeping()
                     || !villager.hasLineOfSight(player)) continue;
 
+            // Ignore non-custom, inside raid, lower reputation, ignored activities.
             Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
             if (npc.isEmpty() || npc.get().isInsideRaid()) continue;
             if (npc.get().getReputation(player.getUniqueId()) < requiredReputation) continue;
+            if (ignoredActivities.contains(npc.get().getActivityName(EMPTY).toLowerCase())) continue;
 
             InteractionTargetType relationship = InteractionTargetType.getInteractionTarget(npc.get(), player);
             if (!cooldown.canInteract(player, villager, relationship.getName(), Config.GREET_MESSAGES_PER_TYPE_COOLDOWN.asLong())) {
@@ -121,48 +126,12 @@ public final class PlayerListeners implements Listener {
         cooldown.removeCooldown(player, "welcome");
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onPlayerInteract(@NotNull PlayerInteractEntityEvent event) {
-        if (!(event.getRightClicked() instanceof Villager villager)) return;
-
-        if (plugin.getTracker().isInvalid(villager, true)) return;
-
-        Player player = event.getPlayer();
-
-        ItemStack item = player.getInventory().getItem(event.getHand());
-        if (item == null || item.getType() != Material.NAME_TAG) return;
-
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasDisplayName()) return;
-
-        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
-        if (npc.isEmpty()) return;
-
-        // Prevent renaming villager, we'll do it ourself.
-        event.setCancelled(true);
-
-        if (!InventoryListeners.canModifyName(npc.get(), player)) {
-            plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_RENAME_NOT_ALLOWED);
-            return;
-        }
-
-        String name = ChatColor.stripColor(meta.getDisplayName());
-        if (name.length() < 3) return;
-
-        npc.get().setVillagerName(name);
-        plugin.getTracker().refreshNPCSkin(villager, false);
-
-        player.getInventory().removeItem(new ItemBuilder(item.clone())
-                .setAmount(1)
-                .build());
-    }
-
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
         handleWhistle(event);
         handleBabySpawn(event);
 
-        if (!plugin.isEnabledIn(event.getPlayer().getWorld())) return;
+        if (plugin.isDisabledIn(event.getPlayer().getWorld())) return;
 
         if (!ReflectionUtils.supports(19)) return;
         if (!Config.ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK.asBool()) return;
@@ -225,7 +194,7 @@ public final class PlayerListeners implements Listener {
         EquipmentSlot hand = event.getHand();
         if (hand == null) return;
 
-        if (!plugin.isEnabledIn(player.getWorld())) return;
+        if (plugin.isDisabledIn(player.getWorld())) return;
 
         Messages messages = plugin.getMessages();
 

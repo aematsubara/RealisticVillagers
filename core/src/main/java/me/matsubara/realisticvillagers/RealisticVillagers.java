@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers;
 
 import com.comphenix.protocol.wrappers.Pair;
+import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
@@ -13,13 +14,11 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
-import me.matsubara.realisticvillagers.listener.InventoryListeners;
-import me.matsubara.realisticvillagers.listener.OtherListeners;
-import me.matsubara.realisticvillagers.listener.PlayerListeners;
-import me.matsubara.realisticvillagers.listener.VillagerListeners;
+import me.matsubara.realisticvillagers.listener.*;
 import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
+import me.matsubara.realisticvillagers.manager.ReviveManager;
 import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.manager.gift.GiftManager;
@@ -29,6 +28,7 @@ import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Shape;
+import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
 import org.bukkit.*;
@@ -58,7 +58,6 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -90,6 +89,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
     private final NamespacedKey skinDataKey = key("SkinDataID");
+    private final NamespacedKey crossItemKey = key("CrossItem");
 
     private InventoryListeners inventoryListeners;
     private OtherListeners otherListeners;
@@ -100,6 +100,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private @Setter Shape ring;
     private @Setter Shape whistle;
 
+    private ReviveManager reviveManager;
     private GiftManager giftManager;
     private ChestManager chestManager;
     private ExpectingManager expectingManager;
@@ -116,6 +117,9 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private List<String> worlds;
 
+    private static final String VILLAGER_HEAD_TEXTURE = "4ca8ef2458a2b10260b8756558f7679bcb7ef691d41f534efea2ba75107315cc";
+    private static final String UNKNOWN_HEAD_TEXTURE = "badc048a7ce78f7dad72a07da27d85c0916881e5522eeed1e3daf217a38c1a";
+
     public static final List<AnvilGUI.ResponseAction> CLOSE_RESPONSE = Collections.singletonList(AnvilGUI.ResponseAction.close());
     private static final List<String> FILTER_TYPES = List.of("WHITELIST", "BLACKLIST");
     private static final Set<String> SPECIAL_SECTIONS = Sets.newHashSet(
@@ -126,7 +130,8 @@ public final class RealisticVillagers extends JavaPlugin {
             "divorce-papers",
             "change-skin",
             "gui.main.frame",
-            "schedules");
+            "schedules",
+            "revive.head-item");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
 
     @Override
@@ -169,38 +174,41 @@ public final class RealisticVillagers extends JavaPlugin {
         saveDefaultConfig();
         messages = new Messages(this);
 
-        // Update files async since we modify a lot of files.
-        CompletableFuture.runAsync(this::updateConfigs).thenRun(() -> getServer().getScheduler().runTask(this, () -> {
-            giftManager = new GiftManager(this);
-            chestManager = new ChestManager(this);
-            expectingManager = new ExpectingManager(this);
-            cooldownManager = new InteractCooldownManager(this);
+        // This may take some time at startup, but it's necessary only once.
+        updateConfigs();
 
-            ring = createWeddingRing();
-            whistle = createWhistle();
+        reviveManager = new ReviveManager(this);
+        giftManager = new GiftManager(this);
+        chestManager = new ChestManager(this);
+        expectingManager = new ExpectingManager(this);
+        cooldownManager = new InteractCooldownManager(this);
+        CustomBlockData.registerListener(this);
 
-            converter.loadData();
+        ring = createWeddingRing();
+        whistle = createWhistle();
 
-            reloadDefaultTargetEntities();
-            reloadWantedItems();
-            reloadLoots();
+        converter.loadData();
 
-            registerEvents(
-                    (inventoryListeners = new InventoryListeners(this)),
-                    (otherListeners = new OtherListeners(this)),
-                    (playerListeners = new PlayerListeners(this)),
-                    (villagerListeners = new VillagerListeners(this)));
+        reloadDefaultTargetEntities();
+        reloadWantedItems();
+        reloadLoots();
 
-            // Used in previous versions, not needed anymore.
-            FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
+        registerEvents(
+                new BlockListeners(this),
+                (inventoryListeners = new InventoryListeners(this)),
+                (otherListeners = new OtherListeners(this)),
+                (playerListeners = new PlayerListeners(this)),
+                (villagerListeners = new VillagerListeners(this)));
 
-            PluginCommand command = getCommand("realisticvillagers");
-            if (command == null) return;
+        // Used in previous versions, not needed anymore.
+        FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
 
-            MainCommand main = new MainCommand(this);
-            command.setExecutor(main);
-            command.setTabCompleter(main);
-        }));
+        PluginCommand command = getCommand("realisticvillagers");
+        if (command == null) return;
+
+        MainCommand main = new MainCommand(this);
+        command.setExecutor(main);
+        command.setTabCompleter(main);
     }
 
     private void loadFileOrCreate(String folder, String fileName) {
@@ -330,6 +338,23 @@ public final class RealisticVillagers extends JavaPlugin {
                 temp -> temp.set("gui.new-skin", null),
                 2);
 
+        // Replace @only-for-family with @only-if-allowed, only for V < 3.
+        handleConfigChanges(
+                file,
+                config,
+                "config.yml",
+                temp -> temp.getInt("config-version") < 3,
+                temp -> {
+                    String pathToSetHome = "gui.main.items.set-home.";
+                    temp.set(pathToSetHome + "only-for-family", null);
+                    temp.set(pathToSetHome + "only-if-allowed", false);
+
+                    String pathToCombat = "gui.main.items.combat.";
+                    temp.set(pathToCombat + "only-for-family", null);
+                    temp.set(pathToCombat + "only-if-allowed", false);
+                },
+                3);
+
         // Previously @interact-fail.not-allowed was a single line message, now is a map; only for V = X.
         handleConfigChanges(
                 file,
@@ -427,7 +452,15 @@ public final class RealisticVillagers extends JavaPlugin {
         return getItem("divorce-papers").setData(divorcePapersKey, PersistentDataType.INTEGER, 1).build();
     }
 
+    public ItemStack getCross() {
+        return getItem("cross").setData(crossItemKey, PersistentDataType.INTEGER, 1).build();
+    }
+
     public ItemBuilder getItem(String path) {
+        return getItem(path, null);
+    }
+
+    public ItemBuilder getItem(String path, @Nullable IVillagerNPC npc) {
         FileConfiguration config = getConfig();
 
         String name = config.getString(path + ".display-name");
@@ -450,7 +483,9 @@ public final class RealisticVillagers extends JavaPlugin {
         }
 
         if (material == Material.PLAYER_HEAD && url != null) {
-            builder.setHead(url, true);
+            // Use UUID from path to allow stacking heads.
+            UUID itemUUID = UUID.nameUUIDFromBytes(path.getBytes());
+            builder.setHead(itemUUID, url.equals("SELF") ? getNPCTextureURL(npc) : url, true);
         }
 
         for (String flag : config.getStringList(path + ".flags")) {
@@ -539,6 +574,15 @@ public final class RealisticVillagers extends JavaPlugin {
         return builder;
     }
 
+    public String getNPCTextureURL(@Nullable IVillagerNPC npc) {
+        if (Config.DISABLE_SKINS.asBool()) return VILLAGER_HEAD_TEXTURE;
+
+        if (npc == null) return UNKNOWN_HEAD_TEXTURE;
+
+        WrappedSignedProperty textures = tracker.getTextures(npc.getSex(), "none", npc.getSkinTextureId());
+        return textures.getName().equals("error") ? UNKNOWN_HEAD_TEXTURE : PluginUtils.getURLFromTexture(textures.getValue());
+    }
+
     private @NotNull Set<Color> getColors(@NotNull FileConfiguration config, String path, String effect, String needed) {
         Set<Color> colors = new HashSet<>();
         for (String colorString : config.getStringList(path + ".firework.firework-effects." + effect + "." + needed)) {
@@ -618,11 +662,15 @@ public final class RealisticVillagers extends JavaPlugin {
         loots.put("inventory-items", createLoot("inventory-items"));
     }
 
-    public boolean isEnabledIn(World world) {
+    public boolean isDisabledIn(@NotNull World world) {
+        return !isEnabledIn(world.getName());
+    }
+
+    public boolean isEnabledIn(String world) {
         String type = Config.WORLDS_FILTER_TYPE.asString();
         if (type == null || !FILTER_TYPES.contains(type.toUpperCase())) return true;
 
-        boolean contains = worlds.contains(world.getName());
+        boolean contains = worlds.contains(world);
         return type.equalsIgnoreCase("WHITELIST") == contains;
     }
 

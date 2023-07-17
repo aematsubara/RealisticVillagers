@@ -42,7 +42,7 @@ public final class CombatGUI extends InteractGUI {
     private final ItemStack disabled;
 
     public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable String keyword) {
-        super(plugin, npc, "combat", 45, null);
+        super(plugin, npc, "combat", 45, null, false);
         this.player = player;
 
         previous = getGUIItem("previous");

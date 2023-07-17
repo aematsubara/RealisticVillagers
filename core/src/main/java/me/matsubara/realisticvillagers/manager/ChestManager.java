@@ -4,7 +4,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.listener.protocol.ChestHandler;
+import me.matsubara.realisticvillagers.handler.protocol.ChestHandler;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;

@@ -17,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 public final class GiftManager {
@@ -168,5 +169,9 @@ public final class GiftManager {
             if (gift.is(type) && (!condition || gift instanceof Gift.GiftWithCondition)) return gift;
         }
         return null;
+    }
+
+    public @Nullable GiftCategory getRandomCategory() {
+        return data.isEmpty() ? null : data.get(ThreadLocalRandom.current().nextInt(data.size()));
     }
 }

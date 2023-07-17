@@ -1,14 +1,10 @@
 package me.matsubara.realisticvillagers.gui.types;
 
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
-import me.matsubara.realisticvillagers.util.ItemBuilder;
-import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
@@ -33,15 +29,11 @@ public final class EquipmentGUI extends InteractGUI {
             EquipmentSlot.OFF_HAND};
 
     public EquipmentGUI(RealisticVillagers plugin, IVillagerNPC npc, @NotNull Player player) {
-        super(plugin, npc, "equipment", npc.bukkit().getInventory().getSize() + 18, null);
+        super(plugin, npc, "equipment", npc.bukkit().getInventory().getSize() + 18, null, true);
+
         this.player = player;
-
         this.close = getGUIItem("close");
-
-        WrappedSignedProperty textures = Config.DISABLE_SKINS.asBool() ? null : plugin.getTracker().getTextures(npc.bukkit());
-        this.head = new ItemBuilder(PluginUtils.createHead(textures == null ? VILLAGER_HEAD_TEXTURE : textures.getValue()))
-                .setDisplayName("&7")
-                .build();
+        this.head = getGUIItem("villager", string -> string.replace("%villager-name%", npc.getVillagerName()));
 
         fillInventory();
         player.openInventory(inventory);

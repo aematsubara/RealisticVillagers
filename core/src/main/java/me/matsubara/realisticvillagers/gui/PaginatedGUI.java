@@ -24,7 +24,7 @@ public abstract class PaginatedGUI extends InteractGUI {
     private final int[] hotbar;
 
     public PaginatedGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, Player player, List<ItemStack> items) {
-        super(plugin, npc, name, size, null);
+        super(plugin, npc, name, size, null, false);
         this.player = player;
         this.items = items;
 

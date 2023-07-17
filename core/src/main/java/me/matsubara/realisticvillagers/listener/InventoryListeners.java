@@ -282,24 +282,9 @@ public final class InventoryListeners implements Listener {
         Messages messages = plugin.getMessages();
 
         if (current.isSimilar(main.getFollow())) {
-            int required = Config.REPUTATION_REQUIRED_TO_ASK_TO_FOLLOW.asInt();
-            if (reputation >= required) {
-                npc.setInteractType(InteractType.FOLLOWING);
-                messages.send(player, npc, Messages.Message.FOLLOW_ME_START);
-            } else {
-                messages.send(player, npc, Messages.Message.FOLLOW_ME_LOW_REPUTATION);
-                npc.shakeHead(player);
-            }
+            handleFollorOrStay(npc, player, InteractType.FOLLOW_ME);
         } else if (current.isSimilar(main.getStay())) {
-            int required = Config.REPUTATION_REQUIRED_TO_ASK_TO_STAY.asInt();
-            if (reputation >= required) {
-                npc.setInteractType(InteractType.STAY);
-                npc.stayInPlace();
-                messages.send(player, npc, Messages.Message.STAY_HERE_START);
-            } else {
-                messages.send(player, npc, Messages.Message.STAY_HERE_LOW_REPUTATION);
-                npc.shakeHead(player);
-            }
+            handleFollorOrStay(npc, player, InteractType.STAY_HERE);
         } else if (current.isSimilar(main.getInfo())) {
             return;
         } else if (current.isSimilar(main.getInspect())) {
@@ -365,13 +350,12 @@ public final class InventoryListeners implements Listener {
             // Divorce, remove and drop previous wedding ring.
             npc.divorceAndDropRing(player);
         } else if (current.isSimilar(main.getCombat())) {
-            if (conditionNotMet(player, isFamily, Messages.Message.INTERACT_FAIL_NOT_FAMILY)) return;
-
+            if (notAllowedToModify(player, isPartner, isFamily, Config.WHO_CAN_MODIFY_VILLAGER_COMBAT, true)) return;
             main.setShouldStopInteracting(false);
             openCombatGUI(npc, player, null);
             return;
         } else if (current.isSimilar(main.getHome())) {
-            if (conditionNotMet(player, isFamily, Messages.Message.INTERACT_FAIL_NOT_FAMILY)) return;
+            if (notAllowedToModify(player, isPartner, isFamily, Config.WHO_CAN_MODIFY_VILLAGER_HOME, true)) return;
             handleExpecting(player, npc, ExpectingType.BED, Messages.Message.SELECT_BED, Messages.Message.SET_HOME_EXPECTING);
         } else if (current.isSimilar(main.getPapers())) {
             // If it's (ask) papers item, then the villager is INDEED a cleric.
@@ -440,6 +424,33 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
+    private boolean notAllowedToModify(Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage) {
+        return switch (whoCanModify.asString("FAMILY").toUpperCase()) {
+            case "NONE" -> conditionNotMet(player, false, sendMessage ? Messages.Message.INTERACT_FAIL_NONE : null);
+            case "PARTNER" ->
+                    conditionNotMet(player, isPartner, sendMessage ? Messages.Message.INTERACT_FAIL_NOT_MARRIED : null);
+            case "FAMILY" ->
+                    conditionNotMet(player, isFamily, sendMessage ? Messages.Message.INTERACT_FAIL_NOT_FAMILY : null);
+            default -> false;
+        };
+    }
+
+    private void handleFollorOrStay(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull InteractType type) {
+        String typeName = type.name(), typeShortName = typeName.split("_")[0];
+        Config bypass = Config.valueOf("FAMILY_BYPASS_ASK_TO_" + typeShortName);
+        Config required = Config.valueOf("REPUTATION_REQUIRED_TO_ASK_TO_" + typeShortName);
+
+        Messages messages = plugin.getMessages();
+        if ((bypass.asBool() && npc.isFamily(player.getUniqueId(), true)) || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
+            npc.setInteractType(type);
+            if (type == InteractType.STAY_HERE) npc.stayInPlace();
+            messages.send(player, npc, Messages.Message.valueOf(typeName + "_START"));
+        } else {
+            messages.send(player, npc, Messages.Message.valueOf(typeName + "_LOW_REPUTATION"));
+            npc.shakeHead(player);
+        }
+    }
+
     private boolean handleVTL(Player player, Villager villager) {
         Plugin vtl = plugin.getServer().getPluginManager().getPlugin("VillagerTradeLimiter");
         if (vtl == null) return false;
@@ -505,8 +516,8 @@ public final class InventoryListeners implements Listener {
         return false;
     }
 
-    private boolean conditionNotMet(Player player, boolean condition, Messages.Message message) {
-        if (!condition) {
+    private boolean conditionNotMet(Player player, boolean condition, @Nullable Messages.Message message) {
+        if (!condition && message != null) {
             plugin.getMessages().send(player, message);
             closeInventory(player);
         }
@@ -910,17 +921,12 @@ public final class InventoryListeners implements Listener {
         plugin.getServer().getScheduler().runTask(plugin, runnable);
     }
 
-    public static boolean canModifyInventory(IVillagerNPC npc, Player player) {
-        return canModify(npc, player, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY);
+    public boolean canModifyInventory(IVillagerNPC npc, Player player) {
+        return !notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY);
     }
 
-    public static boolean canModifyName(IVillagerNPC npc, Player player) {
-        return canModify(npc, player, Config.WHO_CAN_MODIFY_VILLAGER_NAME);
-    }
-
-    private static boolean canModify(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull Config config) {
-        boolean isFamily = npc.isFamily(player.getUniqueId(), true);
-        String who = config.asString();
-        return who.equalsIgnoreCase("everyone") || (who.equalsIgnoreCase("family") && isFamily);
+    public boolean notAllowedToModifyInventoryOrName(@NotNull Player player, @NotNull IVillagerNPC npc, Config whoCanModify) {
+        UUID playerUUID = player.getUniqueId();
+        return notAllowedToModify(player, npc.isFamily(playerUUID, true), npc.isPartner(playerUUID), whoCanModify, false);
     }
 }

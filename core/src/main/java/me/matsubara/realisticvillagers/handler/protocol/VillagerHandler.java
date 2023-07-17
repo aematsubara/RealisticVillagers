@@ -1,4 +1,4 @@
-package me.matsubara.realisticvillagers.listener.protocol;
+package me.matsubara.realisticvillagers.handler.protocol;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
@@ -117,6 +117,11 @@ public class VillagerHandler extends PacketAdapter {
             event.setCancelled(true);
             return;
         }
+
+        // Dont modify locaiton while reviving.
+        if (plugin.getConverter().getNPC((Villager) entity)
+                .map(IVillagerNPC::isReviving)
+                .orElse(false)) return;
 
         if (MOVEMENT_PACKETS.contains(type)) handleNPCLocation(event, (Villager) entity, npc.get());
     }

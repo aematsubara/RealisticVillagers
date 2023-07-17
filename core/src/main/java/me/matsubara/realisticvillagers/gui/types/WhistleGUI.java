@@ -1,11 +1,8 @@
 package me.matsubara.realisticvillagers.gui.types;
 
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.files.Config;
-import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.PaginatedGUI;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.bukkit.entity.Player;
@@ -36,14 +33,8 @@ public class WhistleGUI extends PaginatedGUI {
                 .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(npc -> {
                     String name = npc.getVillagerName();
-                    int skinId = npc.getSkinTextureId();
-
-                    WrappedSignedProperty textures = Config.DISABLE_SKINS.asBool() ? null : skinId == -1 ?
-                            null :
-                            plugin.getTracker().getTextures(npc.getSex(), "none", skinId);
-
                     return new ItemBuilder(plugin.getItem("gui.whistle.items.villager").build())
-                            .setHead(textures == null ? InteractGUI.VILLAGER_HEAD_TEXTURE : textures.getValue(), false)
+                            .setHead(plugin.getNPCTextureURL(npc), true)
                             .setData(plugin.getVillagerNameKey(), PersistentDataType.STRING, name)
                             .replace("%villager-name%", name)
                             .build();
