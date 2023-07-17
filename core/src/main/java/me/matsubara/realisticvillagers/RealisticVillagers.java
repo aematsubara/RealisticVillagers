@@ -74,6 +74,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey motherUUIDKey = key("MotherUUID");
     private final NamespacedKey isRingKey = key("IsRing");
     private final NamespacedKey isWhistleKey = key("IsWhistle");
+    private final NamespacedKey isCrossKey = key("IsCross");
     private final NamespacedKey entityTypeKey = key("EntityType");
     private final NamespacedKey chatInteractionTypeKey = key("ChatInteractionType");
     private final NamespacedKey childNameKey = key("ChildName");
@@ -89,7 +90,6 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
     private final NamespacedKey skinDataKey = key("SkinDataID");
-    private final NamespacedKey crossItemKey = key("CrossItem");
 
     private InventoryListeners inventoryListeners;
     private OtherListeners otherListeners;
@@ -99,6 +99,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private VillagerTracker tracker;
     private @Setter Shape ring;
     private @Setter Shape whistle;
+    private @Setter Shape cross;
 
     private ReviveManager reviveManager;
     private GiftManager giftManager;
@@ -128,6 +129,7 @@ public final class RealisticVillagers extends JavaPlugin {
             "wedding-ring",
             "whistle",
             "divorce-papers",
+            "cross",
             "change-skin",
             "gui.main.frame",
             "schedules",
@@ -186,6 +188,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         ring = createWeddingRing();
         whistle = createWhistle();
+        cross = createCross();
 
         converter.loadData();
 
@@ -435,7 +438,15 @@ public final class RealisticVillagers extends JavaPlugin {
     }
 
     public @NotNull Shape createWhistle() {
-        return createCraftableItem("whistle", "whistle", isWhistleKey);
+        return createCraftableItem("whistle", isWhistleKey);
+    }
+
+    public @NotNull Shape createCross() {
+        return createCraftableItem("cross", isCrossKey);
+    }
+
+    private @NotNull Shape createCraftableItem(String item, NamespacedKey identifier) {
+        return createCraftableItem(item, item, identifier);
     }
 
     private @NotNull Shape createCraftableItem(String item, String recipeName, NamespacedKey identifier) {
@@ -450,10 +461,6 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public ItemStack getDivorcePapers() {
         return getItem("divorce-papers").setData(divorcePapersKey, PersistentDataType.INTEGER, 1).build();
-    }
-
-    public ItemStack getCross() {
-        return getItem("cross").setData(crossItemKey, PersistentDataType.INTEGER, 1).build();
     }
 
     public ItemBuilder getItem(String path) {

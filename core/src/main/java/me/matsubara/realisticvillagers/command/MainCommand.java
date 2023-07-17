@@ -231,6 +231,9 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             Bukkit.removeRecipe(plugin.getWhistle().getKey());
             plugin.setWhistle(plugin.createWhistle());
 
+            Bukkit.removeRecipe(plugin.getCross().getKey());
+            plugin.setCross(plugin.createCross());
+
             plugin.reloadDefaultTargetEntities();
             plugin.reloadWantedItems();
             plugin.reloadLoots();

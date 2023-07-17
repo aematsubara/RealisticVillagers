@@ -157,7 +157,7 @@ public class ReviveManager implements Listener {
         if (ignoreDead.remove(villager.getUniqueId())) return;
 
         if (Config.REVIVE_ONLY_WITH_CROSS.asBool()
-                && !PluginUtils.hasAnyOf(villager, plugin.getCrossItemKey())) return;
+                && !PluginUtils.hasAnyOf(villager, plugin.getIsCrossKey())) return;
 
         ItemStack head = createHeadItem(npc.get(), plugin.getConverter().getNPCTag(villager, false));
 

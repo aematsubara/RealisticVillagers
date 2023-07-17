@@ -876,6 +876,15 @@ cross:
   lore:
     - "&7Give this cross to a villager"
     - "&7to revive him later."
+  crafting:
+    shaped: true
+    ingredients:
+      - IRON_INGOT, I
+      - STRING, S
+    shape:
+      - "SIS"
+      - "III"
+      - "SIS"
 
 change-skin:
   # %skin-id% - the skin that'll be applied.

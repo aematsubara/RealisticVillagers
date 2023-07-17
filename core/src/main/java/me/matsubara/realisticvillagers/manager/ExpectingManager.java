@@ -251,10 +251,10 @@ public final class ExpectingManager implements Listener {
         int repRequiredToMarry = Config.REPUTATION_REQUIRED_TO_MARRY.asInt();
 
         boolean isRing = PluginUtils.isItem(gift, plugin.getIsRingKey());
-        boolean isCross = PluginUtils.isItem(gift, plugin.getCrossItemKey());
+        boolean isCross = PluginUtils.isItem(gift, plugin.getIsCrossKey());
 
         boolean alreadyMarriedWithPlayer = isRing && npc.isPartner(playerUUID);
-        boolean alreadyHasCross = isCross && PluginUtils.hasAnyOf(npc.bukkit(), plugin.getCrossItemKey());
+        boolean alreadyHasCross = isCross && PluginUtils.hasAnyOf(npc.bukkit(), plugin.getIsCrossKey());
 
         boolean successByRing = isRing
                 && npc.bukkit().isAdult()
