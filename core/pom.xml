@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.0.6</version>
+        <version>3.0.7</version>
     </parent>
 
     <pluginRepositories>
@@ -57,7 +57,7 @@
                                 </relocation>
                                 <relocation>
                                     <pattern>org.mineskin</pattern>
-                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util.mineskin</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>

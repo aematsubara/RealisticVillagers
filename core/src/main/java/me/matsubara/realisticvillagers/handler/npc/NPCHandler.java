@@ -4,7 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.nbt.NbtCompound;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -33,9 +32,6 @@ public class NPCHandler implements SpawnCustomizer {
     private final RealisticVillagers plugin;
     private final IVillagerNPC villager;
 
-    private NbtCompound shoulderEntityLeft;
-    private NbtCompound shoulderEntityRight;
-
     public NPCHandler(@NotNull RealisticVillagers plugin, Villager villager) {
         this.plugin = plugin;
         // No need to check if it's invalid, already checked in VillagerTracker#spawnNPC().
@@ -53,32 +49,34 @@ public class NPCHandler implements SpawnCustomizer {
         metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, villager.getShoulderEntityLeft()).send(player);
         metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, villager.getShoulderEntityRight()).send(player);
 
-        if (villager.bukkit().isSleeping()) {
-            Location home = villager.bukkit().getMemory(MemoryKey.HOME);
+        Villager bukkit = villager.bukkit();
+
+        if (bukkit.isSleeping()) {
+            Location home = bukkit.getMemory(MemoryKey.HOME);
 
             Set<UUID> sleeping = plugin.getTracker().getHandler().getSleeping();
             sleeping.add(player.getUniqueId());
 
-            npc.teleport().queueTeleport(location, villager.bukkit().isOnGround()).send(player);
+            npc.teleport().queueTeleport(location, bukkit.isOnGround()).send(player);
             metadata.queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
 
-            villager.bukkit().wakeup();
+            bukkit.wakeup();
 
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                if (home != null) villager.bukkit().sleep(home);
+                if (home != null) bukkit.sleep(home);
                 sleeping.remove(player.getUniqueId());
             }, 2L);
         }
 
         // Mount vehicles.
-        if (villager.bukkit().getVehicle() instanceof Vehicle vehicle) {
+        if (bukkit.getVehicle() instanceof Vehicle vehicle) {
             PacketContainer mount = new PacketContainer(PacketType.Play.Server.MOUNT);
             mount.getIntegers().write(0, vehicle.getEntityId());
             mount.getIntegerArrays().write(0, vehicle.getPassengers().stream().mapToInt(Entity::getEntityId).toArray());
             ProtocolLibrary.getProtocolManager().sendServerPacket(player, mount);
         }
 
-        EntityEquipment equipment = villager.bukkit().getEquipment();
+        EntityEquipment equipment = bukkit.getEquipment();
         if (equipment == null) return;
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {

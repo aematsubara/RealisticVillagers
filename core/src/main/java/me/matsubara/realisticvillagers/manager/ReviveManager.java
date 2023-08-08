@@ -45,10 +45,20 @@ public class ReviveManager implements Listener {
     private final @Getter Map<Block, MonumentAnimation> runningTasks = new HashMap<>();
     private final Set<UUID> ignoreDead = new HashSet<>();
 
-    private static final Set<EntityDamageEvent.DamageCause> CAN_NOT_REVIVE = Sets.immutableEnumSet(
-            EntityDamageEvent.DamageCause.SUFFOCATION,
-            EntityDamageEvent.DamageCause.VOID,
-            EntityDamageEvent.DamageCause.WORLD_BORDER);
+    private static final Set<EntityDamageEvent.DamageCause> CAN_NOT_REVIVE;
+
+    static {
+        Set<EntityDamageEvent.DamageCause> temp = new HashSet<>();
+        temp.add(EntityDamageEvent.DamageCause.SUFFOCATION);
+        temp.add(EntityDamageEvent.DamageCause.VOID);
+
+        // Added in 1.20.
+        EntityDamageEvent.DamageCause border = PluginUtils.getOrNull(EntityDamageEvent.DamageCause.class, "WORLD_BORDER");
+        if (border != null) temp.add(border);
+
+        CAN_NOT_REVIVE = Sets.immutableEnumSet(temp);
+    }
+
     private static final BlockFace[] MONUMENT = {
             BlockFace.NORTH_EAST,
             BlockFace.SOUTH_EAST,

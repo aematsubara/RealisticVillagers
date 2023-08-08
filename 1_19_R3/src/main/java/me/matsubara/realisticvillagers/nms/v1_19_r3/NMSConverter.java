@@ -21,18 +21,16 @@ import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.*;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
@@ -58,8 +56,6 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
-import net.minecraft.world.item.Instrument;
-import net.minecraft.world.item.Instruments;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.BiomeManager;
@@ -67,10 +63,7 @@ import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Raid;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.craftbukkit.v1_19_R3.CraftRaid;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
@@ -84,6 +77,7 @@ import org.bukkit.entity.Villager;
 import org.bukkit.entity.ZombieVillager;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.MusicInstrumentMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
@@ -190,9 +184,8 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public boolean isSeekGoatHorn(ItemStack item) {
-        Optional<? extends Holder<Instrument>> instrument = getInstrument(item);
-        return instrument.isPresent() && instrument.get().is(Instruments.SEEK_GOAT_HORN);
+    public boolean isSeekGoatHorn(@NotNull ItemStack item) {
+        return item.getItemMeta() instanceof MusicInstrumentMeta meta && MusicInstrument.SEEK.equals(meta.getInstrument());
     }
 
     @Override
@@ -520,17 +513,6 @@ public class NMSConverter implements INMSConverter {
                 offlines.add(OfflineVillagerNPC.from(uuid, data, world, xc, yc, zc));
             }
         }
-    }
-
-    private Optional<? extends Holder<Instrument>> getInstrument(ItemStack item) {
-        CompoundTag tag = CraftItemStack.asNMSCopy(item).getTag();
-        if (tag != null) {
-            ResourceLocation location = ResourceLocation.tryParse(tag.getString("instrument"));
-            if (location != null) {
-                return BuiltInRegistries.INSTRUMENT.getHolder(ResourceKey.create(Registries.INSTRUMENT, location));
-            }
-        }
-        return Optional.empty();
     }
 
     public static <T> void unfreezeRegistry(Registry<T> registry) {

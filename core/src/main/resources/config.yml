@@ -61,12 +61,15 @@
 # Enchantments: https://www.digminecraft.com/lists/enchantment_list_pc.php
 # Colors: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Color.html
 # FireworkEffect.Type: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/FireworkEffect.Type.html
+# Effects: https://www.digminecraft.com/lists/effect_list_pc.php
 
 # Don't touch this!
 config-version: 2
 
 # In order to generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
+# NOTE 2: DON'T login with your microsoft account, this is to contribute with a minecraft account to make the requests faster.
+# NOTE 3: You should only login with your google account. If you have problems, try clearing your cookies and try the steps again.
 #
 # To create an api-key, follow the steps below:
 # * Go to https://mineskin.org/account first.
@@ -833,7 +836,8 @@ baby:
 
 # Wedding ring crafting recipe.
 wedding-ring:
-  material: GOLD_INGOT
+  url: 93af4b73349e723b8654b75f905bd38995ccbb1a434d470b06279678945ecbdb
+  material: PLAYER_HEAD
   display-name: "&aWedding ring"
   lore:
     - "&7Give it to the love of your life."
