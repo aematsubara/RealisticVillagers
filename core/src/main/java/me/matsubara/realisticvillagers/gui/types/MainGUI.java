@@ -340,7 +340,8 @@ public final class MainGUI extends InteractGUI {
                 .replace("%mother%", motherName)
                 .replace("%skin-id%", npc.getSkinTextureId())
                 .replace("%id%", npc.bukkit().getEntityId())
-                .replace("%current-partner%", currentlyMarried ? partnerName : Config.NO_PARTNERS.asString());
+                .replace("%current-partner%", currentlyMarried ? partnerName : Config.NO_PARTNERS.asString())
+                .replace("%reputation%", npc.getReputation(player.getUniqueId()));
 
         return builder
                 .applyMultiLineLore(partners, "%partner%", "%partners%", null /* Won't be empty. */, partnersNames)

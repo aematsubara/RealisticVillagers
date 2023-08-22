@@ -253,7 +253,14 @@ public final class PluginUtils {
     }
 
     public static Color getColor(@NotNull String string) {
-        return string.equalsIgnoreCase("$RANDOM") ? getRandomColor() : COLORS_BY_NAME.get(string);
+        if (string.equalsIgnoreCase("$RANDOM")) return getRandomColor();
+
+        if (string.matches(PATTERN.pattern())) {
+            java.awt.Color temp = ChatColor.of(string).getColor();
+            return Color.fromRGB(temp.getRed(), temp.getGreen(), temp.getBlue());
+        }
+
+        return COLORS_BY_NAME.get(string);
     }
 
     public static <T extends Enum<T>> T getRandomFromEnum(@NotNull Class<T> clazz) {

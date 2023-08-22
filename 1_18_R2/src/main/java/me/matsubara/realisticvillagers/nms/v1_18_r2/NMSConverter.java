@@ -302,11 +302,7 @@ public class NMSConverter implements INMSConverter {
 
             // Iterate through all .mca files in "entities" folder.
             for (File entityFile : entitiesFiles) {
-                try {
-                    checkMCAFile(entityFile);
-                } catch (IOException exception) {
-                    exception.printStackTrace();
-                }
+                checkMCAFile(entityFile);
             }
         }
     }
@@ -465,17 +461,21 @@ public class NMSConverter implements INMSConverter {
         }
     }
 
-    private void checkMCAFile(@NotNull File entityFile) throws IOException {
-        RegionFile region = new RegionFile(entityFile.toPath(), entityFile.getParentFile().toPath(), false);
-        String world = entityFile.getParentFile().getParentFile().getName();
+    private void checkMCAFile(@NotNull File entityFile) {
+        try {
+            RegionFile region = new RegionFile(entityFile.toPath(), entityFile.getParentFile().toPath(), false);
+            String world = entityFile.getParentFile().getParentFile().getName();
 
-        for (int x = 0; x < 32; x++) {
-            for (int z = 0; z < 32; z++) {
-                checkRegion(region, world, x, z);
+            for (int x = 0; x < 32; x++) {
+                for (int z = 0; z < 32; z++) {
+                    checkRegion(region, world, x, z);
+                }
             }
-        }
 
-        region.close();
+            region.close();
+        } catch (IOException | IllegalArgumentException ignored) {
+            // Invalid region file, caused by the server software in most of the cases; ignoring to prevent spam.
+        }
     }
 
     private void checkRegion(@NotNull RegionFile region, String world, int x, int z) throws IOException {

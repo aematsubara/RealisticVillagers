@@ -16,6 +16,9 @@
 # @flags: which attributes to hide.
 # @enchantments: the enchantments to be applied.
 # @leather-color: the color of the leather armor.
+# * Use a color from: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Color.html (e.g. AQUA, BLACK, etc.)
+# * Use a random color with: $RANDOM
+# * Use a color using RGB format: &#RRGGBB
 # @damage: the amount of damage to apply to the item (maximum durability - given damage, can be $RANDOM or X-Y).
 # @tipped: the potion effect the arrow will have (must be a TIPPED_ARROW).
 # @amount: the amount of items.
@@ -548,10 +551,12 @@ gui:
         # %childrens% - childrens of this villager (one line).
         # %children% - childrens of this villager (displayed one below the other).
         # %effect% - active potion effects.
+        # %reputation% - player reputation with this villager.
         lore:
           - "&7Name: &e%villager-name%"
           - "&7ID: &e%id%"
           - "&7Skin ID: &e%skin-id%"
+          - "&7Reputation: &e%reputation%"
           - "&7Sex: &e%sex%"
           - "&7Age stage: &e%age-stage%"
           - "&7Health: &e%health%&7/&e%max-health%"

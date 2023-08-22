@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.0.7</version>
+        <version>3.0.8</version>
     </parent>
 
     <pluginRepositories>
@@ -134,6 +134,10 @@
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
+        <repository>
+            <id>viaversion-repo</id>
+            <url>https://repo.viaversion.com</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -194,6 +198,13 @@
             <groupId>com.github.PretzelJohn</groupId>
             <artifactId>VillagerTradeLimiter</artifactId>
             <version>1.5.6</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- ViaVersion -->
+        <dependency>
+            <groupId>com.viaversion</groupId>
+            <artifactId>viaversion-api</artifactId>
+            <version>4.7.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

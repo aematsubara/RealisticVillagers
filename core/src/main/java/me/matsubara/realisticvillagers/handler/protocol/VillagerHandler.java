@@ -106,6 +106,13 @@ public class VillagerHandler extends PacketAdapter {
             handleStatus(npc, bytes.readSafely(0));
         }
 
+        // Cancel metadata packet for players using 1.7 (or lower).
+        if (type == ENTITY_METADATA
+                && plugin.getServer().getPluginManager().getPlugin("ViaVersion") != null
+                && plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
+            event.setCancelled(true);
+        }
+
         int entityId = entity.getEntityId();
 
         Optional<NPC> npc = plugin.getTracker().getNPC(entityId);
