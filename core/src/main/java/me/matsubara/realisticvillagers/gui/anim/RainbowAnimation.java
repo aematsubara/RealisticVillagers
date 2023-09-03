@@ -8,21 +8,24 @@ import me.matsubara.realisticvillagers.gui.types.MainGUI;
 import me.matsubara.realisticvillagers.gui.types.SkinGUI;
 import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.IntUnaryOperator;
 
 public class RainbowAnimation extends BukkitRunnable {
 
     private final InteractGUI gui;
+    private final boolean frameEnabled;
     private final @Getter ItemStack defaultItem;
-    private final Random random;
     private final @Getter boolean guiAnim;
     private final int guiAnimType;
     private final long delay;
@@ -52,8 +55,8 @@ public class RainbowAnimation extends BukkitRunnable {
         this.gui = gui;
 
         RealisticVillagers plugin = gui.getPlugin();
+        this.frameEnabled = plugin.getConfig().getBoolean("gui.main.frame.enabled");
         this.defaultItem = plugin.getItem("gui.main.frame").build();
-        this.random = ThreadLocalRandom.current();
         this.guiAnim = plugin.getConfig().getBoolean("gui.rainbow-animation.enabled");
         this.guiAnimType = plugin.getConfig().getInt("gui.rainbow-animation.type");
         this.delay = plugin.getConfig().getLong("gui.rainbow-animation.delay", 10L);
@@ -78,9 +81,15 @@ public class RainbowAnimation extends BukkitRunnable {
             return;
         }
 
+        if (!guiAnim && !frameEnabled) {
+            // At this point, we just use this runnable to update the main items.
+            count++;
+            return;
+        }
+
         int next;
         do {
-            next = random.nextInt(PANES.length);
+            next = RandomUtils.nextInt(0, PANES.length);
         } while (previous == next);
 
         // No rainbow? default item. Type 1 ? random pane. Type 2 ? null (selected in createFrame()).
@@ -126,7 +135,7 @@ public class RainbowAnimation extends BukkitRunnable {
             }
             if (ignoreIndexes.contains(i)) continue;
 
-            gui.getInventory().setItem(i, item != null ? item : getCachedFrame(PANES[random.nextInt(PANES.length)]));
+            gui.getInventory().setItem(i, item != null ? item : getCachedFrame(PANES[RandomUtils.nextInt(0, PANES.length)]));
         }
     }
 

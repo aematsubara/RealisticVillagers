@@ -4,6 +4,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.util.ExtraTags;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -17,7 +18,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 public final class GiftManager {
@@ -172,6 +172,6 @@ public final class GiftManager {
     }
 
     public @Nullable GiftCategory getRandomCategory() {
-        return data.isEmpty() ? null : data.get(ThreadLocalRandom.current().nextInt(data.size()));
+        return data.isEmpty() ? null : data.get(RandomUtils.nextInt(0, data.size()));
     }
 }

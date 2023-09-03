@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.0.8</version>
+        <version>3.0.9</version>
     </parent>
 
     <pluginRepositories>
@@ -59,6 +59,10 @@
                                     <pattern>org.mineskin</pattern>
                                     <shadedPattern>me.matsubara.realisticvillagers.util.mineskin</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>com.cryptomorin</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                </relocation>
                             </relocations>
                             <filters>
                                 <filter>
@@ -66,6 +70,12 @@
                                     <excludes>
                                         <exclude>META-INF/**</exclude>
                                     </excludes>
+                                </filter>
+                                <filter>
+                                    <artifact>com.github.cryptomorin:XSeries</artifact>
+                                    <includes>
+                                        <include>com/cryptomorin/xseries/ReflectionUtils*</include>
+                                    </includes>
                                 </filter>
                                 <filter>
                                     <artifact>net.wesjd:anvilgui</artifact>
@@ -206,6 +216,12 @@
             <artifactId>viaversion-api</artifactId>
             <version>4.7.0</version>
             <scope>provided</scope>
+        </dependency>
+        <!--  XSeries  -->
+        <dependency>
+            <groupId>com.github.cryptomorin</groupId>
+            <artifactId>XSeries</artifactId>
+            <version>9.5.0</version>
         </dependency>
     </dependencies>
 </project>

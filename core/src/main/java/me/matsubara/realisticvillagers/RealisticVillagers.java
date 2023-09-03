@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
 import lombok.Getter;
@@ -31,6 +32,7 @@ import me.matsubara.realisticvillagers.util.Shape;
 import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
@@ -58,8 +60,8 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -214,9 +216,16 @@ public final class RealisticVillagers extends JavaPlugin {
         command.setTabCompleter(main);
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void loadFileOrCreate(String folder, String fileName) {
         File file = new File(folder, fileName);
-        if (!file.exists()) createFile(file);
+        if (file.exists()) return;
+
+        try {
+            file.createNewFile();
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
     }
 
     @Override
@@ -248,18 +257,11 @@ public final class RealisticVillagers extends JavaPlugin {
         }
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void createFile(@NotNull File file) {
-        try {
-            file.createNewFile();
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
-    }
-
     public void updateConfigs() {
         String pluginFolder = getDataFolder().getPath();
         String skinFolder = getSkinFolder();
+
+        Predicate<FileConfiguration> noVersion = temp -> !temp.contains("config-version");
 
         // config.yml
         updateConfig(
@@ -284,14 +286,60 @@ public final class RealisticVillagers extends JavaPlugin {
                     if (tracker == null) tracker = new VillagerTracker(this);
                     if (worlds == null) worlds = Config.WORLDS_FILTER_WORLDS.asStringList();
                 },
-                file -> saveDefaultConfig());
+                file -> saveDefaultConfig(),
+                config -> {
+                    fillIgnoredSections(config);
+                    return SPECIAL_SECTIONS.stream().filter(config::contains).toList();
+                },
+                ConfigChanges.builder()
+                        // We need to change the previous %partner% to %current-partner% since now %partner% behaves differently, only for V = X.
+                        .addChange(
+                                noVersion,
+                                temp -> {
+                                    String pathToInfoLore = "gui.main.items.information.lore";
+
+                                    List<String> lore = temp.getStringList(pathToInfoLore);
+                                    if (lore.isEmpty()) return;
+
+                                    lore.replaceAll(line -> line.replace("%partner%", "%current-partner%"));
+                                    temp.set(pathToInfoLore, lore);
+                                },
+                                1)
+                        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
+                        .addChange(
+                                temp -> temp.getInt("config-version") == 1,
+                                temp -> temp.set("gui.new-skin", null),
+                                2)
+                        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
+                        .addChange(
+                                temp -> temp.getInt("config-version") < 3,
+                                temp -> {
+                                    String pathToSetHome = "gui.main.items.set-home.";
+                                    temp.set(pathToSetHome + "only-for-family", null);
+                                    temp.set(pathToSetHome + "only-if-allowed", false);
+
+                                    String pathToCombat = "gui.main.items.combat.";
+                                    temp.set(pathToCombat + "only-for-family", null);
+                                    temp.set(pathToCombat + "only-if-allowed", false);
+                                },
+                                3).build());
+
+        Function<FileConfiguration, List<String>> emptyIgnore = config -> Collections.emptyList();
 
         // messages.yml
         updateConfig(
                 pluginFolder,
                 "messages.yml",
                 file -> messages.setConfiguration(YamlConfiguration.loadConfiguration(file)),
-                file -> saveResource("messages.yml"));
+                file -> saveResource("messages.yml"),
+                emptyIgnore,
+                ConfigChanges.builder()
+                        // Previously @interact-fail.not-allowed was a single line message, now is a map; only for V = X.
+                        .addChange(
+                                noVersion,
+                                temp -> temp.set("interact-fail.not-allowed", null),
+                                1)
+                        .build());
 
         // male.yml & female.yml (these shouldn't be modified directly by admins, only using the skin GUI).
         loadConsumer.accept(new File(skinFolder, "male.yml"));
@@ -302,83 +350,35 @@ public final class RealisticVillagers extends JavaPlugin {
                 pluginFolder,
                 "names.yml",
                 loadConsumer,
-                file -> saveResource("names.yml"));
+                file -> saveResource("names.yml"),
+                emptyIgnore,
+                Collections.emptyList());
     }
 
-    public void updateConfig(String folderName, String fileName, Consumer<File> reloadAfterUpdating, Consumer<File> resetConfiguration) {
+    public void updateConfig(String folderName,
+                             String fileName,
+                             Consumer<File> reloadAfterUpdating,
+                             Consumer<File> resetConfiguration,
+                             Function<FileConfiguration, List<String>> ignoreSection,
+                             List<ConfigChanges> changes) {
         File file = new File(folderName, fileName);
+
         FileConfiguration config = PluginUtils.reloadConfig(this, file, resetConfiguration);
         if (config == null) {
             getLogger().severe("Can't find {" + file.getName() + "}!");
             return;
         }
 
-        Predicate<FileConfiguration> noVersion = temp -> !temp.contains("config-version");
-
-        // We need to change the previous %partner% to %current-partner% since now %partner% behaves differently, only for V = X.
-        handleConfigChanges(
-                file,
-                config,
-                "config.yml",
-                noVersion,
-                temp -> {
-                    String pathToInfoLore = "gui.main.items.information.lore";
-
-                    List<String> lore = temp.getStringList(pathToInfoLore);
-                    if (lore.isEmpty()) return;
-
-                    lore.replaceAll(line -> line.replace("%partner%", "%current-partner%"));
-                    temp.set(pathToInfoLore, lore);
-                },
-                1);
-
-        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
-        handleConfigChanges(
-                file,
-                config,
-                "config.yml",
-                temp -> temp.getInt("config-version") == 1,
-                temp -> temp.set("gui.new-skin", null),
-                2);
-
-        // Replace @only-for-family with @only-if-allowed, only for V < 3.
-        handleConfigChanges(
-                file,
-                config,
-                "config.yml",
-                temp -> temp.getInt("config-version") < 3,
-                temp -> {
-                    String pathToSetHome = "gui.main.items.set-home.";
-                    temp.set(pathToSetHome + "only-for-family", null);
-                    temp.set(pathToSetHome + "only-if-allowed", false);
-
-                    String pathToCombat = "gui.main.items.combat.";
-                    temp.set(pathToCombat + "only-for-family", null);
-                    temp.set(pathToCombat + "only-if-allowed", false);
-                },
-                3);
-
-        // Previously @interact-fail.not-allowed was a single line message, now is a map; only for V = X.
-        handleConfigChanges(
-                file,
-                config,
-                "messages.yml",
-                noVersion,
-                temp -> temp.set("interact-fail.not-allowed", null),
-                1);
+        for (ConfigChanges change : changes) {
+            handleConfigChanges(file, config, change.predicate(), change.consumer(), change.newVersion());
+        }
 
         try {
-            List<String> toIgnore;
-            if (fileName.equals("config.yml")) {
-                fillIgnoredSections(config);
-                toIgnore = SPECIAL_SECTIONS.stream().filter(config::contains).toList();
-            } else toIgnore = Collections.emptyList();
-
             ConfigUpdater.update(
                     this,
                     fileName,
                     file,
-                    toIgnore);
+                    ignoreSection.apply(config));
         } catch (IOException exception) {
             exception.printStackTrace();
         }
@@ -409,9 +409,11 @@ public final class RealisticVillagers extends JavaPlugin {
         }
     }
 
-    @SuppressWarnings("SameParameterValue")
-    private void handleConfigChanges(@NotNull File file, FileConfiguration config, String fileTargetName, Predicate<FileConfiguration> predicate, Consumer<FileConfiguration> consumer, int newVersion) {
-        if (!file.getName().equals(fileTargetName) || !predicate.test(config)) return;
+    private void handleConfigChanges(@NotNull File file, FileConfiguration config, @NotNull Predicate<FileConfiguration> predicate, Consumer<FileConfiguration> consumer, int newVersion) {
+        if (!predicate.test(config)) return;
+
+        int previousVersion = config.getInt("config-version", -1);
+        getLogger().info("Updated {%s} config to v{%s} (from v{%s})".formatted(file.getName(), newVersion, previousVersion));
 
         consumer.accept(config);
         config.set("config-version", newVersion);
@@ -420,6 +422,31 @@ public final class RealisticVillagers extends JavaPlugin {
             config.save(file);
         } catch (IOException exception) {
             exception.printStackTrace();
+        }
+    }
+
+    public record ConfigChanges(Predicate<FileConfiguration> predicate,
+                                Consumer<FileConfiguration> consumer,
+                                int newVersion) {
+
+        public static @NotNull Builder builder() {
+            return new Builder();
+        }
+
+        public static class Builder {
+
+            private final List<ConfigChanges> changes = new ArrayList<>();
+
+            public Builder addChange(Predicate<FileConfiguration> predicate,
+                                     Consumer<FileConfiguration> consumer,
+                                     int newVersion) {
+                changes.add(new ConfigChanges(predicate, consumer, newVersion));
+                return this;
+            }
+
+            public List<ConfigChanges> build() {
+                return ImmutableList.copyOf(changes);
+            }
         }
     }
 
@@ -524,10 +551,25 @@ public final class RealisticVillagers extends JavaPlugin {
             if (potionType != null) builder.setBasePotionData(potionType);
         }
 
-        String leatherColor = config.getString(path + ".leather-color");
-        if (leatherColor != null) {
+        Object leather = config.get(path + ".leather-color");
+        if (leather instanceof String leatherColor) {
             Color color = PluginUtils.getColor(leatherColor);
             if (color != null) builder.setLeatherArmorMetaColor(color);
+        } else if (leather instanceof List<?> list) {
+            List<Color> colors = new ArrayList<>();
+
+            for (Object object : list) {
+                if (!(object instanceof String string)) continue;
+                if (string.equalsIgnoreCase("$RANDOM")) continue;
+
+                Color color = PluginUtils.getColor(string);
+                if (color != null) colors.add(color);
+            }
+
+            if (!colors.isEmpty()) {
+                Color color = colors.get(RandomUtils.nextInt(0, colors.size()));
+                builder.setLeatherArmorMetaColor(color);
+            }
         }
 
         if (config.contains(path + ".firework")) {
@@ -568,7 +610,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
             int damage;
             if (damageString.equalsIgnoreCase("$RANDOM")) {
-                damage = ThreadLocalRandom.current().nextInt(1, maxDurability);
+                damage = RandomUtils.nextInt(1, maxDurability);
             } else if (damageString.contains("%")) {
                 damage = Math.round(maxDurability * ((float) PluginUtils.getRangedAmount(damageString.replace("%", "")) / 100));
             } else {

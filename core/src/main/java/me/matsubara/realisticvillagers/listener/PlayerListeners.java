@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.listener;
 
 import com.comphenix.protocol.wrappers.Pair;
+import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -12,7 +13,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
 import me.matsubara.realisticvillagers.util.PluginUtils;
-import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;

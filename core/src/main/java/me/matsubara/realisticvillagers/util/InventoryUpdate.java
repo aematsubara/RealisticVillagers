@@ -21,6 +21,7 @@
  */
 package me.matsubara.realisticvillagers.util;
 
+import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.bukkit.entity.Player;

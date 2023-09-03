@@ -297,7 +297,8 @@ public class NMSConverter implements INMSConverter {
         for (File world : worlds) {
             File entitiesFolder = new File(world, "entities");
 
-            File[] entitiesFiles = entitiesFolder.listFiles();
+            File[] entitiesFiles = entitiesFolder.listFiles(
+                    (directory, name) -> new File(directory, name).isFile() && name.endsWith(".mca") && !name.contains("backup") && !name.contains("mcc"));
             if (entitiesFiles == null) continue;
 
             // Iterate through all .mca files in "entities" folder.

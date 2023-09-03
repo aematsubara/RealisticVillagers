@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.util;
 
 import com.comphenix.protocol.utility.MinecraftVersion;
+import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
@@ -10,6 +11,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import net.md_5.bungee.api.ChatColor;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -42,7 +44,6 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -134,7 +135,7 @@ public final class PluginUtils {
     }
 
     public static Color getRandomColor() {
-        return COLORS[ThreadLocalRandom.current().nextInt(COLORS.length)];
+        return COLORS[RandomUtils.nextInt(0, COLORS.length)];
     }
 
     public static @NotNull String translate(String message) {
@@ -265,7 +266,7 @@ public final class PluginUtils {
 
     public static <T extends Enum<T>> T getRandomFromEnum(@NotNull Class<T> clazz) {
         T[] constants = clazz.getEnumConstants();
-        return constants[ThreadLocalRandom.current().nextInt(constants.length)];
+        return constants[RandomUtils.nextInt(0, constants.length)];
     }
 
     public static <T extends Enum<T>> T getOrEitherRandomOrNull(Class<T> clazz, @NotNull String name) {
@@ -296,7 +297,7 @@ public final class PluginUtils {
             try {
                 int min = Integer.parseInt(data[0]);
                 int max = Integer.parseInt(data[1]);
-                return ThreadLocalRandom.current().nextInt(min, max + 1);
+                return RandomUtils.nextInt(min, max + 1);
             } catch (IllegalArgumentException ignored) {
             }
         }

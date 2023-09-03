@@ -6,9 +6,9 @@ import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedWatchableObject;
+import com.cryptomorin.xseries.ReflectionUtils;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.util.PluginUtils;
-import me.matsubara.realisticvillagers.util.ReflectionUtils;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 

@@ -4,6 +4,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.wesjd.anvilgui.AnvilGUI;
+import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
@@ -13,7 +14,6 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class BabyTask extends BukkitRunnable {
 
@@ -31,7 +31,7 @@ public class BabyTask extends BukkitRunnable {
         // No need to check if it's invalid, the main GUI can only be opened by valid villagers.
         this.villager = plugin.getConverter().getNPC(villager).get();
         this.player = player;
-        this.isBoy = ThreadLocalRandom.current().nextBoolean();
+        this.isBoy = RandomUtils.nextBoolean();
     }
 
     @Override
