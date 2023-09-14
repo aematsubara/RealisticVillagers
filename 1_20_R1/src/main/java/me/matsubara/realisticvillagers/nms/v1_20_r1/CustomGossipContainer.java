@@ -227,7 +227,7 @@ public class CustomGossipContainer extends GossipContainer {
                 .apply(var0, GossipEntry::new));
         public static final Codec<List<GossipEntry>> LIST_CODEC = CODEC.listOf();
 
-        public int weightedValue () {
+        public int weightedValue() {
             return value * type.weight;
         }
     }

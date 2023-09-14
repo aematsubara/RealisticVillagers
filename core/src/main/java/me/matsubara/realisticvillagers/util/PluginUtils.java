@@ -257,7 +257,7 @@ public final class PluginUtils {
         if (string.equalsIgnoreCase("$RANDOM")) return getRandomColor();
 
         if (string.matches(PATTERN.pattern())) {
-            java.awt.Color temp = ChatColor.of(string).getColor();
+            java.awt.Color temp = ChatColor.of(string.substring(1)).getColor();
             return Color.fromRGB(temp.getRed(), temp.getGreen(), temp.getBlue());
         }
 

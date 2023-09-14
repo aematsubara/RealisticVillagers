@@ -375,7 +375,8 @@ public final class MainGUI extends InteractGUI {
     }
 
     private int getMaxXpPerLevel(int level) {
-        return NEXT_LEVEL_XP_THRESHOLDS[level > NEXT_LEVEL_XP_THRESHOLDS.length - 1 ? level - 1 : level];
+        int last;
+        return NEXT_LEVEL_XP_THRESHOLDS[level > (last = NEXT_LEVEL_XP_THRESHOLDS.length - 1) ? last : level];
     }
 
     private boolean outOfFullStock(@NotNull List<MerchantRecipe> offers) {
