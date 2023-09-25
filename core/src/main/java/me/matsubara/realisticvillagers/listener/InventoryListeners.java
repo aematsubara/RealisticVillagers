@@ -350,12 +350,22 @@ public final class InventoryListeners implements Listener {
             // Divorce, remove and drop previous wedding ring.
             npc.divorceAndDropRing(player);
         } else if (current.isSimilar(main.getCombat())) {
-            if (notAllowedToModify(player, isPartner, isFamily, Config.WHO_CAN_MODIFY_VILLAGER_COMBAT, true)) return;
+            if (notAllowedToModify(player,
+                    isPartner,
+                    isFamily,
+                    Config.WHO_CAN_MODIFY_VILLAGER_COMBAT,
+                    true,
+                    "realisticvillagers.bypass.combat")) return;
             main.setShouldStopInteracting(false);
             openCombatGUI(npc, player, null);
             return;
         } else if (current.isSimilar(main.getHome())) {
-            if (notAllowedToModify(player, isPartner, isFamily, Config.WHO_CAN_MODIFY_VILLAGER_HOME, true)) return;
+            if (notAllowedToModify(player,
+                    isPartner,
+                    isFamily,
+                    Config.WHO_CAN_MODIFY_VILLAGER_HOME,
+                    true,
+                    "realisticvillagers.bypass.sethome")) return;
             handleExpecting(player, npc, ExpectingType.BED, Messages.Message.SELECT_BED, Messages.Message.SET_HOME_EXPECTING);
         } else if (current.isSimilar(main.getPapers())) {
             // If it's (ask) papers item, then the villager is INDEED a cleric.
@@ -424,7 +434,9 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
-    private boolean notAllowedToModify(Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage) {
+    private boolean notAllowedToModify(@NotNull Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage, String permission) {
+        if (player.hasPermission(permission)) return false;
+
         return switch (whoCanModify.asString("FAMILY").toUpperCase()) {
             case "NONE" -> conditionNotMet(player, false, sendMessage ? Messages.Message.INTERACT_FAIL_NONE : null);
             case "PARTNER" ->
@@ -441,7 +453,9 @@ public final class InventoryListeners implements Listener {
         Config required = Config.valueOf("REPUTATION_REQUIRED_TO_ASK_TO_" + typeShortName);
 
         Messages messages = plugin.getMessages();
-        if ((bypass.asBool() && npc.isFamily(player.getUniqueId(), true)) || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
+        if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase().replace("_", ""))
+                || (bypass.asBool() && npc.isFamily(player.getUniqueId(), true))
+                || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
             npc.setInteractType(type);
             if (type == InteractType.STAY_HERE) npc.stayInPlace();
             messages.send(player, npc, Messages.Message.valueOf(typeName + "_START"));
@@ -922,11 +936,11 @@ public final class InventoryListeners implements Listener {
     }
 
     public boolean canModifyInventory(IVillagerNPC npc, Player player) {
-        return !notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY);
+        return !notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY, "realisticvillagers.bypass.inventory");
     }
 
-    public boolean notAllowedToModifyInventoryOrName(@NotNull Player player, @NotNull IVillagerNPC npc, Config whoCanModify) {
+    public boolean notAllowedToModifyInventoryOrName(@NotNull Player player, @NotNull IVillagerNPC npc, Config whoCanModify, String permission) {
         UUID playerUUID = player.getUniqueId();
-        return notAllowedToModify(player, npc.isFamily(playerUUID, true), npc.isPartner(playerUUID), whoCanModify, false);
+        return notAllowedToModify(player, npc.isFamily(playerUUID, true), npc.isPartner(playerUUID), whoCanModify, false, permission);
     }
 }

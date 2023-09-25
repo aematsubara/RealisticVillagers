@@ -18,6 +18,8 @@ public enum Config {
     MELEE_ATTACK_COOLDOWN("melee-attack-cooldown"),
     VILLAGER_FIX_IRON_GOLEM_WITH_IRON("villager-fix-iron-golem-with-iron"),
     VILLAGER_FIX_IRON_GOLEM_COOLDOWN("villager-fix-iron-golem-cooldown"),
+    VILLAGER_HELP_FAMILY("villager-help-family"),
+    VILLAGER_HELP_FAMILY_COOLDOWN("villager-help-family-cooldown"),
     PARTNER_JOKE_ALWAYS_SUCCESS("partner-joke-always-success"),
     CHANCE_OF_CHAT_INTERACTION_SUCCESS("chance-of-chat-interaction-success"),
 

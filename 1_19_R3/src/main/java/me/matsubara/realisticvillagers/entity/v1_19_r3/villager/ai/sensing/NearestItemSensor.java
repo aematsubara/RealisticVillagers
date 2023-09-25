@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
+import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
@@ -35,7 +36,12 @@ public class NearestItemSensor extends Sensor<Mob> {
                         mob.getBoundingBox().inflate(ITEM_RANGE, (double) ITEM_RANGE / 2, ITEM_RANGE)),
                 ITEM_RANGE,
                 VillagerNPC.NEAREST_WANTED_ITEM,
-                (entity) -> entity instanceof ItemEntity item && mob.wantsToPickUp(item.getItem()));
+                (entity) -> {
+                    if (!(entity instanceof ItemEntity item)) return false;
+                    return (!(mob instanceof VillagerNPC npc)
+                            || !item.getBukkitEntity().getPersistentDataContainer().has(npc.getPlugin().getIgnoreItemKey(), PersistentDataType.INTEGER))
+                            && mob.wantsToPickUp(item.getItem());
+                });
 
         provideNearest(mob,
                 level.getEntitiesOfClass(

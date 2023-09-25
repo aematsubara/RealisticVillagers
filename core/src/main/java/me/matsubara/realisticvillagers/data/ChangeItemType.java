@@ -5,6 +5,7 @@ public enum ChangeItemType {
     SHOWING_TRADES,
     TAMING,
     HEALING_GOLEM,
+    HELPING_FAMILY,
     USING_BONE_MEAL,
     USING_HOE,
     USING_FISHING_ROD,
@@ -25,6 +26,10 @@ public enum ChangeItemType {
 
     public boolean isHealingGolem(boolean healingGolem) {
         return this != HEALING_GOLEM && healingGolem;
+    }
+
+    public boolean isHelpingFamily(boolean helpingFamily) {
+        return this != HELPING_FAMILY && helpingFamily;
     }
 
     public boolean isUsingBoneMeal(boolean usingBoneMeal) {

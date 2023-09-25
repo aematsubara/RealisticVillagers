@@ -39,6 +39,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -105,10 +106,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ArrayUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.Particle;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_19_R3.CraftRegionAccessor;
 import org.bukkit.craftbukkit.v1_19_R3.CraftWorld;
@@ -116,6 +114,7 @@ import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftVillager;
 import org.bukkit.craftbukkit.v1_19_R3.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_19_R3.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
 import org.bukkit.entity.FishHook;
 import org.bukkit.event.entity.*;
@@ -178,6 +177,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean showingTrades;
     private boolean isTaming;
     private boolean isHealingGolem;
+    private boolean isHelpingFamily;
     private boolean isUsingBoneMeal;
     private boolean isUsingHoe;
     private boolean isUsingFishingRod;
@@ -197,6 +197,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private final VillagerFoodData foodData = new VillagerFoodData(this);
     private final @Setter(AccessLevel.NONE) CustomGossipContainer gossips = new CustomGossipContainer();
 
+    public static final MemoryModuleType<Boolean> HAS_HELPED_FAMILY_RECENTLY = NMSConverter.registerMemoryType("has_helped_family_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> HAS_TAMED_RECENTLY = NMSConverter.registerMemoryType("has_tamed_recently", Codec.BOOL);
@@ -240,6 +241,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             MemoryModuleType.LAST_WOKEN,
             MemoryModuleType.LAST_WORKED_AT_POI,
             MemoryModuleType.GOLEM_DETECTED_RECENTLY,
+            HAS_HELPED_FAMILY_RECENTLY,
             HAS_HEALED_GOLEM_RECENTLY,
             HAS_FISHED_RECENTLY,
             HAS_TAMED_RECENTLY,
@@ -539,8 +541,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public float getScale() {
-        // For babies is 0.5, but that would suffocate villagers.
-        return 1.0f;
+        // For babies is 0.5, but that would suffocate villagers (if skins are enabled).
+        return Config.DISABLE_SKINS.asBool() ? super.getScale() : 1.0f;
     }
 
     @Override
@@ -1008,7 +1010,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public ItemStack eat(@NotNull Level level, ItemStack item) {
         foodData.eat(item.getItem(), item);
-        level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, getSoundSource(), 0.5f, random.nextFloat() * 0.1f + 0.9f);
+        if (!useVillagerSounds()) {
+            level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_BURP, getSoundSource(), 0.5f, random.nextFloat() * 0.1f + 0.9f);
+        }
         return super.eat(level, item);
     }
 
@@ -1386,7 +1390,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void increaseMerchantCareer() {
         super.increaseMerchantCareer();
 
-        if (!Config.USE_VILLAGER_SOUNDS.asBool()) {
+        if (!useVillagerSounds()) {
             level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_LEVELUP, getSoundSource(), 1.0f, 1.0f);
         }
     }
@@ -1395,6 +1399,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void pickUpItem(@NotNull ItemEntity entity) {
         ItemStack stack = entity.getItem();
         if (!wantsToPickUp(stack)) return;
+
+        if (entity.getBukkitEntity().getPersistentDataContainer().has(plugin.getIgnoreItemKey(), PersistentDataType.INTEGER)) {
+            return;
+        }
 
         SimpleContainer container = getInventory();
         if (!container.canAddItem(stack)) return;
@@ -1461,6 +1469,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (ignore.isShowingTrades(showingTrades)) return ChangeItemType.SHOWING_TRADES;
         if (ignore.isTaming(isTaming)) return ChangeItemType.TAMING;
         if (ignore.isHealingGolem(isHealingGolem)) return ChangeItemType.HEALING_GOLEM;
+        if (ignore.isHelpingFamily(isHelpingFamily)) return ChangeItemType.HELPING_FAMILY;
         if (ignore.isUsingBoneMeal(isUsingBoneMeal)) return ChangeItemType.USING_BONE_MEAL;
         if (ignore.isUsingHoe(isUsingHoe)) return ChangeItemType.USING_HOE;
         if (ignore.isUsingFishingRod(isUsingFishingRod)) return ChangeItemType.USING_FISHING_ROD;
@@ -1504,20 +1513,15 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public boolean fished(ItemStack item) {
         ItemMeta meta = CraftItemStack.asBukkitCopy(item).getItemMeta();
-        if (meta != null) {
-            String uuidString = meta.getPersistentDataContainer().get(plugin.getFishedKey(), PersistentDataType.STRING);
-            if (uuidString != null) return UUID.fromString(uuidString).equals(getUUID());
-        }
-        return false;
+        return meta != null && stringUUID.equals(meta.getPersistentDataContainer().get(plugin.getFishedKey(), PersistentDataType.STRING));
     }
 
     private @Nullable UUID getThrower(ItemStack stack) {
         ItemMeta meta = CraftItemStack.asBukkitCopy(stack).getItemMeta();
-        if (meta != null) {
-            String uuidString = meta.getPersistentDataContainer().get(plugin.getGiftKey(), PersistentDataType.STRING);
-            if (uuidString != null) return UUID.fromString(uuidString);
-        }
-        return null;
+        if (meta == null) return null;
+
+        String uuidString = meta.getPersistentDataContainer().get(plugin.getGiftKey(), PersistentDataType.STRING);
+        return uuidString != null ? UUID.fromString(uuidString) : null;
     }
 
     public VillagerProfession getProfession() {
@@ -1729,7 +1733,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 && canBreed()
                 && other.canBreed()
                 && (!hasPartner() ? !other.hasPartner() : isPartner(other.getUUID()))
-                && !isFamily(other.getUUID(), false);
+                && !isFamily(other.getUUID());
     }
 
     @Override
@@ -2045,6 +2049,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public void drop(@NotNull ItemStack item) {
+        drop(item, null);
+    }
+
+    public void drop(@NotNull ItemStack item, @Nullable NamespacedKey identifier) {
         if (item.isEmpty()) return;
         if (level.isClientSide) swing(InteractionHand.MAIN_HAND);
 
@@ -2065,6 +2073,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 (double) (-yRotSin * xRotCos * 0.3f) + Math.cos(f5) * (double) f6,
                 -xRotSin * 0.3f + 0.1f + (random.nextFloat() - random.nextFloat()) * 0.1f,
                 (double) (yRotCos * xRotCos * 0.3f) + Math.sin(f5) * (double) f6);
+
+        if (identifier != null) {
+            CraftPersistentDataContainer container = itemEntity.getBukkitEntity().getPersistentDataContainer();
+            container.set(identifier, PersistentDataType.INTEGER, 1);
+        }
 
         level.addFreshEntity(itemEntity);
     }

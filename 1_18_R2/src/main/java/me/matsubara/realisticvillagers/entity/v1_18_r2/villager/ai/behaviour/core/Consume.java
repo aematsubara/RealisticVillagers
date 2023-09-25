@@ -44,19 +44,19 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
     private @Getter ItemStack previousItem;
     private int duration;
 
-    private static final Set<MobEffect> HEALTH_EFFECTS = ImmutableSet.of(
+    public static final Set<MobEffect> HEALTH_EFFECTS = ImmutableSet.of(
             MobEffects.HEAL,
             MobEffects.REGENERATION,
             MobEffects.HEALTH_BOOST,
             MobEffects.ABSORPTION);
 
-    private static final Set<MobEffect> POWER_EFFECTS = ImmutableSet.of(
+    public static final Set<MobEffect> POWER_EFFECTS = ImmutableSet.of(
             MobEffects.MOVEMENT_SPEED,
             MobEffects.DAMAGE_BOOST,
             MobEffects.DAMAGE_RESISTANCE,
             MobEffects.FIRE_RESISTANCE);
 
-    private static final BiPredicate<ItemStack, Set<MobEffect>> POTION_PREDICATE = (item, effects) -> {
+    public static final BiPredicate<ItemStack, Set<MobEffect>> POTION_PREDICATE = (item, effects) -> {
         if (!item.is(Items.POTION)) return false;
 
         Potion potion = PotionUtils.getPotion(item);
@@ -104,7 +104,7 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
         return hasHarmfulEffects(npc.getActiveEffects()) && hasAnyMatching(npc.getInventory(), item -> item.is(Items.MILK_BUCKET));
     }
 
-    private boolean hasHarmfulEffects(@NotNull Collection<MobEffectInstance> effects) {
+    public static boolean hasHarmfulEffects(@NotNull Collection<MobEffectInstance> effects) {
         for (MobEffectInstance effect : effects) {
             if (isHarmful(effect)) return true;
         }
@@ -268,7 +268,7 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
         return instance.getEffect().getCategory() == MobEffectCategory.HARMFUL;
     }
 
-    private enum ConsumeType {
+    public enum ConsumeType {
         FOOD,
         HARMFUL,
         HEALTH,

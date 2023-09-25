@@ -134,6 +134,12 @@ villager-fix-iron-golem-with-iron: true
 # The waiting time to fix a golem again (in ticks). Use 0 or lower to set no limit.
 villager-fix-iron-golem-cooldown: 600
 
+# Whether villagers can help family members (only players ATM).
+villager-help-family: true
+
+# The waiting time to help a family member again (in ticks). Use 0 or lower to set no limit.
+villager-help-family-cooldown: 600
+
 # Whether villagers can spawn iron golems when needed.
 # NOTE: True by default, but should be considered since villagers can defend themselves.
 villager-spawn-iron-golem: true

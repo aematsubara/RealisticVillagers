@@ -92,6 +92,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
     private final NamespacedKey skinDataKey = key("SkinDataID");
+    private final NamespacedKey ignoreItemKey = key("IgnoreItem");
 
     private InventoryListeners inventoryListeners;
     private OtherListeners otherListeners;

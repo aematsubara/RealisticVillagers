@@ -119,7 +119,8 @@ public class VillagerNPCGoalPackages {
                         3,
                         living -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
                         ImmutableSet.of(Items.BONE))),
-                Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())));
+                Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())),
+                Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())));
     }
 
     @Contract("_, _, _ -> new")

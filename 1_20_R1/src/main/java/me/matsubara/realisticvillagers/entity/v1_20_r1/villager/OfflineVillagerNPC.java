@@ -26,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 
-@SuppressWarnings("unused")
 @Getter
 public class OfflineVillagerNPC implements IVillagerNPC {
 
@@ -62,7 +61,6 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
-    public static final String DEAD = "Dead";
     public static final BiFunction<VillagerTracker, Tag, IVillagerNPC> OFFLINE_MAPPER = (tracker, input) -> input instanceof CompoundTag compound ?
             OfflineVillagerNPC.from(compound) :
             tracker.getOffline(NbtUtils.loadUUID(input));
@@ -523,7 +521,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isEquipped() {
-        return false;
+        return tag.getBoolean(EQUIPPED);
     }
 
     @Override
@@ -533,12 +531,12 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public Object getShoulderEntityLeft() {
-        return null;
+        return tag.getCompound(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT);
     }
 
     @Override
     public Object getShoulderEntityRight() {
-        return null;
+        return tag.getCompound(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT);
     }
 
     @Override
@@ -548,7 +546,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isWasInfected() {
-        return false;
+        return tag.getBoolean(OfflineVillagerNPC.WAS_INFECTED);
     }
 
     @Override
@@ -564,14 +562,6 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     @Override
     public boolean isReviving() {
         return false;
-    }
-
-    public boolean isMarkedAsDead() {
-        return tag.contains(DEAD);
-    }
-
-    public void markAsDead() {
-        tag.putLong(DEAD, System.currentTimeMillis());
     }
 
     private static @NotNull LastKnownPosition lastPositionFrom(@NotNull CompoundTag tag) {
