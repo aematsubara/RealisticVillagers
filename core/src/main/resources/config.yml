@@ -187,7 +187,7 @@ input-gui:
 # This only applies to villagers who have not yet spawned.
 # If the villager has no weapon in hand, he will flee from danger.
 # NOTE: Only monsters are supported at the moment (ENDER_DRAGON & WITHER included).
-# Monsters: https://minecraft.fandom.com/wiki/Mob#Hostile_mobs
+# Monsters: https://minecraft.wiki/w/Mob#Hostile_mobs
 default-target-entities:
   - DROWNED
   - EVOKER
@@ -914,7 +914,7 @@ bad-gift-reputation: 5
 # The list of accepted items for each gift level.
 # Minimum reputation value: 2; use 1 or less to disable.
 #
-# For a list of tags, visit https://minecraft.fandom.com/wiki/Tag#List_of_tags
+# For a list of tags, visit https://minecraft.wiki/w/Tag#List_of_tags
 # Tag format: ${tag-name}
 # Tag example: $LEATHER_ARMOR_PIECES
 #
@@ -1284,7 +1284,7 @@ speed-modifier:
 baby-look-height-offset: 0.0
 
 # Here you can modify the schedule of the villagers and their respective activities whether they're babies or adults.
-# For more information, take a look at: https://minecraft.fandom.com/wiki/Villager#Schedules
+# For more information, take a look at: https://minecraft.wiki/w/Villager#Schedules
 #
 # NOTE: Don't touch this if you don't know what you're doing!
 # Available activities: IDLE, PLAY, WORK, MEET, REST.

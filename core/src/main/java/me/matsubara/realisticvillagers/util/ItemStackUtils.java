@@ -270,7 +270,7 @@ public final class ItemStackUtils {
 
         points += getSharpnessPoints(item);
 
-        // https://minecraft.fandom.com/wiki/Fire_Aspect - (level × 4) – 1.
+        // https://minecraft.wiki/w/Fire_Aspect - (level × 4) – 1.
         int fireAspectLevel = item.getEnchantmentLevel(Enchantment.FIRE_ASPECT);
         if (fireAspectLevel > 0) {
             points += (((double) fireAspectLevel * 4) - 1) * 10 / 100;
@@ -280,7 +280,7 @@ public final class ItemStackUtils {
     }
 
     private static double getSharpnessPoints(@NotNull ItemStack item) {
-        // https://minecraft.fandom.com/wiki/Sharpness - 0.5 * level + 0.5.
+        // https://minecraft.wiki/w/Sharpness - 0.5 * level + 0.5.
         int sharpnessLevel = item.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
         return (sharpnessLevel > 0) ? 0.5d * sharpnessLevel + 0.5d : 0.0d;
     }
@@ -288,7 +288,7 @@ public final class ItemStackUtils {
     private static double getBowBasePoints(@NotNull ItemStack item) {
         double points = 0.0d;
 
-        // https://minecraft.fandom.com/wiki/Power - 25% * (level + 1).
+        // https://minecraft.wiki/w/Power - 25% * (level + 1).
         int powerLevel = item.getEnchantmentLevel(Enchantment.ARROW_DAMAGE);
         if (powerLevel > 0) {
             points += 0.25d * (powerLevel + 1);
@@ -300,7 +300,7 @@ public final class ItemStackUtils {
     private static double getTridentBasePoints(@NotNull ItemStack item) {
         double points = 0.0d;
 
-        // https://minecraft.fandom.com/wiki/Impaling - level × 2.5.
+        // https://minecraft.wiki/w/Impaling - level × 2.5.
         int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
         if (impalingLevel > 0) {
             points += impalingLevel * 2.5d;
