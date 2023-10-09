@@ -166,8 +166,8 @@ public class NPC {
                 throw new IllegalArgumentException("No entity id given!");
             }
 
-            if (profile == null || !profile.isComplete()) {
-                throw new IllegalArgumentException("No profile given or not completed!");
+            if (profile == null) {
+                throw new IllegalArgumentException("No profile given!");
             }
 
             NPC npc = new NPC(profile, location, spawnCustomizer, entityId);

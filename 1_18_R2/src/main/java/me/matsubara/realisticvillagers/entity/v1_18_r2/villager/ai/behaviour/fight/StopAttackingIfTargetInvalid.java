@@ -2,7 +2,6 @@ package me.matsubara.realisticvillagers.entity.v1_18_r2.villager.ai.behaviour.fi
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.villager.VillagerNPC;
-import me.matsubara.realisticvillagers.files.Messages;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -61,9 +60,6 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
                 || isCurrentTargetOffline(villager)) {
             clearAttackTarget(villager);
         } else if (isCurrentTargetFarAway(villager)) {
-            if (villager instanceof VillagerNPC npc && target instanceof ServerPlayer player) {
-                npc.getPlugin().getMessages().send(player.getBukkitEntity(), npc, Messages.Message.RAN_AWAY);
-            }
             clearAttackTarget(villager);
         }
     }

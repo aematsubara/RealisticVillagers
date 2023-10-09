@@ -12,13 +12,6 @@ reaction:
     - "That really hurt!"
     - "Hey! What do you think you're doing?!"
     - "*Oof*! That better have been an accident!"
-  ran-away:
-    - "That's right, you'd better run!"
-    - "Come back and fight like a man!"
-    - "if I see you again, I'll beat you up!"
-    - "I knew you were afraid of me!"
-    - "Why are you running? Get back here so I can hit you!"
-    - "I'm going to hit you if I ever see you again!"
 
 marry:
   success:

@@ -7,6 +7,7 @@ import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
 import com.google.common.collect.Lists;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.bukkit.entity.EntityType;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -82,9 +83,13 @@ public class VisibilityModifier extends NPCModifier {
 
     public VisibilityModifier queueSpawn() {
         queueInstantly((npc, player) -> {
-            PacketContainer container = new PacketContainer(Server.NAMED_ENTITY_SPAWN);
+            PacketContainer container = new PacketContainer(PluginUtils.IS_1_20_2_OR_NEW ? Server.SPAWN_ENTITY : Server.NAMED_ENTITY_SPAWN);
             container.getIntegers().write(0, npc.getEntityId());
             container.getUUIDs().write(0, npc.getProfile().getUUID());
+
+            if (PluginUtils.IS_1_20_2_OR_NEW) {
+                container.getEntityTypeModifier().write(0, EntityType.PLAYER);
+            }
 
             double x = npc.getLocation().getX();
             double y = npc.getLocation().getY();

@@ -124,7 +124,6 @@ public final class Messages {
 
     public enum Message {
         ON_HIT("reaction.on-hit"),
-        RAN_AWAY("reaction.ran-away"),
         MARRRY_SUCCESS("marry.success"),
         MARRY_FAIL_MARRIED_TO_GIVER("marry.fail.married-to-giver"),
         MARRY_FAIL_MARRIED_TO_OTHER("marry.fail.married-to-other"),

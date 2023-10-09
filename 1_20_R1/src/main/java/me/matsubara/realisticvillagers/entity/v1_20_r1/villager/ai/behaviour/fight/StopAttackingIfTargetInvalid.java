@@ -3,7 +3,6 @@ package me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.fi
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.VillagerNPC;
-import me.matsubara.realisticvillagers.files.Messages;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -63,10 +62,6 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
             // If target reason is horn, we don't check the distance.
             Optional<TargetReason> targetReason = brain.getMemory(VillagerNPC.TARGET_REASON);
             if (targetReason.isPresent() && targetReason.get() == TargetReason.HORN) return;
-
-            if (villager instanceof VillagerNPC npc && target instanceof ServerPlayer player) {
-                npc.getPlugin().getMessages().send(player.getBukkitEntity(), npc, Messages.Message.RAN_AWAY);
-            }
             clearAttackTarget(villager);
         }
     }

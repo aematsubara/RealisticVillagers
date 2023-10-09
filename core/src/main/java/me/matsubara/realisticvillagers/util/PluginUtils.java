@@ -79,6 +79,7 @@ public final class PluginUtils {
     private static final MethodHandle PROFILE;
 
     public static final boolean IS_1_19_3_OR_NEW = new MinecraftVersion("1.19.3").atOrAbove();
+    public static final boolean IS_1_20_2_OR_NEW = new MinecraftVersion("1.20.2").atOrAbove();
 
     static {
         ROMAN_NUMERALS.put(1000, "M");
@@ -170,7 +171,7 @@ public final class PluginUtils {
     }
 
     public static void applySkin(SkullMeta meta, UUID uuid, String texture, boolean isUrl) {
-        GameProfile profile = new GameProfile(uuid, null);
+        GameProfile profile = new GameProfile(uuid, "");
 
         String textureValue = texture;
         if (isUrl) {

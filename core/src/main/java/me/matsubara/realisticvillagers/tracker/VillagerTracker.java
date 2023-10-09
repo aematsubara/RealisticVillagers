@@ -2,9 +2,6 @@ package me.matsubara.realisticvillagers.tracker;
 
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
@@ -114,33 +111,6 @@ public final class VillagerTracker implements Listener {
         ProtocolManager protocol = ProtocolLibrary.getProtocolManager();
         protocol.addPacketListener(handler = new VillagerHandler(plugin));
         protocol.addPacketListener(new DisguiseHandler(plugin));
-        protocol.addPacketListener(new PacketAdapter(plugin, VillagerHandler.MOVEMENT_PACKETS) {
-
-            @Override
-            public void onPacketSending(PacketEvent event) {
-                if (event.isCancelled()) return;
-
-                Player player = event.getPlayer();
-
-                World world;
-                try {
-                    world = player.getWorld();
-                } catch (UnsupportedOperationException exception) {
-                    // Should "fix" -> UnsupportedOperationException: The method getWorld is not supported for temporary players.
-                    return;
-                }
-
-                PacketContainer packet = event.getPacket();
-
-                Entity entity = packet.getEntityModifier(world).readSafely(0);
-                if (!(entity instanceof Vehicle vehicle)) return;
-
-                for (Entity passenger : vehicle.getPassengers()) {
-                    if (!(passenger instanceof Villager villager) || isInvalid(villager)) continue;
-                    getNPC(villager.getEntityId()).ifPresent(value -> handler.handleNPCLocation(event, villager, value));
-                }
-            }
-        });
     }
 
     public void updateMineskinApiKey() {
