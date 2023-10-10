@@ -8,6 +8,7 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.cryptomorin.xseries.ReflectionUtils;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -38,38 +39,25 @@ public class VillagerHandler extends PacketAdapter {
     private final @Getter Set<UUID> sleeping = ConcurrentHashMap.newKeySet();
     private final @Getter Set<UUID> allowSpawn = ConcurrentHashMap.newKeySet();
 
-    public static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
-            ENTITY_VELOCITY,
-            REL_ENTITY_MOVE,
+    private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
+            ENTITY_HEAD_ROTATION,
             ENTITY_LOOK,
             ENTITY_TELEPORT,
-            ENTITY_HEAD_ROTATION,
+            ENTITY_VELOCITY,
+            REL_ENTITY_MOVE,
             REL_ENTITY_MOVE_LOOK);
 
+    private static final PacketType[] LISTEN_PACKETS = ImmutableList.builder()
+            .addAll(MOVEMENT_PACKETS)
+            .add(SPAWN_ENTITY, SPAWN_ENTITY_LIVING, ENTITY_STATUS, ENTITY_METADATA)
+            .build()
+            .stream()
+            .map(object -> (PacketType) object)
+            .filter(PacketType::isSupported)
+            .toArray(PacketType[]::new);
+
     public VillagerHandler(RealisticVillagers plugin) {
-        super(
-                plugin,
-                ListenerPriority.HIGHEST,
-                SPAWN_ENTITY,
-                NAMED_ENTITY_SPAWN,
-                ANIMATION,
-                BLOCK_BREAK_ANIMATION,
-                ENTITY_STATUS,
-                REL_ENTITY_MOVE,
-                REL_ENTITY_MOVE_LOOK,
-                ENTITY_LOOK,
-                ENTITY_HEAD_ROTATION,
-                CAMERA,
-                ENTITY_METADATA,
-                ATTACH_ENTITY,
-                ENTITY_VELOCITY,
-                ENTITY_EQUIPMENT,
-                MOUNT,
-                ENTITY_SOUND,
-                COLLECT,
-                ENTITY_TELEPORT,
-                UPDATE_ATTRIBUTES,
-                ENTITY_EFFECT);
+        super(plugin, ListenerPriority.HIGHEST, LISTEN_PACKETS);
         this.plugin = plugin;
     }
 

@@ -413,7 +413,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private void handleConfigChanges(@NotNull File file, FileConfiguration config, @NotNull Predicate<FileConfiguration> predicate, Consumer<FileConfiguration> consumer, int newVersion) {
         if (!predicate.test(config)) return;
 
-        int previousVersion = config.getInt("config-version", -1);
+        int previousVersion = config.getInt("config-version", 0);
         getLogger().info("Updated {%s} config to v{%s} (from v{%s})".formatted(file.getName(), newVersion, previousVersion));
 
         consumer.accept(config);
