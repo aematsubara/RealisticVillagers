@@ -203,7 +203,6 @@ public final class ExpectingManager implements Listener {
         if (meta != null) meta.getPersistentDataContainer().remove(key);
 
         stack.setItemMeta(meta);
-        item.setItemStack(stack);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
