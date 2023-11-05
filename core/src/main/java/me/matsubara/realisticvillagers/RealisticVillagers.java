@@ -548,7 +548,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         String tippedArrow = config.getString(path + ".tipped");
         if (tippedArrow != null) {
-            PotionType potionType = PluginUtils.getOrEitherRandomOrNull(PotionType.class, tippedArrow);
+            PotionType potionType = PluginUtils.getValidPotionType(tippedArrow);
             if (potionType != null) builder.setBasePotionData(potionType);
         }
 

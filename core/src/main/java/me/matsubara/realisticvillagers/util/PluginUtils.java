@@ -26,6 +26,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionType;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -273,6 +274,27 @@ public final class PluginUtils {
     public static <T extends Enum<T>> T getOrEitherRandomOrNull(Class<T> clazz, @NotNull String name) {
         if (name.equalsIgnoreCase("$RANDOM")) return getRandomFromEnum(clazz);
         return getOrNull(clazz, name);
+    }
+
+    public static @Nullable PotionType getValidPotionType(@NotNull String name) {
+        if (name.equalsIgnoreCase("$RANDOM")) {
+            PotionType type;
+            do {
+                type = getRandomFromEnum(PotionType.class);
+            } while (isInvalidPotionType(type));
+            return type;
+        }
+
+        PotionType type = getOrNull(PotionType.class, name);
+        return isInvalidPotionType(type) ? null : type;
+    }
+
+    @SuppressWarnings("deprecation")
+    private static boolean isInvalidPotionType(PotionType type) {
+        return type == null
+                || type.name().startsWith("LONG_")
+                || type.name().startsWith("STRONG_")
+                || type.getEffectType() == null;
     }
 
     public static <T extends Enum<T>> T getOrNull(Class<T> clazz, String name) {
