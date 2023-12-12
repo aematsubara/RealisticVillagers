@@ -388,6 +388,11 @@ public class CustomBlockData implements PersistentDataContainer {
     }
 
     @Override
+    public boolean has(@NotNull NamespacedKey key) {
+        return false;
+    }
+
+    @Override
     public @Nullable <T, Z> Z get(final @NotNull NamespacedKey namespacedKey, final @NotNull PersistentDataType<T, Z> persistentDataType) {
         return pdc.get(namespacedKey, persistentDataType);
     }
@@ -411,6 +416,11 @@ public class CustomBlockData implements PersistentDataContainer {
     @Override
     public boolean isEmpty() {
         return pdc.isEmpty();
+    }
+
+    @Override
+    public void copyTo(@NotNull PersistentDataContainer other, boolean replace) {
+
     }
 
     @Override

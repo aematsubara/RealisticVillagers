@@ -57,16 +57,16 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             "skins");
     private static final List<String> HELP = Stream.of(
             "&8----------------------------------------",
-            "&6&lRealisticVillagers &f&oCommands &c(optional) <required>",
+            "&6&lRealisticVillagers &f&oCommands &c<required> | [optional]",
             "&e/rv reload &f- &7Reload configuration files.",
-            "&e/rv give-ring (player) &f- &7Gives a wedding ring.",
-            "&e/rv give-whistle (player) &f- &7Gives a whistle.",
-            "&e/rv give-divorce-papers (player) &f- &7Gives divorce papers.",
-            "&e/rv give-cross (player) &f- &7Gives a cross.",
-            "&e/rv force-divorce (player) &f- &7Forces the divorce of a player.",
+            "&e/rv give-ring [player] &f- &7Gives a wedding ring.",
+            "&e/rv give-whistle [player] &f- &7Gives a whistle.",
+            "&e/rv give-divorce-papers [player] &f- &7Gives divorce papers.",
+            "&e/rv give-cross [player] &f- &7Gives a cross.",
+            "&e/rv force-divorce [player] &f- &7Forces the divorce of a player.",
             "&e/rv add-skin <sex> <age-stage> <texture> <signature> &f- &7Add a new skin (from the console).",
             "&e/rv set-skin <sex> <id> &f- &7Gives you an item to change the skin of a villager.",
-            "&e/rv skins (sex) (age-stage) (page) &f- &7Manage all skins.",
+            "&e/rv skins [sex] [age-stage] [page] &f- &7Manage all skins.",
             "&8----------------------------------------").map(PluginUtils::translate).toList();
     private static final List<String> SKIN_ID_ARGS = List.of("<id>");
     private static final List<String> TEXTURE_ARGS = List.of("<texture>");

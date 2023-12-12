@@ -77,7 +77,14 @@ public class VillagerHandler extends PacketAdapter {
 
         PacketContainer packet = event.getPacket();
 
-        Entity entity = packet.getEntityModifier(world).readSafely(0);
+        Entity entity;
+        try {
+            entity = packet.getEntityModifier(world).readSafely(0);
+        } catch (Exception exception) {
+            // Should "fix" -> FieldAccessException/RuntimeException: Cannot find entity from ID (X?).
+            return;
+        }
+
         if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager)) return;
 
         UUID uuid = entity.getUniqueId();
