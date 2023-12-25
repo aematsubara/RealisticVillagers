@@ -39,6 +39,7 @@ import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.wor
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.work.StartFishing;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.work.UseBonemeal;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.work.WorkAtBarrel;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -121,7 +122,8 @@ public class VillagerNPCGoalPackages {
                 Pair.of(10, new StopRiding()),
                 Pair.of(10, createTameOrFeedPet(
                         3,
-                        (npc, living) -> living instanceof Pet
+                        (npc, living) -> Config.TAME_HORSES.asBool()
+                                && living instanceof Pet
                                 && living instanceof AbstractHorse horse
                                 && !horse.isVehicle()
                                 && !horse.isBaby()

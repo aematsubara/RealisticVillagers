@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.entity.v1_20_r2.villager.ai.behaviour.co
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.pet.horse.HorseEating;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
@@ -33,7 +34,8 @@ public class RideHorse extends Behavior<Villager> {
 
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
-        return villager instanceof VillagerNPC npc
+        return Config.TAME_HORSES.asBool()
+                && villager instanceof VillagerNPC npc
                 && npc.isDoingNothing(true)
                 && !npc.isPassenger()
                 && isHorsePetVisible(npc)

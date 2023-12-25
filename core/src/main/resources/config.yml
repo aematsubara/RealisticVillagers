@@ -1444,3 +1444,7 @@ revive:
     flags:
       - CREATE_FOG
       - DARKEN_SKY
+
+# If true, villagers will be able to feed, tame and ride horses, donkeys and mules.
+# NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
+tame-horses: false

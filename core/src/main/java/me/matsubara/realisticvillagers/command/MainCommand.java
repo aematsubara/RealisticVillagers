@@ -21,6 +21,7 @@ import org.bukkit.World;
 import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.HandlerList;
@@ -198,6 +199,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
         boolean nametagsDisabled = Config.DISABLE_NAMETAGS.asBool();
         boolean reviveEnabled = Config.REVIVE_ENABLED.asBool();
+        boolean tameHorsesEnabled = Config.TAME_HORSES.asBool();
 
         messages.send(sender, Messages.Message.RELOADING);
 
@@ -262,6 +264,15 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                         // Only disable nametags if skins are enabled.
                         Villager bukkit = npc.bukkit();
                         if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
+                    });
+
+            handleChangedOption(
+                    tameHorsesEnabled,
+                    Config.TAME_HORSES.asBool(),
+                    (npc, state) -> {
+                        if (!state && npc.bukkit().getVehicle() instanceof AbstractHorse) {
+                            npc.bukkit().leaveVehicle();
+                        }
                     });
 
             if (reviveEnabled == Config.REVIVE_ENABLED.asBool()) return;
