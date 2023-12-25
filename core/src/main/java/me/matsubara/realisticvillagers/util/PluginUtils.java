@@ -45,6 +45,7 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -481,5 +482,9 @@ public final class PluginUtils {
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         return container.has(key, PersistentDataType.INTEGER);
+    }
+
+    public static @NotNull String getRandomSex() {
+        return ThreadLocalRandom.current().nextBoolean() ? "male" : "female";
     }
 }

@@ -5,9 +5,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
-import me.matsubara.realisticvillagers.entity.v1_20_r1.PetCat;
-import me.matsubara.realisticvillagers.entity.v1_20_r1.PetParrot;
-import me.matsubara.realisticvillagers.entity.v1_20_r1.PetWolf;
+import me.matsubara.realisticvillagers.entity.Pet;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetParrot;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.horse.HorseEating;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.GiveGiftToHero;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.behaviour.SetEntityLookTarget;
@@ -48,16 +50,19 @@ import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -66,6 +71,7 @@ public class VillagerNPCGoalPackages {
     private static final int MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW = 5;
     private static final int GO_TO_WANTED_ITEM_DISTANCE = 10;
 
+    private static final ImmutableSet<Item> HORSE_FOOD = ImmutableSet.of(Items.WHEAT, Items.SUGAR, Blocks.HAY_BLOCK.asItem(), Items.APPLE, Items.GOLDEN_CARROT, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE);
     private static final Predicate<LivingEntity> IS_DOING_NOTHING = living -> !(living instanceof VillagerNPC npc) || npc.isDoingNothing(true);
     private static final Predicate<LivingEntity> DUMMY = living -> true;
     private static final Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
@@ -104,27 +110,42 @@ public class VillagerNPCGoalPackages {
                 Pair.of(10, AcquirePoi.create(holder -> holder.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT, true, Optional.of((byte) 14))),
                 Pair.of(10, AssignProfessionFromJobSite.create()),
                 Pair.of(10, ResetProfession.create()),
+                Pair.of(10, BehaviorBuilder.sequence(
+                        BehaviorBuilder.triggerIf(
+                                (level, villager) -> villager.getVehicle() instanceof HorseEating),
+                        VillageBoundRandomStroll.create(VillagerNPC.SPRINT_SPEED.get()))),
                 Pair.of(10, new BackToStay()),
                 Pair.of(10, new CheckInventory()),
                 Pair.of(10, new EquipTotem()),
+                Pair.of(10, new RideHorse(100, VillagerNPC.WALK_SPEED.get())),
+                Pair.of(10, new StopRiding()),
                 Pair.of(10, createTameOrFeedPet(
                         3,
-                        living -> living instanceof PetCat cat && !cat.isTame(),
+                        (npc, living) -> living instanceof Pet
+                                && living instanceof AbstractHorse horse
+                                && !horse.isVehicle()
+                                && !horse.isBaby()
+                                && !horse.isTamed()
+                                && npc.getInventory().hasAnyOf(Set.of(Items.SADDLE)),
+                        HORSE_FOOD)),
+                Pair.of(10, createTameOrFeedPet(
+                        3,
+                        (npc, living) -> living instanceof PetCat cat && !cat.isTame(),
                         ImmutableSet.of(Items.COD, Items.SALMON))),
                 Pair.of(10, createTameOrFeedPet(
                         10,
-                        living -> living instanceof PetParrot parrot && !parrot.isTame(),
+                        (npc, living) -> living instanceof PetParrot parrot && !parrot.isTame(),
                         ImmutableSet.of(Items.WHEAT_SEEDS, Items.MELON_SEEDS, Items.PUMPKIN_SEEDS, Items.BEETROOT_SEEDS))),
                 Pair.of(10, createTameOrFeedPet(
                         3,
-                        living -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
+                        (npc, living) -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
                         ImmutableSet.of(Items.BONE))),
                 Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())),
                 Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())));
     }
 
     @Contract("_, _, _ -> new")
-    private static @NotNull TameOrFeedPet createTameOrFeedPet(int tameChance, Predicate<LivingEntity> tameFilter, Set<Item> tameItems) {
+    private static @NotNull TameOrFeedPet createTameOrFeedPet(int tameChance, BiPredicate<VillagerNPC, LivingEntity> tameFilter, Set<Item> tameItems) {
         return new TameOrFeedPet(2, tameChance, VillagerNPC.WALK_SPEED.get(), tameFilter, tameItems);
     }
 

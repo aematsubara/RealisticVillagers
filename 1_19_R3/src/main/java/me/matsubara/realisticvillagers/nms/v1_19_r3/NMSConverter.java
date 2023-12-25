@@ -10,9 +10,12 @@ import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.entity.v1_19_r3.PetCat;
-import me.matsubara.realisticvillagers.entity.v1_19_r3.PetParrot;
-import me.matsubara.realisticvillagers.entity.v1_19_r3.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.PetParrot;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.horse.PetDonkey;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.horse.PetHorse;
+import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.horse.PetMule;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
@@ -51,6 +54,9 @@ import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Cat;
 import net.minecraft.world.entity.animal.Parrot;
 import net.minecraft.world.entity.animal.Wolf;
+import net.minecraft.world.entity.animal.horse.Donkey;
+import net.minecraft.world.entity.animal.horse.Horse;
+import net.minecraft.world.entity.animal.horse.Mule;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
@@ -85,10 +91,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.*;
@@ -115,6 +118,10 @@ public class NMSConverter implements INMSConverter {
 
     private static final RandomSource RANDOM = RandomSource.create();
     private static final Map<String, Activity> ACTIVITIES;
+    private static final FilenameFilter DATA_FILE_FILTER = (directory, name) -> new File(directory, name).isFile()
+            && name.endsWith(".mca")
+            && !name.contains("backup")
+            && !name.contains("mcc");
 
     static {
         Map<String, Activity> activities = new HashMap<>();
@@ -154,6 +161,9 @@ public class NMSConverter implements INMSConverter {
                         }
                         return new net.minecraft.world.entity.npc.Villager(EntityType.VILLAGER, level);
                     });
+            Reflection.setFieldUsingUnsafe(field, EntityType.DONKEY, (EntityType.EntityFactory<Donkey>) PetDonkey::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.HORSE, (EntityType.EntityFactory<Horse>) PetHorse::new);
+            Reflection.setFieldUsingUnsafe(field, EntityType.MULE, (EntityType.EntityFactory<Mule>) PetMule::new);
             Reflection.setFieldUsingUnsafe(field, EntityType.CAT, (EntityType.EntityFactory<Cat>) PetCat::new);
             Reflection.setFieldUsingUnsafe(field, EntityType.PARROT, (EntityType.EntityFactory<Parrot>) PetParrot::new);
             Reflection.setFieldUsingUnsafe(field, EntityType.WOLF, (EntityType.EntityFactory<Wolf>) PetWolf::new);
@@ -300,8 +310,7 @@ public class NMSConverter implements INMSConverter {
         for (File world : worlds) {
             File entitiesFolder = new File(world, "entities");
 
-            File[] entitiesFiles = entitiesFolder.listFiles(
-                    (directory, name) -> new File(directory, name).isFile() && name.endsWith(".mca") && !name.contains("backup") && !name.contains("mcc"));
+            File[] entitiesFiles = entitiesFolder.listFiles(DATA_FILE_FILTER);
             if (entitiesFiles == null) continue;
 
             // Iterate through all .mca files in "entities" folder.

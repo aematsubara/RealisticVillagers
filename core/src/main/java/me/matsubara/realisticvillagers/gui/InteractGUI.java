@@ -25,6 +25,7 @@ public abstract class InteractGUI implements InventoryHolder {
     protected final Inventory inventory;
     protected final boolean useNPC;
     protected @Setter int taskId;
+    protected final UnaryOperator<String> titleOperator;
     protected RainbowAnimation animation;
     private boolean shouldStopInteracting;
 
@@ -46,23 +47,24 @@ public abstract class InteractGUI implements InventoryHolder {
             Material.RED_STAINED_GLASS_PANE,
             Material.BLACK_STAINED_GLASS_PANE};
 
-    protected InteractGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, @Nullable UnaryOperator<String> operator, boolean useNPC) {
+    protected InteractGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, @Nullable UnaryOperator<String> titleOperator, boolean useNPC) {
         this.name = name;
         this.plugin = plugin;
         this.npc = npc;
         this.useNPC = useNPC;
+        this.titleOperator = titleOperator;
 
         String title = getTitle();
         if (npc != null) title = title.replace("%villager-name%", npc.getVillagerName());
 
-        this.inventory = Bukkit.createInventory(this, (this.size = size), (operator != null ? operator : EMPTY).apply(title));
+        this.inventory = Bukkit.createInventory(this, (this.size = size), (titleOperator != null ? titleOperator : EMPTY).apply(title));
 
         this.shouldStopInteracting = true;
         this.taskId = (animation = new RainbowAnimation(this)).runTaskTimer(plugin, 0L, 1L).getTaskId();
     }
 
     protected String getTitle() {
-        return plugin.getConfig().getString("gui." + name + ".title");
+        return (titleOperator != null ? titleOperator : EMPTY).apply(plugin.getConfig().getString("gui." + name + ".title"));
     }
 
     protected ItemStack getGUIItem(String itemName) {

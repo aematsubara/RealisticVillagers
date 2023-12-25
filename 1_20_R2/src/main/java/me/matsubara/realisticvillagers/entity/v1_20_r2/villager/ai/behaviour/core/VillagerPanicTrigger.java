@@ -8,10 +8,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.util.EntityHead;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -68,9 +65,11 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         }
 
         if (villager instanceof VillagerNPC npc) npc.stopAllInteractions();
+        if (villager.isPassenger()) villager.stopRiding();
 
         // Use the same condition as canStillUse(), but the name doesn't mean anything.
         if (canStillUse(level, villager, time)) {
+            if (target.getType().getCategory() != MobCategory.MONSTER) return;
             handleNormalReaction(brain);
         } else if (!shouldPanic(villager) && (isHurt(villager) || hasHostile(villager))) {
             handleFightReaction(brain, target, TargetReason.DEFEND);
@@ -146,7 +145,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     }
 
     public static boolean ignorePlayer(VillagerNPC npc, Player player) {
-        return !isWearingMonsterHead(npc, player) && !isDefendVillager(npc, player);
+        return !isWearingMonsterHead(npc, player) && !isDefendVillager(npc, player) && !npc.getPlayers().contains(player.getUUID());
     }
 
     private static boolean isWearingMonsterHead(VillagerNPC npc, Player player) {

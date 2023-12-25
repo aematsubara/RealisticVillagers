@@ -8,7 +8,8 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.SkinGUI;
-import me.matsubara.realisticvillagers.manager.ReviveManager;
+import me.matsubara.realisticvillagers.manager.revive.MonumentAnimation;
+import me.matsubara.realisticvillagers.manager.revive.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -210,7 +211,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         ReviveManager reviveManager = plugin.getReviveManager();
 
         // Cancel all revivals.
-        for (ReviveManager.MonumentAnimation animation : reviveManager.getRunningTasks().values()) {
+        for (MonumentAnimation animation : reviveManager.getRunningTasks().values()) {
             plugin.getServer().getScheduler().cancelTask(animation.getTaskId());
         }
 

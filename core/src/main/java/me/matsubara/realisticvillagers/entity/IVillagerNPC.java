@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public interface IVillagerNPC {
@@ -195,4 +196,6 @@ public interface IVillagerNPC {
     void refreshBrain();
 
     boolean isReviving();
+
+    Set<UUID> getPlayers();
 }

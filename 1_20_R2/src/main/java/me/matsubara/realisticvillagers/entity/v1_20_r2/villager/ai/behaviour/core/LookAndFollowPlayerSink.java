@@ -5,12 +5,14 @@ import me.matsubara.realisticvillagers.entity.v1_20_r2.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.behavior.EntityTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ProjectileWeaponItem;
@@ -93,7 +95,7 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
         }
 
         if (canTeleport && !villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET)) {
-            teleportToPlayer(villager, player);
+            teleportToPlayer(villager.getVehicle() instanceof AbstractHorse horse ? horse : villager, player);
         } else {
             // Don't follow if villager is fighting with someone with a bow.
             if (!(villager instanceof VillagerNPC npc)
@@ -129,50 +131,50 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
         brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(player, true));
     }
 
-    private void teleportToPlayer(Villager villager, @NotNull Player player) {
+    private void teleportToPlayer(PathfinderMob mob, @NotNull Player player) {
         BlockPos pos = player.blockPosition();
 
         for (int i = 0; i < 10; i++) {
-            int randomX = randomIntInclusive(villager, -3, 3);
-            int randomY = randomIntInclusive(villager, -1, 1);
-            int randomZ = randomIntInclusive(villager, -3, 3);
+            int randomX = randomIntInclusive(mob, -3, 3);
+            int randomY = randomIntInclusive(mob, -1, 1);
+            int randomZ = randomIntInclusive(mob, -3, 3);
 
-            boolean flag = maybeTeleportTo(villager, player, pos.getX() + randomX, pos.getY() + randomY, pos.getZ() + randomZ);
+            boolean flag = maybeTeleportTo(mob, player, pos.getX() + randomX, pos.getY() + randomY, pos.getZ() + randomZ);
             if (flag) return;
         }
     }
 
-    private boolean maybeTeleportTo(Villager villager, @NotNull Player player, int x, int y, int z) {
+    private boolean maybeTeleportTo(PathfinderMob mob, @NotNull Player player, int x, int y, int z) {
         if (Math.abs((double) x - player.getX()) < 2.0d && Math.abs((double) z - player.getZ()) < 2.0d) return false;
-        if (!canTeleportTo((ServerLevel) villager.level(), villager, new BlockPos(x, y, z), false)) return false;
+        if (!canTeleportTo((ServerLevel) mob.level(), mob, new BlockPos(x, y, z), false)) return false;
 
-        CraftEntity entity = villager.getBukkitEntity();
-        Location to = new Location(entity.getWorld(), (double) x + 0.5d, y, (double) z + 0.5d, villager.getYRot(), villager.getXRot());
+        CraftEntity entity = mob.getBukkitEntity();
+        Location to = new Location(entity.getWorld(), (double) x + 0.5d, y, (double) z + 0.5d, mob.getYRot(), mob.getXRot());
 
         EntityTeleportEvent event = new EntityTeleportEvent(entity, entity.getLocation(), to);
-        villager.level().getCraftServer().getPluginManager().callEvent(event);
+        mob.level().getCraftServer().getPluginManager().callEvent(event);
         if (event.isCancelled()) return false;
 
         to = event.getTo();
         if (to == null) return false;
 
-        villager.moveTo(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
-        villager.getNavigation().stop();
+        mob.moveTo(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
+        mob.getNavigation().stop();
         return true;
     }
 
     @SuppressWarnings("SameParameterValue")
-    private boolean canTeleportTo(ServerLevel level, Villager villager, @NotNull BlockPos pos, boolean canFly) {
+    private boolean canTeleportTo(ServerLevel level, PathfinderMob mob, @NotNull BlockPos pos, boolean canFly) {
         BlockPathTypes pathType = WalkNodeEvaluator.getBlockPathTypeStatic(level, pos.mutable());
         if (pathType != BlockPathTypes.WALKABLE) return false;
 
         BlockState state = level.getBlockState(pos.below());
         if (!canFly && state.getBlock() instanceof LeavesBlock) return false;
 
-        return level.noCollision(villager, villager.getBoundingBox().move(pos.subtract(villager.blockPosition())));
+        return level.noCollision(mob, mob.getBoundingBox().move(pos.subtract(mob.blockPosition())));
     }
 
-    private int randomIntInclusive(@NotNull Villager villager, int origin, int bound) {
-        return villager.getRandom().nextInt(bound - origin + 1) + origin;
+    private int randomIntInclusive(@NotNull PathfinderMob mob, int origin, int bound) {
+        return mob.getRandom().nextInt(bound - origin + 1) + origin;
     }
 }

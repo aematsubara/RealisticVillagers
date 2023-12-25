@@ -3,10 +3,7 @@ package me.matsubara.realisticvillagers.gui.anim;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
-import me.matsubara.realisticvillagers.gui.types.CombatGUI;
-import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.gui.types.SkinGUI;
-import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
+import me.matsubara.realisticvillagers.gui.types.*;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
@@ -132,6 +129,8 @@ public class RainbowAnimation extends BukkitRunnable {
                 handleSkinGUI(skin.getProfessionItems(), ignoreIndexes);
             } else if (gui instanceof CombatGUI combat) {
                 ignoreIndexes.add(gui.getInventory().first(combat.getClose()));
+            } else if (gui instanceof PlayersGUI players) {
+                players.addButtons();
             }
             if (ignoreIndexes.contains(i)) continue;
 

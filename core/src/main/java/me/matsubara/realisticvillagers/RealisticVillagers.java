@@ -19,10 +19,10 @@ import me.matsubara.realisticvillagers.listener.*;
 import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
-import me.matsubara.realisticvillagers.manager.ReviveManager;
 import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.manager.gift.GiftManager;
+import me.matsubara.realisticvillagers.manager.revive.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -93,6 +93,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey raidStatsKey = key("RaidStats");
     private final NamespacedKey skinDataKey = key("SkinDataID");
     private final NamespacedKey ignoreItemKey = key("IgnoreItem");
+    private final NamespacedKey playerUUIDKey = new NamespacedKey(this, "PlayerUUID");
 
     private InventoryListeners inventoryListeners;
     private OtherListeners otherListeners;
@@ -293,7 +294,6 @@ public final class RealisticVillagers extends JavaPlugin {
                     return SPECIAL_SECTIONS.stream().filter(config::contains).toList();
                 },
                 ConfigChanges.builder()
-                        // We need to change the previous %partner% to %current-partner% since now %partner% behaves differently, only for V = X.
                         .addChange(
                                 noVersion,
                                 temp -> {
@@ -306,14 +306,12 @@ public final class RealisticVillagers extends JavaPlugin {
                                     temp.set(pathToInfoLore, lore);
                                 },
                                 1)
-                        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
                         .addChange(
-                                temp -> temp.getInt("config-version") == 1,
+                                aimVersion(1),
                                 temp -> temp.set("gui.new-skin", null),
                                 2)
-                        // We need to remove @gui.new-skin to prevent duplicate issue, only for V = 1.
                         .addChange(
-                                temp -> temp.getInt("config-version") < 3,
+                                aimVersion(2),
                                 temp -> {
                                     String pathToSetHome = "gui.main.items.set-home.";
                                     temp.set(pathToSetHome + "only-for-family", null);
@@ -323,7 +321,28 @@ public final class RealisticVillagers extends JavaPlugin {
                                     temp.set(pathToCombat + "only-for-family", null);
                                     temp.set(pathToCombat + "only-if-allowed", false);
                                 },
-                                3).build());
+                                3)
+                        .addChange(
+                                aimVersion(3),
+                                new Consumer<>() {
+                                    @Override
+                                    public void accept(FileConfiguration temp) {
+                                        handleEntityName(temp, "zombie_villager");
+                                        handleEntityName(temp, "cave_spider");
+                                        handleEntityName(temp, "elder_guardian");
+                                        handleEntityName(temp, "wither_skeleton");
+                                        handleEntityName(temp, "piglin_brute");
+                                        handleEntityName(temp, "zombified_piglin");
+                                        handleEntityName(temp, "ender_dragon");
+                                    }
+
+                                    private void handleEntityName(@NotNull FileConfiguration temp, String path) {
+                                        String name = temp.getString(path);
+                                        if (name != null) temp.set(path.replace("_", "-"), name);
+                                    }
+                                },
+                                4)
+                        .build());
 
         Function<FileConfiguration, List<String>> emptyIgnore = config -> Collections.emptyList();
 
@@ -354,6 +373,11 @@ public final class RealisticVillagers extends JavaPlugin {
                 file -> saveResource("names.yml"),
                 emptyIgnore,
                 Collections.emptyList());
+    }
+
+    @Contract(pure = true)
+    private @NotNull Predicate<FileConfiguration> aimVersion(int version) {
+        return config -> config.getInt("config-version") == version;
     }
 
     public void updateConfig(String folderName,

@@ -67,7 +67,7 @@
 # Effects: https://www.digminecraft.com/lists/effect_list_pc.php
 
 # Don't touch this!
-config-version: 2
+config-version: 4
 
 # In order to generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
@@ -183,11 +183,13 @@ input-gui:
   new-skin:
     title: "Which player?"
     text: "Write..."
+  players:
+    title: "Search..."
+    text: "Search..."
 
 # This only applies to villagers who have not yet spawned.
-# If the villager has no weapon in hand, he will flee from danger.
-# NOTE: Only monsters are supported at the moment (ENDER_DRAGON & WITHER included).
-# Monsters: https://minecraft.fandom.com/wiki/Mob#Hostile_mobs
+# If the villager has no weapon in hand, he'll flee from danger (only with monsters).
+# Entities: https://www.digminecraft.com/lists/entity_list_pc.php
 default-target-entities:
   - DROWNED
   - EVOKER
@@ -358,41 +360,76 @@ variable-text:
     fight: "Fight"
     stay: "Stay"
   entity:
-    zombie: "Zombie"
-    skeleton: "Skeleton"
-    creeper: "Creeper"
-    witch: "Witch"
-    spider: "Spider"
-    zombie_villager: "Zombie Villager"
-    enderman: "Enderman"
-    slime: "Slime"
-    cave_spider: "Cave Spider"
-    silverfish: "Silverfish"
-    stray: "Stray"
-    husk: "Husk"
-    phantom: "Phantom"
-    drowned: "Drowned"
-    vindicator: "Vindicator"
-    vex: "Vex"
-    illusioner: "Illusioner"
-    evoker: "Evoker"
-    ravager: "Ravager"
-    guardian: "Guardian"
-    elder_guardian: "Elder Guardian"
+    axolotl: "Axolotl"
+    bat: "Bat"
+    bee: "Bee"
     blaze: "Blaze"
-    ghast: "Ghast"
-    magma_cube: "Magma Cube"
-    wither_skeleton: "Wither Skeleton"
-    hoglin: "Hoglin"
-    zoglin: "Zoglin"
-    piglin: "Piglin"
-    piglin_brute: "Piglin Brute"
-    zombified_piglin: "Zombified Piglin"
+    camel: "Camel"
+    cat: "Cat"
+    cave-spider: "Cave Spider"
+    chicken: "Chicken"
+    cod: "Cod"
+    cow: "Cow"
+    creeper: "Creeper"
+    dolphin: "Dolphin"
+    donkey: "Donkey"
+    drowned: "Drowned"
+    elder-guardian: "Elder Guardian"
+    enderman: "Enderman"
     endermite: "Endermite"
+    ender-dragon: "Ender Dragon"
+    evoker: "Evoker"
+    fox: "Fox"
+    frog: "Frog"
+    ghast: "Ghast"
+    glow-squid: "Glow Squid"
+    goat: "Goat"
+    guardian: "Guardian"
+    hoglin: "Hoglin"
+    horse: "Horse"
+    husk: "Husk"
+    illusioner: "Illusioner"
+    llama: "Llama"
+    magma-cube: "Magma Cube"
+    mule: "Mule"
+    mushroom-cow: "Mushroom Cow"
+    ocelot: "Ocelot"
+    panda: "Panda"
+    parrot: "Parrot"
+    phantom: "Phantom"
+    pig: "Pig"
+    piglin: "Piglin"
+    piglin-brute: "Piglin Brute"
+    polar-bear: "Polar Bear"
+    pufferfish: "Pufferfish"
+    rabbit: "Rabbit"
+    ravager: "Ravager"
+    salmon: "Salmon"
+    sheep: "Sheep"
     shulker: "Shulker"
-    wither: "Wither"
-    ender_dragon: "Ender Dragon"
+    silverfish: "Silverfish"
+    skeleton: "Skeleton"
+    slime: "Slime"
+    sniffer: "Sniffer"
+    spider: "Spider"
+    squid: "Squid"
+    stray: "Stray"
+    strider: "Strider"
+    tadpole: "Tadpole"
+    trader-llama: "Trader Llama"
+    tropical-fish: "Tropical Fish"
+    turtle: "Turtle"
+    vex: "Vex"
+    vindicator: "Vindicator"
     warden: "Warden"
+    witch: "Witch"
+    wither: "Wither"
+    wither-skeleton: "Wither Skeleton"
+    wolf: "Wolf"
+    zoglin: "Zoglin"
+    zombie: "Zombie"
+    zombie-villager: "Zombie Villager"
+    zombified-piglin: "Zombified Piglin"
   potion-effect-type:
     speed: "Speed"
     slowness: "Slowness"
@@ -681,6 +718,71 @@ gui:
         display-name: "&aNext"
         lore:
           - "&7Click to go to the next page."
+  combat-settings:
+    title: "Combat | Settings"
+    items:
+      players:
+        material: PLAYER_HEAD
+        display-name: "&bPlayers"
+        lore:
+          - "&7Add the players that should be attacked."
+      animals:
+        material: PLAYER_HEAD
+        url: d6551840955f524367580f11b35228938b6786397a8f2e8c8cc6b0eb01b5db3d
+        display-name: "&aAnimals"
+        lore:
+          - "&7Choose the animals you want to be attacked."
+      monsters:
+        material: CREEPER_HEAD
+        display-name: "&cMonsters"
+        lore:
+          - "&7Choose the monsters you want to be attacked."
+  players:
+    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
+    size: 36
+    title: "Players (%page%/%max-page%)"
+    items:
+      close:
+        material: BARRIER
+        display-name: "&cClose"
+        lore:
+          - "&7Click to close this inventory."
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific player."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      player:
+        material: PLAYER_HEAD
+        # %name% - name of the player.
+        display-name: "&a%name%"
+        lore:
+          - "&7This villager will attack this player."
+          - "&6Click to remove this player from this list."
+      add-new-player:
+        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
+        material: PLAYER_HEAD
+        display-name: "&bNew player"
+        lore:
+          - "&7Click to add a new player!"
   whistle:
     # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
     size: 36

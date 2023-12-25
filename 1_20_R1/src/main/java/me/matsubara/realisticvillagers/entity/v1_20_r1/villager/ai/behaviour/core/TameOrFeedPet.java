@@ -6,13 +6,16 @@ import me.matsubara.realisticvillagers.data.ChangeItemType;
 import me.matsubara.realisticvillagers.data.Exchangeable;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Pet;
-import me.matsubara.realisticvillagers.entity.v1_20_r1.PetCat;
-import me.matsubara.realisticvillagers.entity.v1_20_r1.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetCat;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetParrot;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.horse.HorseEating;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerTameEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -24,10 +27,12 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_20_R1.entity.CraftLivingEntity;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
@@ -36,7 +41,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 @SuppressWarnings({"OptionalGetWithoutIsPresent", "ConstantConditions"})
 public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
@@ -45,7 +49,7 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
     private final int distanceToTame;
     private final int tameChance;
     private final float speedModifier;
-    private final Predicate<LivingEntity> tameFilter;
+    private final BiPredicate<VillagerNPC, LivingEntity> tameFilter;
     private final Set<Item> tameItems;
     private Item food;
     private boolean isTame;
@@ -62,7 +66,7 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
                     // In this case, we don't need an updated offline; we just need to know if the villager is alive.
                     && npc.getPlugin().getTracker().getOfflineByUUID(pet.getOwnerUniqueId()) == null;
 
-    public TameOrFeedPet(int distanceToTame, int tameChance, float speedModifier, Predicate<LivingEntity> tameFilter, Set<Item> tameItems) {
+    public TameOrFeedPet(int distanceToTame, int tameChance, float speedModifier, BiPredicate<VillagerNPC, LivingEntity> tameFilter, Set<Item> tameItems) {
         super(ImmutableMap.of(
                 MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES, MemoryStatus.VALUE_PRESENT,
                 VillagerNPC.HAS_TAMED_RECENTLY, MemoryStatus.VALUE_ABSENT));
@@ -111,14 +115,14 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
 
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
-        if (villager instanceof VillagerNPC npc) {
-            npc.setTaming(true);
-            previousItem = npc.getMainHandItem();
-        }
+        if (!(villager instanceof VillagerNPC npc)) return;
+
+        npc.setTaming(true);
+        previousItem = npc.getMainHandItem();
 
         started = true;
 
-        LivingEntity tamable = get(villager);
+        LivingEntity tamable = get(npc);
 
         villager.getBrain().setMemory(MemoryModuleType.INTERACTION_TARGET, tamable);
         BehaviorUtils.lookAtEntity(villager, tamable);
@@ -152,7 +156,9 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
 
     @Override
     public void tick(ServerLevel level, Villager villager, long time) {
-        LivingEntity tamable = get(villager);
+        if (!(villager instanceof VillagerNPC npc)) return;
+
+        LivingEntity tamable = get(npc);
         BehaviorUtils.lookAtEntity(villager, tamable);
 
         if (!isWithinTamingDistance(villager, tamable)) {
@@ -165,17 +171,25 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
             return;
         }
 
-        boolean isWolf, isTamed = false;
-        if (isTame && villager instanceof VillagerNPC npc && tamable instanceof Pet pet && (isTamed = canTame(level, npc, tamable))) {
+        boolean isTamed = false;
+        if (isTame && tamable instanceof Pet pet && (isTamed = canTame(level, npc, tamable))) {
             pet.tameByVillager(npc);
-        } else if (!isTame && ((isWolf = tamable instanceof PetWolf) || tamable instanceof PetCat)) {
-            if (isWolf) {
+            if (tamable instanceof AbstractHorse horse) { // Ride horse.
+                if (!horse.isVehicle()) villager.startRiding(horse, true);
+                if (!horse.isSaddled()) {
+                    horse.equipSaddle(SoundSource.NEUTRAL);
+                    villager.getInventory().removeItemType(Items.SADDLE, 1);
+                }
+            }
+        } else if (!isTame && !(tamable instanceof PetParrot)) { // Parrots can't be fed (only cookies, which will kill them).
+            if (tamable instanceof PetWolf) {
                 tamable.heal(food.getFoodProperties().getNutrition(), EntityRegainHealthEvent.RegainReason.EATING);
-            } else {
+            } else if (tamable instanceof PetCat) {
                 tamable.playSound(SoundEvents.CAT_EAT, 1.0f, 1.0f);
                 tamable.heal(food.getFoodProperties().getNutrition());
+            } else if (tamable instanceof HorseEating horse) {
+                horse.handleEating(food.getDefaultInstance());
             }
-            // Parrots can't be fed (only cookies, which will kill them).
         }
 
         if (isTame) {
@@ -206,11 +220,11 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
         return false;
     }
 
-    private Optional<LivingEntity> getNearestUntamedOrAbandoned(@NotNull Villager villager) {
-        Optional<NearestVisibleLivingEntities> nearest = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+    private Optional<LivingEntity> getNearestUntamedOrAbandoned(@NotNull VillagerNPC npc) {
+        Optional<NearestVisibleLivingEntities> nearest = npc.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return Optional.empty();
 
-        return nearest.get().findClosest(tameFilter.or(living -> ABANDONED.test(villager, living)));
+        return nearest.get().findClosest(living -> tameFilter.or(ABANDONED).test(npc, living));
     }
 
     private Optional<LivingEntity> getNearestHungry(@NotNull Villager villager) {
@@ -227,7 +241,7 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
         return villager.blockPosition().closerThan(tamable.blockPosition(), distanceToTame);
     }
 
-    private @NotNull LivingEntity get(Villager villager) {
-        return isTame ? getNearestUntamedOrAbandoned(villager).get() : getNearestHungry(villager).get();
+    private @NotNull LivingEntity get(VillagerNPC npc) {
+        return isTame ? getNearestUntamedOrAbandoned(npc).get() : getNearestHungry(npc).get();
     }
 }

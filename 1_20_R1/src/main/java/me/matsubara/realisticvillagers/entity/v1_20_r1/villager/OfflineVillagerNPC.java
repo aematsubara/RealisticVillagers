@@ -35,7 +35,8 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     private @Setter CompoundTag tag;
     private final List<IVillagerNPC> partners = new ArrayList<>();
     private final List<IVillagerNPC> childrens = new ArrayList<>();
-    private final Set<EntityType<?>> targetEntities;
+    private final Set<EntityType<?>> targetEntities = new HashSet<>();
+    private final Set<UUID> players = new HashSet<>();
     private final LastKnownPosition lastKnownPosition;
 
     public static final String UUID = "UUID";
@@ -61,6 +62,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
+    public static final String PLAYERS = "Players";
     public static final BiFunction<VillagerTracker, Tag, IVillagerNPC> OFFLINE_MAPPER = (tracker, input) -> input instanceof CompoundTag compound ?
             OfflineVillagerNPC.from(compound) :
             tracker.getOffline(NbtUtils.loadUUID(input));
@@ -79,8 +81,16 @@ public class OfflineVillagerNPC implements IVillagerNPC {
                 input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(plugin.getTracker(), input),
                 CHILDRENS,
                 tag);
-        this.targetEntities = new HashSet<>();
-        VillagerNPC.fillCollection(targetEntities, input -> EntityType.byString(input.getAsString()).orElse(null), TARGET_ENTITIES, tag);
+        VillagerNPC.fillCollection(
+                targetEntities,
+                input -> EntityType.byString(input.getAsString()).orElse(null),
+                TARGET_ENTITIES,
+                tag);
+        VillagerNPC.fillCollection(
+                players,
+                NbtUtils::loadUUID,
+                OfflineVillagerNPC.PLAYERS,
+                tag);
     }
 
     @Contract("_, _, _, _, _, _ -> new")
@@ -562,6 +572,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     @Override
     public boolean isReviving() {
         return false;
+    }
+
+    @Override
+    public Set<UUID> getPlayers() {
+        return players;
     }
 
     private static @NotNull LastKnownPosition lastPositionFrom(@NotNull CompoundTag tag) {

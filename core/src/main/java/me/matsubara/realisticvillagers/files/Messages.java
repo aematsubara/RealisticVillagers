@@ -1,23 +1,31 @@
 package me.matsubara.realisticvillagers.files;
 
 import com.google.common.collect.Lists;
+import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.GUIInteractType;
 import me.matsubara.realisticvillagers.data.InteractionTargetType;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.apache.commons.lang3.RandomUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Messages {
@@ -25,6 +33,8 @@ public final class Messages {
     private final RealisticVillagers plugin;
 
     private @Setter FileConfiguration configuration;
+
+    private static final double NEARBY_SEARCH_RANGE = 30.0d;
 
     public Messages(@NotNull RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -55,18 +65,55 @@ public final class Messages {
 
         Villager.Profession profession = npc.bukkit().getProfession();
 
-        String name;
+        String playerName = player.getName();
+        String villagerName = npc.getVillagerName();
+
+        String fullVillagerName;
         if (npc.is(Villager.Profession.NONE) || !Config.SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE.asBool()) {
-            name = npc.getVillagerName();
+            fullVillagerName = villagerName;
         } else {
-            name = npc.getVillagerName() + " " + getVillagerTitle(profession);
+            fullVillagerName = villagerName + " " + getVillagerTitle(profession);
         }
 
         String formattedMessage = Config.VILLAGER_MESSAGE_FORMAT.asStringTranslated()
-                .replace("%name%", name)
-                .replace("%message%", message);
+                .replace("%name%", fullVillagerName)
+                .replace("%message%", message)
+                .replace("%villager-name%", villagerName)
+                .replace("%player-name%", playerName)
+                .replace("%random-villager-name%", getNearbyRandom(npc, null))
+                .replace("%random-player-name%", getNearbyRandom(npc, playerName));
 
         player.sendMessage(formattedMessage);
+    }
+
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    private String getNearbyRandom(@NotNull IVillagerNPC npc, @Nullable String exceptPlayer) {
+        VillagerTracker tracker = plugin.getTracker();
+        for (Entity nearby : npc.bukkit().getNearbyEntities(NEARBY_SEARCH_RANGE, NEARBY_SEARCH_RANGE, NEARBY_SEARCH_RANGE)) {
+            if (exceptPlayer == null) {
+                // If villager is valid, then the optional won't be empty.
+                if (nearby instanceof Villager villager
+                        && !tracker.isInvalid(villager)) return plugin.getConverter()
+                        .getNPC(villager)
+                        .get()
+                        .getVillagerName();
+            } else if (nearby instanceof Player player
+                    && !player.getName().equals(exceptPlayer)) return player.getName();
+        }
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        if (exceptPlayer != null) {
+            List<String> offlineNames = Arrays.stream(Bukkit.getOfflinePlayers())
+                    .map(OfflinePlayer::getName)
+                    .filter(Predicate.not(exceptPlayer::equals))
+                    .toList();
+            // If there isn't any offline player (shouldn't happen), a random villager name will be used.
+            if (!offlineNames.isEmpty()) return offlineNames.get(random.nextInt(offlineNames.size()));
+        }
+
+        // If there isn't any villager nearby, we pick a random name.
+        return tracker.getRandomNameBySex(PluginUtils.getRandomSex());
     }
 
     public void send(CommandSender sender, Message message) {
@@ -136,17 +183,17 @@ public final class Messages {
         PROCREATE_FAIL_HAS_BABY("procreate.fail.has-baby"),
         PROCREATE_FAIL_LOW_REPUTATION("procreate.fail.low-reputation"),
         PROCREATE_COOLDOWN("procreate.cooldown"),
-        BABY_GROW("baby-grow"),
-        BABY_CAN_NOT_SPAWN("baby-can-not-spawn"),
-        BABY_COUNTDOWN("baby-countdown"),
-        BABY_SPAWNED("baby-spawned"),
+        BABY_GROW,
+        BABY_CAN_NOT_SPAWN,
+        BABY_COUNTDOWN,
+        BABY_SPAWNED,
         DIVORCE_NORMAL("divorce.normal"),
         DIVORCE_PAPERS("divorce.papers"),
         CLERIC_DIVORCE_PAPERS("cleric.divorce-papers"),
         CLERIC_NOT_MARRIED("cleric.not-married"),
-        BED_OCCUPIED("bed-occupied"),
-        BED_ESTABLISHED("bed-established"),
-        BED_INVALID("bed-invalid"),
+        BED_OCCUPIED,
+        BED_ESTABLISHED,
+        BED_INVALID,
         INTERACT_FAIL_FIGHTING_OR_RAID("interact-fail.fighting-or-raid"),
         INTERACT_FAIL_PROCREATING("interact-fail.procreating"),
         INTERACT_FAIL_EXPECTING_GIFT_FROM_YOU("interact-fail.expecting-gift-from-you"),
@@ -168,27 +215,34 @@ public final class Messages {
         INTERACT_FAIL_ALREADY_ALIVE("interact-fail.already-alive"),
         GIFT_EXPECTING("gift.expecting"),
         GIFT_EXPECTING_FAIL("gift.expecting-fail"),
-        THROW_GIFT("throw-gift"),
-        SELECT_BED("select-bed"),
-        RELOADING("reloading"),
-        RELOAD("reload"),
-        NO_PERMISSION("no-permission"),
-        INVALID_COMMAND("invalid-command"),
-        NO_MINESKIN_API_KEY("no-mineskin-api-key"),
-        NO_SKIN_CACHED("no-skin-cached"),
+        THROW_GIFT,
+        SELECT_BED,
+        RELOADING,
+        RELOAD,
+        NO_PERMISSION,
+        INVALID_COMMAND,
+        NO_MINESKIN_API_KEY,
+        NO_SKIN_CACHED,
         FOLLOW_ME_START("follow-me.start"),
         FOLLOW_ME_STOP("follow-me.stop"),
         FOLLOW_ME_LOW_REPUTATION("follow-me.low-reputation"),
         STAY_HERE_START("stay-here.start"),
         STAY_HERE_STOP("stay-here.stop"),
         STAY_HERE_LOW_REPUTATION("stay-here.low-reputation"),
-        NO_TRADES("no-trades"),
+        NO_TRADES,
         WHISTLE_TELEPORTED("whistle-teleported"),
         WHISTLE_ERROR("whistle-error"),
         WHISTLE_NO_FAMILY("whistle-no-family"),
-        UNKNOWN_PLAYER("unknown-player"),
-        NOT_MARRIED("not-married"),
-        DIVORCED("divorced"),
+        UNKNOWN_PLAYER,
+        HAS_NEVER_PLAYER_BEFORE("players-gui.has-never-played-before"),
+        PLAYER_IS_FAMILY_MEMBER("players-gui.player-is-family-member"),
+        NOT_YOURSELF("players-gui.not-yourself"),
+        INVALID_NAME("players-gui.invalid-name"),
+        ALREADY_ADDED("players-gui.already-added"),
+        PLAYERS_ADDED("players-gui.added"),
+        PLAYERS_REMOVED("players-gui.removed"),
+        NOT_MARRIED,
+        DIVORCED,
         SKIN_CLEARED("skin.cleared"),
         SKIN_NOT_CLEARED("skin.not-cleared"),
         SKIN_AT_LEAST_ONE("skin.at-least-one"),
@@ -205,17 +259,18 @@ public final class Messages {
         SKIN_SAME_SKIN("skin.same-skin"),
         SKIN_VILLAGER_SAME_SKIN("skin.villager-same-skin"),
         SKIN_DISGUISED("skin.disguised"),
-        ONLY_FROM_PLAYER("only-from-player"),
-        ONLY_FROM_CONSOLE("only-from-console"),
-        INVALID_NUMBER("invalid-number");
-        private final String path;
+        ONLY_FROM_PLAYER,
+        ONLY_FROM_CONSOLE,
+        INVALID_NUMBER;
+
+        private final @Getter String path;
+
+        Message() {
+            this.path = name().toLowerCase().replace("_", "-");
+        }
 
         Message(String path) {
             this.path = path;
-        }
-
-        public String getPath() {
-            return path;
         }
     }
 }

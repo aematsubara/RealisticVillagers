@@ -206,12 +206,24 @@ public final class VillagerListeners implements Listener {
         if (handItem != null && (meta = handItem.getItemMeta()) != null) {
             PersistentDataContainer container = meta.getPersistentDataContainer();
             if (container.has(plugin.getIsWhistleKey(), PersistentDataType.INTEGER)) return;
+
             if (container.has(plugin.getSkinDataKey(), PersistentDataType.STRING)) {
                 handleChangeSkinItem(player, npc, handItem);
                 return;
             }
+
             if (handItem.getType() == Material.NAME_TAG && meta.hasDisplayName()) {
                 handleRename(event);
+                return;
+            }
+
+            if (handItem.getType() == Material.LEAD) {
+                if (npc.isInteracting() && npc.getInteractingWith().equals(player.getUniqueId()) && npc.isFollowing()) {
+                    messages.send(player, npc, Messages.Message.FOLLOW_ME_STOP);
+                    npc.stopInteracting();
+                } else {
+                    plugin.getInventoryListeners().handleFollorOrStay(npc, player, InteractType.FOLLOW_ME, true);
+                }
                 return;
             }
         }

@@ -4,6 +4,12 @@
 # Don't touch this!
 config-version: 1
 
+# You can use the following placeholders for almost every message sent by villagers to players (gift/chat/joke/etc.).
+# %player-name% - the name of the player receiving the message.
+# %random-player-name% - the name of a random player who has played on the server.
+# %villager-name% - the name of the villager involved in this conversation.
+# %random-villager-name% - the name of a random villager nearby.
+
 reaction:
   on-hit:
     - "That hurt!"
@@ -122,6 +128,16 @@ divorced: "&6The player %player-name% has been divorced!"
 whistle-teleported: "&a%villager-name% has been teleported."
 whistle-error: "&cIt wasn't possible to teleport %villager-name%."
 whistle-no-family: "&cYou should get a family first!"
+
+players-gui:
+  has-never-played-before: "&cThis player has never played before."
+  player-is-family-member: "&cThis player is a member of the villager's family!"
+  not-yourself: "&cYou cannot add yourself!"
+  invalid-name: "&cInvalid name!"
+  already-added: "&cThis player is already on the list."
+  # %player-name% - the name of the player involved (@added & @removed).
+  added: "&aThe player %player-name% has been added to the list of players!"
+  removed: "&cThe player %player-name% has been removed from the list of players!"
 
 skin:
   cleared: "&6The skin has been cleaned!"
@@ -307,9 +323,11 @@ gift:
 chat:
   adult:
     success:
+      - "Hi %player-name%, I'm %villager-name%!"
       - "Good talk!"
       - "Sounds cool!"
       - "Nice."
+      - "Hey %player-name%!"
       - "That happens to the best of us."
       - "Man, cookies and milk does sound delicious right now."
       - "Yes, I suppose the weather is nice today."
@@ -330,6 +348,7 @@ chat:
   child:
     success:
       - "I heard stories about you! Are you a hero?"
+      - "Are you... %player-name%?"
       - "Hi. I was going to go try and climb to the roof."
       - "Do you wanna go burn stuff with me?"
       - "I'm going to be a hunter like you and kill many things!"

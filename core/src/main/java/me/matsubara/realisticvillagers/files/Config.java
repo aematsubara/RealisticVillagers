@@ -109,6 +109,9 @@ public enum Config {
     NEW_SKIN_TITLE("input-gui.new-skin.title"),
     NEW_SKIN_TEXT("input-gui.new-skin.text"),
 
+    PLAYERS_TITLE("input-gui.players.title"),
+    PLAYERS_TEXT("input-gui.players.text"),
+
     FISHING_COOLDOWN("fishing-cooldown"),
 
     USE_VILLAGER_SOUNDS("use-villager-sounds"),

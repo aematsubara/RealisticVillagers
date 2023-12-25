@@ -2,22 +2,25 @@ package me.matsubara.realisticvillagers.gui.types;
 
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.EntityCategory;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.util.EntityHead;
 import me.matsubara.realisticvillagers.util.InventoryUpdate;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.text.WordUtils;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Getter
 public final class CombatGUI extends InteractGUI {
@@ -25,6 +28,7 @@ public final class CombatGUI extends InteractGUI {
     private final Player player;
     private final List<EntityHead> heads;
     private final String keyword;
+    private final boolean isAnimal;
 
     private int current;
     private int pages;
@@ -41,9 +45,26 @@ public final class CombatGUI extends InteractGUI {
     private final ItemStack enabled;
     private final ItemStack disabled;
 
-    public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable String keyword) {
+    // Villagers can't reach water entities when they're underwater.
+    private static final Set<EntityType> IGNORE_ENTITIES = Stream.of(
+                    "AXOLOTL",
+                    "COD",
+                    "DOLPHIN",
+                    "ELDER_GUARDIAN",
+                    "GLOW_SQUID",
+                    "GUARDIAN",
+                    "PUFFERFISH",
+                    "SALMON",
+                    "SQUID",
+                    "TADPOLE",
+                    "TROPICAL_FISH")
+            .map(string -> PluginUtils.getOrNull(EntityType.class, string))
+            .collect(Collectors.toSet());
+
+    public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable String keyword, boolean isAnimal) {
         super(plugin, npc, "combat", 45, null, false);
         this.player = player;
+        this.isAnimal = isAnimal;
 
         previous = getGUIItem("previous");
         search = getGUIItem("search");
@@ -55,7 +76,14 @@ public final class CombatGUI extends InteractGUI {
 
         this.heads = new ArrayList<>();
         for (EntityHead skull : EntityHead.values()) {
-            if (skull.getType() != null) heads.add(skull);
+            EntityType type = skull.getType();
+            if (type == null || IGNORE_ENTITIES.contains(type)) continue;
+
+            EntityCategory category = skull.getCategory();
+            if (isAnimal && category == EntityCategory.MONSTER) continue;
+            if (!isAnimal && category == EntityCategory.ANIMAL) continue;
+
+            heads.add(skull);
         }
 
         this.keyword = keyword;
@@ -95,7 +123,8 @@ public final class CombatGUI extends InteractGUI {
             EntityHead skull = heads.get(aux);
 
             String defaultName = skull.name().toLowerCase();
-            String name = plugin.getConfig().getString("variable-text.entity." + defaultName, defaultName);
+            @SuppressWarnings("deprecation") String name = plugin.getConfig().getString("variable-text.entity." + defaultName.replace("-", "_"),
+                    WordUtils.capitalizeFully(defaultName.toLowerCase().replace("_", " ")));
 
             ItemBuilder builder = new ItemBuilder(getGUIItem("entity"));
             if (skull.getUrl() == null) {

@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 @Getter
@@ -38,26 +39,41 @@ import java.util.function.Function;
 public final class MainGUI extends InteractGUI {
 
     private final Player player;
+    private final ItemStack chat;
+    private final ItemStack greet;
+    private final ItemStack story;
+    private final ItemStack joke;
+    private final ItemStack insult;
+    private final ItemStack flirt;
+    private final ItemStack proud;
+    private final ItemStack follow;
+    private final ItemStack stay;
+    private final ItemStack inspect;
+    private final ItemStack gift;
+    private final ItemStack procreate;
+    private final ItemStack home;
+    private final ItemStack combat;
+
     private int currentTrade = 0;
-    private ItemStack chat, greet, story,
-            joke, flirt, proud,
-            insult, follow, stay,
-            inspect, gift, procreate,
-            home, divorce, combat,
-            papers, info, trade, noTrades;
-    private final Function<String, ItemStack> tradeItem = itemName -> {
-        List<MerchantRecipe> recipes = npc.bukkit().getRecipes().stream()
+    private ItemStack divorce;
+    private ItemStack papers;
+    private ItemStack info;
+    private ItemStack trade;
+    private ItemStack noTrades;
+
+    private static final BiFunction<MainGUI, String, ItemStack> TRADE_ITEM = (gui, itemName) -> {
+        List<MerchantRecipe> recipes = gui.getNPC().bukkit().getRecipes().stream()
                 .filter(recipe -> recipe.getUses() < recipe.getMaxUses())
                 .toList();
 
-        if (currentTrade >= recipes.size()) currentTrade = 0;
+        if (gui.getCurrentTrade() >= recipes.size()) gui.setCurrentTrade(0);
 
-        ItemStack item = new ItemBuilder(getGUIItem(itemName))
-                .setType(recipes.get(currentTrade).getResult().getType())
+        ItemStack item = new ItemBuilder(gui.getGUIItem(itemName))
+                .setType(recipes.get(gui.getCurrentTrade()).getResult().getType())
                 .addItemFlags(ItemFlag.values())
                 .build();
 
-        currentTrade++;
+        gui.setCurrentTrade(gui.getCurrentTrade() + 1);
         return item;
     };
 
@@ -117,7 +133,7 @@ public final class MainGUI extends InteractGUI {
             return;
         }
 
-        trade = setItemInSlot("trade", tradeItem);
+        trade = setItemInSlot("trade", string -> TRADE_ITEM.apply(this, string));
     }
 
     private ItemStack setChatItemInSlot(String itemName) {
@@ -181,6 +197,7 @@ public final class MainGUI extends InteractGUI {
                 .build();
     }
 
+    @SuppressWarnings("deprecation")
     private ItemStack createInfoItem(ItemStack item) {
         String sex = npc.isMale() ? Config.MALE.asString() : Config.FEMALE.asString();
 
@@ -322,7 +339,7 @@ public final class MainGUI extends InteractGUI {
         AttributeInstance maxHealthAttribute = npc.bukkit().getAttribute(Attribute.GENERIC_MAX_HEALTH);
         int level = npc.bukkit().getVillagerLevel();
 
-        @SuppressWarnings("deprecation") ItemBuilder builder = new ItemBuilder(item)
+        return new ItemBuilder(item)
                 .replace("%villager-name%", npc.getVillagerName())
                 .replace("%sex%", sex)
                 .replace("%age-stage%", age)
@@ -341,9 +358,7 @@ public final class MainGUI extends InteractGUI {
                 .replace("%skin-id%", npc.getSkinTextureId())
                 .replace("%id%", npc.bukkit().getEntityId())
                 .replace("%current-partner%", currentlyMarried ? partnerName : Config.NO_PARTNERS.asString())
-                .replace("%reputation%", npc.getReputation(player.getUniqueId()));
-
-        return builder
+                .replace("%reputation%", npc.getReputation(player.getUniqueId()))
                 .applyMultiLineLore(partners, "%partner%", "%partners%", null /* Won't be empty. */, partnersNames)
                 .applyMultiLineLore(childrens, "%children%", "%childrens%", Config.NO_CHILDRENS.asString(), childrensNames)
                 .applyMultiLineLore(effects, "%effect%", "%effects%", Config.NO_EFFECTS.asString(), effectsNames)

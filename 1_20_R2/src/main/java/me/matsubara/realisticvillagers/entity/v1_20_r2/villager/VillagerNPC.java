@@ -13,7 +13,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.*;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.DummyFishingHook;
-import me.matsubara.realisticvillagers.entity.v1_20_r2.PetParrot;
+import me.matsubara.realisticvillagers.entity.v1_20_r2.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.villager.ai.VillagerNPCGoalPackages;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.villager.ai.behaviour.core.LootChest;
 import me.matsubara.realisticvillagers.entity.v1_20_r2.villager.ai.behaviour.core.VillagerPanicTrigger;
@@ -187,6 +187,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean shakingHead;
     private boolean equipped;
     private boolean isAttackingWithTrident;
+    private final Set<UUID> players = new HashSet<>();
     private ThrownTrident thrownTrident;
     private ServerPlayer shakingHeadAt;
     private long timeEntitySatOnShoulder;
@@ -432,6 +433,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         villagerTag.put(OfflineVillagerNPC.GOSSIPS, gossips.store(NbtOps.INSTANCE));
         saveCollection(childrens, this::fromOffline, OfflineVillagerNPC.CHILDRENS, villagerTag);
         saveCollection(targetEntities, type -> StringTag.valueOf(type.toShortString()), OfflineVillagerNPC.TARGET_ENTITIES, villagerTag);
+        saveCollection(players, NbtUtils::createUUID, OfflineVillagerNPC.PLAYERS, villagerTag);
         if (bedHome != null && bedHomeWorld != null) {
             CompoundTag bedHomeTag = new CompoundTag();
             bedHomeTag.putUUID(OfflineVillagerNPC.BED_HOME_WORLD, bedHomeWorld);
@@ -481,7 +483,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         inventory.fromTag(villagerTag.getList(OfflineVillagerNPC.INVENTORY, 10));
         villagerName = villagerTag.getString(OfflineVillagerNPC.NAME);
         sex = villagerTag.getString(OfflineVillagerNPC.SEX);
-        if (sex.isEmpty()) sex = random.nextBoolean() ? "male" : "female";
+        if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
         if (tracker.shouldRename(villagerName)) {
             setVillagerName(tracker.getRandomNameBySex(sex));
         }
@@ -528,6 +530,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 targetEntities,
                 input -> EntityType.byString(input.getAsString()).orElse(null),
                 OfflineVillagerNPC.TARGET_ENTITIES,
+                villagerTag);
+        fillCollection(
+                players,
+                NbtUtils::loadUUID,
+                OfflineVillagerNPC.PLAYERS,
                 villagerTag);
         loadBedHomePosition(villagerTag);
         foodData.readAdditionalSaveData(villagerTag);
@@ -987,7 +994,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         for (String entity : plugin.getDefaultTargets()) {
             Optional<EntityType<?>> type = EntityType.byString(entity.toLowerCase());
             if (type.isEmpty()) continue;
-            if (type.get().getCategory() != MobCategory.MONSTER) continue;
             types.add(type.get());
         }
         return types;

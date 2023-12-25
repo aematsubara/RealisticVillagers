@@ -24,10 +24,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.wesjd.anvilgui.AnvilGUI;
-import org.bukkit.Bukkit;
-import org.bukkit.EntityEffect;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
@@ -57,7 +54,9 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 public final class InventoryListeners implements Listener {
 
@@ -223,6 +222,58 @@ public final class InventoryListeners implements Listener {
 
         if (current == null) return;
 
+        if (interact instanceof PlayersGUI players) {
+            if (current.isSimilar(players.getClose())) {
+                closeInventory(player);
+                return;
+            } else if (current.isSimilar(players.getPrevious())) {
+                players.previousPage(isShiftClick);
+                return;
+            } else if (current.isSimilar(players.getNext())) {
+                players.nextPage(isShiftClick);
+                return;
+            } else if (current.isSimilar(players.getSearch())) {
+                players.setShouldStopInteracting(false);
+                new AnvilGUI.Builder()
+                        .onClick((slot, snapshot) -> {
+                            if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+                            openPlayersGUI(npc, snapshot.getPlayer(), snapshot.getText());
+                            return RealisticVillagers.CLOSE_RESPONSE;
+                        })
+                        .title(Config.PLAYERS_TITLE.asStringTranslated())
+                        .text(Config.PLAYERS_TEXT.asStringTranslated())
+                        .itemLeft(new ItemStack(Material.PAPER))
+                        .plugin(plugin)
+                        .open(player);
+                return;
+            } else if (current.isSimilar(players.getClearSearch())) {
+                players.setShouldStopInteracting(false);
+                openPlayersGUI(npc, player, null);
+                return;
+            } else if (current.isSimilar(players.getAddNewPlayer())) {
+                players.setShouldStopInteracting(false);
+                openAddNewPlayerGUI(player, npc);
+                return;
+            }
+
+            ItemMeta meta = current.getItemMeta();
+            if (meta == null) return;
+
+            String villagerUUID = meta.getPersistentDataContainer().get(plugin.getPlayerUUIDKey(), PersistentDataType.STRING);
+            if (villagerUUID == null || villagerUUID.isEmpty()) return;
+
+            UUID uuid = UUID.fromString(villagerUUID);
+
+            OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+            if (offlinePlayer.getName() == null) return; // Shouldn't happen.
+
+            plugin.getMessages().send(player, Messages.Message.PLAYERS_REMOVED, string -> string.replace("%player-name%", offlinePlayer.getName()));
+            npc.getPlayers().remove(uuid);
+
+            closeInventory(player);
+            return;
+        }
+
         if (interact instanceof CombatGUI combat) {
             if (current.isSimilar(combat.getClose())) {
                 closeInventory(player);
@@ -232,11 +283,17 @@ public final class InventoryListeners implements Listener {
                 combat.nextPage(isShiftClick);
             } else if (current.isSimilar(combat.getSearch())) {
                 combat.setShouldStopInteracting(false);
+
+                AtomicBoolean success = new AtomicBoolean(false);
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
                             if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-                            openCombatGUI(npc, snapshot.getPlayer(), snapshot.getText());
+                            openCombatGUI(npc, snapshot.getPlayer(), snapshot.getText(), combat.isAnimal());
+                            success.set(true);
                             return RealisticVillagers.CLOSE_RESPONSE;
+                        })
+                        .onClose(opener -> {
+                            if (!success.get()) npc.stopInteracting();
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
                         .text(Config.COMBAT_SEARCH_TEXT.asStringTranslated())
@@ -245,7 +302,7 @@ public final class InventoryListeners implements Listener {
                         .open((Player) event.getWhoClicked());
             } else if (current.isSimilar(combat.getClearSearch())) {
                 combat.setShouldStopInteracting(false);
-                openCombatGUI(npc, player, null);
+                openCombatGUI(npc, player, null, combat.isAnimal());
             } else if (current.getItemMeta() != null) {
                 ItemMeta meta = current.getItemMeta();
                 PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -274,7 +331,25 @@ public final class InventoryListeners implements Listener {
         UUID playerUUID = player.getUniqueId();
         int reputation = npc.getReputation(playerUUID);
 
-        MainGUI main = (MainGUI) interact;
+        if (interact instanceof CombatSettingsGUI settings) {
+            if (current.isSimilar(settings.getPlayers())) {
+                settings.setShouldStopInteracting(false);
+                if (npc.getPlayers().isEmpty()) {
+                    openAddNewPlayerGUI(player, npc);
+                } else {
+                    openPlayersGUI(npc, player, null);
+                }
+            } else if (current.isSimilar(settings.getAnimals())) {
+                settings.setShouldStopInteracting(false);
+                openCombatGUI(npc, player, null, true);
+            } else if (current.isSimilar(settings.getMonsters())) {
+                settings.setShouldStopInteracting(false);
+                openCombatGUI(npc, player, null, false);
+            }
+            return;
+        }
+
+        if (!(interact instanceof MainGUI main)) return;
 
         boolean isFamily = npc.isFamily(player.getUniqueId(), true);
         boolean isPartner = npc.isPartner(playerUUID);
@@ -282,9 +357,9 @@ public final class InventoryListeners implements Listener {
         Messages messages = plugin.getMessages();
 
         if (current.isSimilar(main.getFollow())) {
-            handleFollorOrStay(npc, player, InteractType.FOLLOW_ME);
+            handleFollorOrStay(npc, player, InteractType.FOLLOW_ME, false);
         } else if (current.isSimilar(main.getStay())) {
-            handleFollorOrStay(npc, player, InteractType.STAY_HERE);
+            handleFollorOrStay(npc, player, InteractType.STAY_HERE, false);
         } else if (current.isSimilar(main.getInfo())) {
             return;
         } else if (current.isSimilar(main.getInspect())) {
@@ -357,7 +432,7 @@ public final class InventoryListeners implements Listener {
                     true,
                     "realisticvillagers.bypass.combat")) return;
             main.setShouldStopInteracting(false);
-            openCombatGUI(npc, player, null);
+            runTask(() -> new CombatSettingsGUI(plugin, npc, player));
             return;
         } else if (current.isSimilar(main.getHome())) {
             if (notAllowedToModify(player,
@@ -434,6 +509,61 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
+    private void openAddNewPlayerGUI(Player player, IVillagerNPC npc) {
+        AtomicBoolean success = new AtomicBoolean(false);
+        new AnvilGUI.Builder()
+                .onClick((slot, snapshot) -> {
+                    Player opener = snapshot.getPlayer();
+                    if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+
+                    Messages messages = plugin.getMessages();
+                    if (plugin.getTracker().isInvalidNametag(snapshot.getText())) {
+                        messages.send(opener, Messages.Message.INVALID_NAME);
+                        return RealisticVillagers.CLOSE_RESPONSE;
+                    }
+
+                    @SuppressWarnings("deprecation") OfflinePlayer target = Bukkit.getOfflinePlayer(snapshot.getText());
+
+                    String targetName = target.getName();
+                    UUID targetUUID = target.getUniqueId();
+
+                    if (targetName != null) {
+                        if (opener.getUniqueId().equals(targetUUID)) {
+                            messages.send(opener, Messages.Message.NOT_YOURSELF);
+                        } else if (npc.getPlayers().contains(targetUUID)) {
+                            messages.send(opener, Messages.Message.ALREADY_ADDED);
+                        } else if (!target.hasPlayedBefore()) {
+                            messages.send(opener, Messages.Message.HAS_NEVER_PLAYER_BEFORE);
+                        } else if (npc.isFamily(targetUUID, true)) {
+                            messages.send(opener, Messages.Message.PLAYER_IS_FAMILY_MEMBER);
+                        } else {
+                            success.set(true);
+                            messages.send(opener, Messages.Message.PLAYERS_ADDED, string -> string.replace("%player-name%", targetName));
+                            npc.getPlayers().add(targetUUID);
+                            openPlayersGUI(npc, snapshot.getPlayer(), null);
+                        }
+                    } else {
+                        messages.send(opener, Messages.Message.UNKNOWN_PLAYER);
+                    }
+
+                    return RealisticVillagers.CLOSE_RESPONSE;
+                })
+                .onClose(opener -> {
+                    if (!success.get()) npc.stopInteracting();
+                })
+                .title(Config.PLAYERS_TITLE.asStringTranslated())
+                .text(Config.PLAYERS_TEXT.asStringTranslated())
+                .itemLeft(new ItemStack(Material.PAPER))
+                .plugin(plugin)
+                .open(player);
+    }
+
+    private void openPlayersGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
+        runTask(() -> new PlayersGUI(plugin, npc, player, npc.getPlayers().stream()
+                .map(Bukkit::getOfflinePlayer)
+                .collect(Collectors.toSet()), keyword));
+    }
+
     private boolean notAllowedToModify(@NotNull Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage, String permission) {
         if (player.hasPermission(permission)) return false;
 
@@ -447,7 +577,7 @@ public final class InventoryListeners implements Listener {
         };
     }
 
-    private void handleFollorOrStay(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull InteractType type) {
+    public void handleFollorOrStay(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull InteractType type, boolean forced) {
         String typeName = type.name(), typeShortName = typeName.split("_")[0];
         Config bypass = Config.valueOf("FAMILY_BYPASS_ASK_TO_" + typeShortName);
         Config required = Config.valueOf("REPUTATION_REQUIRED_TO_ASK_TO_" + typeShortName);
@@ -456,8 +586,12 @@ public final class InventoryListeners implements Listener {
         if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase().replace("_", ""))
                 || (bypass.asBool() && npc.isFamily(player.getUniqueId(), true))
                 || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
-            npc.setInteractType(type);
+
+            if (forced) npc.setInteractingWithAndType(player.getUniqueId(), type);
+            else npc.setInteractType(type);
+
             if (type == InteractType.STAY_HERE) npc.stayInPlace();
+
             messages.send(player, npc, Messages.Message.valueOf(typeName + "_START"));
         } else {
             messages.send(player, npc, Messages.Message.valueOf(typeName + "_LOW_REPUTATION"));
@@ -915,8 +1049,8 @@ public final class InventoryListeners implements Listener {
                 .open((Player) event.getWhoClicked());
     }
 
-    private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
-        runTask(() -> new CombatGUI(plugin, npc, player, keyword));
+    private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword, boolean isAnimal) {
+        runTask(() -> new CombatGUI(plugin, npc, player, keyword, isAnimal));
     }
 
     private void openWhistleGUI(Player player, @Nullable String keyword) {
