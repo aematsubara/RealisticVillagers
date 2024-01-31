@@ -408,7 +408,17 @@ public final class VillagerListeners implements Listener {
         if (npc == null) return;
         if (npc.isFishing()) npc.toggleFishing();
 
-        if (!(event instanceof EntityDamageByEntityEvent byEntity)) return;
+        if (!(event instanceof EntityDamageByEntityEvent byEntity)) {
+            if (event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION
+                    && !villager.isAdult()
+                    && !Config.DISABLE_SKINS.asBool()
+                    && !Config.INCREASE_BABY_SCALE.asBool()
+                    && !villager.getLocation().getBlock().getType().isSolid()) {
+                // Prevent baby villagers suffocating when their hitbox remain small with enabled skins.
+                event.setCancelled(true);
+            }
+            return;
+        }
 
         if (byEntity.getDamager() instanceof Firework firework
                 && firework.getShooter() instanceof Villager

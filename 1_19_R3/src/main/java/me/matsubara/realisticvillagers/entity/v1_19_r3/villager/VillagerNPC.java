@@ -549,7 +549,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public float getScale() {
         // For babies is 0.5, but that would suffocate villagers (if skins are enabled).
-        return Config.DISABLE_SKINS.asBool() ? super.getScale() : 1.0f;
+        return Config.DISABLE_SKINS.asBool() || !Config.INCREASE_BABY_SCALE.asBool() ? super.getScale() : 1.0f;
     }
 
     @Override

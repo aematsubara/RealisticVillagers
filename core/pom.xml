@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.1</version>
+        <version>3.1.1</version>
     </parent>
 
     <pluginRepositories>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>com.comphenix.protocol</groupId>
             <artifactId>ProtocolLib</artifactId>
-            <version>5.1.0</version>
+            <version>5.2.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- AnvilGUI -->
@@ -221,7 +221,7 @@
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>9.8.0</version>
+            <version>9.8.1</version>
         </dependency>
     </dependencies>
 </project>

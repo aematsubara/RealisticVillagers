@@ -55,16 +55,16 @@ public class NPCPool implements Listener {
                     }
 
                     // Only considered in range if the real entity is being tracked by the player.
-                    boolean inRange = plugin.getConverter().isBeingTracked(player, npc.getEntityId());
+                    boolean tracked = plugin.getConverter().isBeingTracked(player, npc.getEntityId());
 
-                    if (!inRange && npc.isShownFor(player)) {
+                    if (!tracked && npc.isShownFor(player)) {
                         npc.hide(player);
-                    } else if (inRange && !npc.isShownFor(player)) {
+                    } else if (tracked && !npc.isShownFor(player)) {
                         npc.show(player, plugin, tabListRemoveTicks);
                     }
                 }
             }
-        }, 20L, 4L);
+        }, 30L, 30L);
     }
 
     protected void takeCareOf(NPC npc) {

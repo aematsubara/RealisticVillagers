@@ -1448,3 +1448,9 @@ revive:
 # If true, villagers will be able to feed, tame and ride horses, donkeys and mules.
 # NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
 tame-horses: false
+
+# If true, the scale of baby villagers will change to the scale of adult villagers, meaning that their hitboxes will be larger;
+# hence, baby villagers will no longer pass through 1x1 holes.
+# If false, the baby villagers will have their hitbox reduced (vanilla) but can be seen passing through 1x1 blocks, looking glitchy.
+# NOTE: This option will only take effect if @disable-skins is false.
+increase-baby-scale: true

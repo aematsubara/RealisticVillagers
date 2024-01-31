@@ -7,6 +7,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.handler.protocol.ChestHandler;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -64,7 +65,14 @@ public class ChestManager implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryClose(@NotNull InventoryCloseEvent event) {
         Location location = event.getInventory().getLocation();
-        if (location == null || location.getBlock().getType() != Material.CHEST) return;
+        try {
+            World world;
+            if (location == null
+                    || ((world = location.getWorld()) == null || !world.isChunkLoaded(location.getBlockX(), location.getBlockZ()))
+                    || location.getBlock().getType() != Material.CHEST) return;
+        } catch (IllegalStateException exception) {
+            return;
+        }
 
         Vector vector = location.toVector();
 

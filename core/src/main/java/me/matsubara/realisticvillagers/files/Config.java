@@ -172,7 +172,8 @@ public enum Config {
     REVIVE_BOSSBAR_COLOR("revive.boss-bar.color"),
     REVIVE_BOSSBAR_STYLE("revive.boss-bar.style"),
     REVIVE_BOSSBAR_FLAGS("revive.boss-bar.flags"),
-    TAME_HORSES("tame-horses");
+    TAME_HORSES("tame-horses"),
+    INCREASE_BABY_SCALE("increase-baby-scale");
 
     private final String path;
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
