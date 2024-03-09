@@ -7,7 +7,6 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_18_r2.pet.PetCat;
@@ -32,11 +31,8 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerPlayerConnection;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -110,7 +106,6 @@ public class NMSConverter implements INMSConverter {
     private static final MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
 
     // Other.
-    private static final MethodHandle TRACKED_ENTITY_FIELD = Reflection.getFieldGetter(ChunkMap.TrackedEntity.class, "c");
     private static final MethodHandle TIMELINES = Reflection.getFieldGetter(Schedule.class, "g");
 
     private static final Random RANDOM = new Random();
@@ -364,33 +359,6 @@ public class NMSConverter implements INMSConverter {
     @Override
     public GameProfile getPlayerProfile(Player player) {
         return ((CraftPlayer) player).getHandle().getGameProfile();
-    }
-
-    @SuppressWarnings("WhileLoopReplaceableByForEach")
-    @Override
-    public boolean isBeingTracked(Player player, int villagerId) {
-        ServerPlayer handle = ((CraftPlayer) player).getHandle();
-
-        ObjectIterator<ChunkMap.TrackedEntity> entityIterator = handle.getLevel().getChunkSource().chunkMap.entityMap.values().iterator();
-        while (entityIterator.hasNext()) {
-            try {
-                ChunkMap.TrackedEntity tracked = entityIterator.next();
-                if (tracked == null) continue;
-
-                Entity entity = (Entity) TRACKED_ENTITY_FIELD.invoke(tracked);
-                if (entity.getId() != villagerId) continue;
-
-                Iterator<ServerPlayerConnection> seenByIterator = tracked.seenBy.iterator();
-                while (seenByIterator.hasNext()) {
-                    ServerPlayerConnection connection = seenByIterator.next();
-                    if (connection == null) continue;
-                    if (connection.getPlayer().is(handle)) return true;
-                }
-            } catch (Throwable ignored) {
-
-            }
-        }
-        return false;
     }
 
     @Override

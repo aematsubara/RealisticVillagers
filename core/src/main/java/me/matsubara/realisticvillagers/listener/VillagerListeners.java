@@ -9,6 +9,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.Reflection;
@@ -88,7 +89,26 @@ public final class VillagerListeners implements Listener {
 
         // Update villager skin when changing job after 1 tick since this event is called before changing job.
         // Respawn NPC with the new profession texture.
-        plugin.getServer().getScheduler().runTask(plugin, () -> tracker.refreshNPCSkin(villager, true));
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            plugin.getConverter().getNPC(villager).ifPresent(npc -> {
+                NametagManager nametagManager = plugin.getNametagManager();
+                if (nametagManager != null) nametagManager.resetNametag(npc, null, true);
+            });
+            tracker.refreshNPCSkin(villager, true);
+        });
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onVillagerAcquireTrade(@NotNull VillagerAcquireTradeEvent event) {
+        if (!(event.getEntity() instanceof Villager villager)) return;
+
+        VillagerTracker tracker = plugin.getTracker();
+        if (tracker.isInvalid(villager)) return;
+
+        plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getConverter().getNPC(villager).ifPresent(npc -> {
+            NametagManager nametagManager = plugin.getNametagManager();
+            if (nametagManager != null) nametagManager.resetNametag(npc, null, true);
+        }));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -427,11 +447,16 @@ public final class VillagerListeners implements Listener {
             return;
         }
 
+        boolean alive = villager.getHealth() - event.getFinalDamage() > 0.0d;
+
         // Don't send messages if villager died.
-        if (villager.getTarget() == null
-                && byEntity.getDamager() instanceof Player player
-                && villager.getHealth() - event.getFinalDamage() > 0.0d) {
+        if (villager.getTarget() == null && byEntity.getDamager() instanceof Player player && alive) {
             plugin.getMessages().send(player, npc, Messages.Message.ON_HIT);
+        }
+
+        NametagManager nametagManager = plugin.getNametagManager();
+        if (nametagManager != null && !hasTotem(villager) && !alive) {
+            nametagManager.remove(npc);
         }
 
         if (!npc.isDamageSourceBlocked()) return;
@@ -443,5 +468,16 @@ public final class VillagerListeners implements Listener {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    private boolean hasTotem(@NotNull Villager villager) {
+        EntityEquipment equipment = villager.getEquipment();
+        if (equipment == null) return false;
+
+        ItemStack mainHand = equipment.getItemInMainHand();
+        if (mainHand.getType() == Material.TOTEM_OF_UNDYING) return true;
+
+        ItemStack offHand = equipment.getItemInOffHand();
+        return offHand.getType() == Material.TOTEM_OF_UNDYING;
     }
 }

@@ -4,6 +4,9 @@ import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.EnumWrappers.PlayerInfoAction;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.google.common.base.Preconditions;
+import lombok.Getter;
+import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
+import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.npc.modifier.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -18,6 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @SuppressWarnings("deprecation")
+@Getter
 public class NPC {
 
     private final Collection<Player> seeingPlayers = new CopyOnWriteArraySet<>();
@@ -62,6 +66,11 @@ public class NPC {
             modifier.queueSpawn().send(player);
             spawnCustomizer.handleSpawn(this, player);
 
+            if (spawnCustomizer instanceof NPCHandler handler) {
+                NametagManager nametagManager = handler.getPlugin().getNametagManager();
+                if (nametagManager != null) nametagManager.showNametag(handler.getVillager(), player);
+            }
+
             if (tabListRemoveTicks >= 0) {
                 // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
                 Bukkit.getScheduler().runTaskLater(
@@ -77,6 +86,12 @@ public class NPC {
                 .queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER)
                 .queueDestroy()
                 .send(player);
+
+        if (spawnCustomizer instanceof NPCHandler handler) {
+            NametagManager nametagManager = handler.getPlugin().getNametagManager();
+            if (nametagManager != null) nametagManager.hideNametag(handler.getVillager(), player);
+        }
+
         removeSeeingPlayer(player);
     }
 

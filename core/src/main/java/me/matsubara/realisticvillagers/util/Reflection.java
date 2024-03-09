@@ -52,7 +52,7 @@ public final class Reflection {
         }
     }
 
-    public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, Class<?> parameterTypes) {
+    public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, Class<?>... parameterTypes) {
         MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
         try {
             Method method = refc.getDeclaredMethod(name, parameterTypes);

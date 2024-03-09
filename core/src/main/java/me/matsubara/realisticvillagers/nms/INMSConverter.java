@@ -42,8 +42,6 @@ public interface INMSConverter {
 
     GameProfile getPlayerProfile(Player player);
 
-    boolean isBeingTracked(Player player, int villagerId);
-
     void refreshSchedules();
 
     IVillagerNPC getNPCFromTag(String tag);

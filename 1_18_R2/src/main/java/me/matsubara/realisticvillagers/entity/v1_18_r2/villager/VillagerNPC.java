@@ -290,7 +290,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             ShieldItem.class,
             ArmorItem.class);
 
-    private static final MethodHandle BUKKIT_ENTITY = Reflection.getFieldSetter(Entity.class, "bukkitEntity");
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getFieldGetter(GateBehavior.class, "e");
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {

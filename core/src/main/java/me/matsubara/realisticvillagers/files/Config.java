@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 public enum Config {
+    RENDER_DISTANCE("render-distance"),
     MINESKIN_API_KEY("mineskin-api-key"),
     DISABLE_INTERACTIONS("disable-interactions"),
     MAX_GOSSIP_TOPICS("max-gossip-topics"),
@@ -32,6 +33,9 @@ public enum Config {
 
     ARROWS_PASS_THROUGH_OTHER_VILLAGERS("arrows-pass-through-other-villagers"),
     ARROW_STATUS("arrow-status"),
+
+    CUSTOM_NAME_SHOW_JOB_BLOCK("custom-nametags.show-job-block"),
+    CUSTOM_NAME_LINES("custom-nametags.lines"),
 
     VILLAGER_MAX_HEALTH("villager-max-health"),
 

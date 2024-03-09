@@ -12,6 +12,7 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.*;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.DummyFishingHook;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.ai.VillagerNPCGoalPackages;
@@ -116,7 +117,9 @@ import org.bukkit.craftbukkit.v1_19_R3.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_19_R3.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.FishHook;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -139,7 +142,7 @@ import java.util.function.Supplier;
 @SuppressWarnings({"Guava", "deprecation"})
 @Getter
 @Setter
-public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob {
+public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob, Nameable {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
@@ -192,6 +195,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private long timeEntitySatOnShoulder;
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
+
+    private TextDisplay nametagEntity;
+    private BlockDisplay nametagItemEntity;
+    private int currentAmountOfLines;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -299,7 +306,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             ShieldItem.class,
             ArmorItem.class);
 
-    private static final MethodHandle BUKKIT_ENTITY = Reflection.getFieldSetter(Entity.class, "bukkitEntity");
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getFieldGetter(GateBehavior.class, "e");
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {

@@ -58,7 +58,7 @@ public class SkinGUI extends PaginatedGUI {
     private static final int SEARCH_SLOT = 22;
     private static final int CLEAR_SKIN = 23;
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private static final Map<Villager.Profession, Material> PROFESSION_ICON = new LinkedHashMap<>();
+    public static final Map<Villager.Profession, Material> PROFESSION_ICON = new LinkedHashMap<>();
     public static final Map<Integer, ItemStack> CACHE_MALE_HEADS = new ConcurrentHashMap<>();
     public static final Map<Integer, ItemStack> CACHE_FEMALE_HEADS = new ConcurrentHashMap<>();
 

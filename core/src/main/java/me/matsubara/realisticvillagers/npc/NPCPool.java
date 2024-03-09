@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.npc;
 
 import com.google.common.base.Preconditions;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.files.Config;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -23,6 +24,8 @@ public class NPCPool implements Listener {
     private final RealisticVillagers plugin;
     private final long tabListRemoveTicks;
     private final Map<Integer, NPC> npcMap = new ConcurrentHashMap<>();
+
+    private static final double BUKKIT_VIEW_DISTANCE = Math.pow(Bukkit.getViewDistance() << 4, 2);
 
     private NPCPool(RealisticVillagers plugin, long tabListRemoveTicks) {
         this.plugin = plugin;
@@ -54,12 +57,12 @@ public class NPCPool implements Listener {
                         continue;
                     }
 
-                    // Only considered in range if the real entity is being tracked by the player.
-                    boolean tracked = plugin.getConverter().isBeingTracked(player, npc.getEntityId());
+                    int renderDistance = Config.RENDER_DISTANCE.asInt();
+                    boolean inRange = npcLocation.distanceSquared(playerLocation) <= Math.min(renderDistance * renderDistance, BUKKIT_VIEW_DISTANCE);
 
-                    if (!tracked && npc.isShownFor(player)) {
+                    if (!inRange && npc.isShownFor(player)) {
                         npc.hide(player);
-                    } else if (tracked && !npc.isShownFor(player)) {
+                    } else if (inRange && !npc.isShownFor(player)) {
                         npc.show(player, plugin, tabListRemoveTicks);
                     }
                 }

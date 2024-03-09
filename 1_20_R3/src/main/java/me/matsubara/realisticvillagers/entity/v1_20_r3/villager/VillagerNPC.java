@@ -12,6 +12,7 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.*;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_20_r3.DummyFishingHook;
 import me.matsubara.realisticvillagers.entity.v1_20_r3.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_20_r3.villager.ai.VillagerNPCGoalPackages;
@@ -35,6 +36,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
@@ -52,9 +54,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.*;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
@@ -83,6 +83,7 @@ import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.animal.Parrot;
+import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
@@ -109,6 +110,7 @@ import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.v1_20_R3.CraftEquipmentSlot;
 import org.bukkit.craftbukkit.v1_20_R3.CraftRegionAccessor;
 import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
@@ -117,7 +119,9 @@ import org.bukkit.craftbukkit.v1_20_R3.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_20_R3.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.FishHook;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -140,7 +144,7 @@ import java.util.function.Supplier;
 @SuppressWarnings({"Guava", "deprecation"})
 @Getter
 @Setter
-public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob {
+public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob, Nameable {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
@@ -170,6 +174,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private Set<EntityType<?>> targetEntities = getDefaultTargets();
     private long lastGossipTime;
     private long lastGossipDecayTime;
+    private long lastDamageStamp;
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
     private DamageSource lastDamageSource;
@@ -193,6 +198,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private long timeEntitySatOnShoulder;
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
+
+    private TextDisplay nametagEntity;
+    private BlockDisplay nametagItemEntity;
+    private int currentAmountOfLines;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -293,8 +302,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             ShieldItem.class,
             ArmorItem.class);
 
-    private static final MethodHandle BUKKIT_ENTITY = Reflection.getFieldSetter(Entity.class, "bukkitEntity");
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getFieldGetter(GateBehavior.class, "e");
+    private static final MethodHandle ACTUALLY_HURT_METHOD = Reflection.getMethod(LivingEntity.class, "actuallyHurt", DamageSource.class, float.class);
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {
         this(type, level, VillagerType.PLAINS);
@@ -1906,14 +1915,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    protected boolean damageEntity0(DamageSource source, float damage) {
-        lastDamageSource = source;
-        boolean flag = super.damageEntity0(source, damage);
-        lastDamageSource = null;
-        return flag;
-    }
-
-    @Override
     public boolean isDamageSourceBlocked() {
         return lastDamageSource != null && isDamageSourceBlocked(lastDamageSource);
     }
@@ -2005,9 +2006,184 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public boolean hurt(DamageSource source, float damage) {
-        boolean damaged = super.hurt(source, damage);
+        boolean damaged = handleHurt(source, damage);
         if (damaged) removeEntitiesOnShoulder();
         return damaged;
+    }
+
+    private boolean notDamaged(DamageSource source, float damage) {
+        if (ACTUALLY_HURT_METHOD == null) return true;
+
+        lastDamageSource = source;
+
+        boolean flag;
+        try {
+            flag = (boolean) ACTUALLY_HURT_METHOD.invoke(this, source, damage);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            flag = false;
+        }
+
+        lastDamageSource = null;
+        return !flag;
+    }
+
+    private boolean handleHurt(DamageSource source, float damage) {
+        if (isInvulnerableTo(source)) return false;
+        if (level().isClientSide) return false;
+        if (isRemoved() || dead || getHealth() <= 0.0f) return false;
+        if (source.is(DamageTypeTags.IS_FIRE) && hasEffect(MobEffects.FIRE_RESISTANCE)) return false;
+
+        if (isSleeping() && !level().isClientSide) {
+            stopSleeping();
+        }
+
+        noActionTime = 0;
+
+        float originalDamage = damage;
+        boolean blocked = damage > 0.0f && isDamageSourceBlocked(source);
+
+        if (source.is(DamageTypeTags.IS_FREEZING) && getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
+            damage *= 5.0f;
+        }
+
+        walkAnimation.setSpeed(1.5f);
+        boolean vulnerable = true;
+        if ((float) invulnerableTime > (float) invulnerableDuration / 2.0f && !source.is(DamageTypeTags.BYPASSES_COOLDOWN)) {
+            if (damage <= lastHurt) {
+                return false;
+            }
+
+            if (notDamaged(source, damage - lastHurt)) {
+                return false;
+            }
+
+            lastHurt = damage;
+            vulnerable = false;
+        } else {
+            if (notDamaged(source, damage)) {
+                return false;
+            }
+
+            lastHurt = damage;
+            invulnerableTime = invulnerableDuration;
+            hurtDuration = 10;
+            hurtTime = hurtDuration;
+        }
+
+        Entity damager = source.getEntity();
+        if (damager instanceof LivingEntity living && !source.is(DamageTypeTags.NO_ANGER)) {
+            setLastHurtByMob(living);
+        }
+
+        if (damager instanceof Player player) {
+            lastHurtByPlayerTime = 100;
+            lastHurtByPlayer = player;
+        } else if (damager instanceof Wolf wolf && wolf.isTame()) {
+            lastHurtByPlayerTime = 100;
+            LivingEntity owner = wolf.getOwner();
+            if (owner instanceof Player) {
+                lastHurtByPlayer = (Player) owner;
+            } else {
+                lastHurtByPlayer = null;
+            }
+        }
+
+        if (vulnerable) {
+            if (blocked) {
+                level().broadcastEntityEvent(this, (byte) 29);
+            } else {
+                level().broadcastDamageEvent(this, source);
+            }
+
+            if (!source.is(DamageTypeTags.NO_IMPACT) && (!blocked || damage > 0.0f)) {
+                markHurt();
+            }
+
+            if (damager != null && !source.is(DamageTypeTags.NO_KNOCKBACK)) {
+                double dx = damager.getX() - getX();
+                double dz;
+                for (dz = damager.getZ() - getZ(); dx * dx + dz * dz < 1.0E-4; dz = (Math.random() - Math.random()) * 0.01d) {
+                    dx = (Math.random() - Math.random()) * 0.01d;
+                }
+
+                knockback(0.4000000059604645d, dx, dz);
+                if (!blocked) indicateDamage(dx, dz);
+            }
+        }
+
+        if (isDeadOrDying()) {
+            if (!checkTotemDeathProtection(source)) {
+                SoundEvent deathSound = getDeathSound();
+                if (vulnerable && deathSound != null) {
+                    playSound(deathSound, getSoundVolume(), getVoicePitch());
+                }
+
+                die(source);
+            }
+        } else if (vulnerable) {
+            playHurtSound(source);
+        }
+
+        boolean hurt = !blocked || damage > 0.0f;
+        if (hurt) {
+            lastDamageSource = source;
+            lastDamageStamp = level().getGameTime();
+        }
+
+        if (damager instanceof ServerPlayer) {
+            CriteriaTriggers.PLAYER_HURT_ENTITY.trigger((ServerPlayer) damager, this, source, originalDamage, damage, blocked);
+        }
+
+        return hurt;
+    }
+
+    @Override
+    public @Nullable DamageSource getLastDamageSource() {
+        if (level().getGameTime() - lastDamageStamp > 40L) {
+            lastDamageSource = null;
+        }
+        return lastDamageSource;
+    }
+
+    @Override
+    public void handleDamageEvent(DamageSource source) {
+        super.handleDamageEvent(source);
+        lastDamageSource = source;
+        lastDamageStamp = level().getGameTime();
+    }
+
+    private boolean checkTotemDeathProtection(@NotNull DamageSource source) {
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return false;
+
+        InteractionHand hand = null;
+        ItemStack item = ItemStack.EMPTY;
+        for (InteractionHand tempHand : InteractionHand.values()) {
+            item = getItemInHand(tempHand);
+            if (item.is(Items.TOTEM_OF_UNDYING)) {
+                hand = tempHand;
+                break;
+            }
+        }
+
+        org.bukkit.inventory.EquipmentSlot handSlot = hand != null ? CraftEquipmentSlot.getHand(hand) : null;
+        EntityResurrectEvent event = new EntityResurrectEvent(getBukkitEntity(), handSlot);
+        event.setCancelled(hand == null);
+        level().getCraftServer().getPluginManager().callEvent(event);
+        if (!event.isCancelled()) {
+            if (!item.isEmpty()) {
+                item.shrink(1);
+            }
+
+            setHealth(1.0f);
+            removeAllEffects(EntityPotionEffectEvent.Cause.TOTEM);
+            addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1), EntityPotionEffectEvent.Cause.TOTEM);
+            addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1), EntityPotionEffectEvent.Cause.TOTEM);
+            addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0), EntityPotionEffectEvent.Cause.TOTEM);
+            level().broadcastEntityEvent(this, (byte) 35);
+        }
+
+        return !event.isCancelled();
     }
 
     @Override

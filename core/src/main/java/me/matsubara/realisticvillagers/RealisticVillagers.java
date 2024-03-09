@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers;
 
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
@@ -19,6 +20,7 @@ import me.matsubara.realisticvillagers.listener.*;
 import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
+import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.manager.gift.GiftManager;
@@ -111,6 +113,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private ExpectingManager expectingManager;
     private InteractCooldownManager cooldownManager;
     private CompatibilityManager compatibilityManager;
+    private NametagManager nametagManager;
 
     private Messages messages;
     private INMSConverter converter;
@@ -188,6 +191,7 @@ public final class RealisticVillagers extends JavaPlugin {
         chestManager = new ChestManager(this);
         expectingManager = new ExpectingManager(this);
         cooldownManager = new InteractCooldownManager(this);
+        nametagManager = ReflectionUtils.supports(20, 2) ? new NametagManager(this) : null;
         CustomBlockData.registerListener(this);
 
         ring = createWeddingRing();

@@ -69,6 +69,9 @@
 # Don't touch this!
 config-version: 4
 
+# The rendering distance of the villagers.
+render-distance: 56
+
 # In order to generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
 # NOTE 2: DON'T login with your microsoft account, this is to contribute with a minecraft account to make the requests faster.
@@ -109,6 +112,22 @@ goat-horn-seek-range: 32
 
 # If the villager must defend a family member (only if the villager has a weapon).
 villager-defend-family-member: true
+
+# Whether to disable player nametags.
+disable-nametags: false
+
+# Here you can modify the text displayed above the player.
+# NOTE: This function doesn't work in 1.18.2, 1.19.4 and 1.20.1 :(.
+custom-nametags:
+  # If true, a small block will be displayed above the text representing the villager's job block
+  # (except the unemployed and nitwits).
+  show-job-block: true
+  # %villager-name% - name of the villager.
+  # %level% - level of the villager.
+  # %profession% - profession of the villager.
+  lines:
+    - "&f%villager-name% &a(Lvl. %level%)"
+    - "&7%profession%"
 
 # If the villager must defend the hero of the village (only if the villager has a weapon).
 # NOTE: A player is considered the hero of the village if he has the effect HERO_OF_THE_VILLAGE or
@@ -331,7 +350,7 @@ variable-text:
     swamp: "Swamp"
     taiga: "Taiga"
   profession:
-    none: "None"
+    none: "Unemployed"
     armorer: "Armorer"
     butcher: "Butcher"
     cartographer: "Cartographer"
@@ -1115,9 +1134,6 @@ worlds-filter:
     - world_name_1
     - world_name_2
     - world_name_3
-
-# Whether to disable player nametags.
-disable-nametags: false
 
 # The waiting time to try to tame again (in ticks). Use 0 or lower to set no limit.
 tame-cooldown: 600

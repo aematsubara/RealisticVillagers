@@ -63,22 +63,13 @@ public final class Messages {
     public void send(Player player, IVillagerNPC npc, @NotNull String message) {
         if (message.isEmpty()) return;
 
-        Villager.Profession profession = npc.bukkit().getProfession();
-
         String playerName = player.getName();
-        String villagerName = npc.getVillagerName();
-
-        String fullVillagerName;
-        if (npc.is(Villager.Profession.NONE) || !Config.SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE.asBool()) {
-            fullVillagerName = villagerName;
-        } else {
-            fullVillagerName = villagerName + " " + getVillagerTitle(profession);
-        }
+        String fullVillagerName = getVillagerTitleName(npc);
 
         String formattedMessage = Config.VILLAGER_MESSAGE_FORMAT.asStringTranslated()
                 .replace("%name%", fullVillagerName)
                 .replace("%message%", message)
-                .replace("%villager-name%", villagerName)
+                .replace("%villager-name%", npc.getVillagerName())
                 .replace("%player-name%", playerName)
                 .replace("%random-villager-name%", getNearbyRandom(npc, null))
                 .replace("%random-player-name%", getNearbyRandom(npc, playerName));
@@ -127,7 +118,17 @@ public final class Messages {
         }
     }
 
-    public @NotNull String getVillagerTitle(Villager.Profession profession) {
+    public String getVillagerTitleName(@NotNull IVillagerNPC npc) {
+        String villagerName = npc.getVillagerName();
+
+        if (npc.is(Villager.Profession.NONE) || !Config.SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE.asBool()) {
+            return villagerName;
+        }
+
+        return villagerName + " " + getVillagerTitle(npc.bukkit().getProfession());
+    }
+
+    private @NotNull String getVillagerTitle(Villager.Profession profession) {
         return Config.VILLAGER_TITLE_ARTICLE.asString() + " " + plugin.getProfessionFormatted(profession);
     }
 
