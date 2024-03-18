@@ -30,7 +30,7 @@ public class NPC {
     private final SpawnCustomizer spawnCustomizer;
     private Location location;
 
-    private NPC(WrappedGameProfile profile, Location location, SpawnCustomizer spawnCustomizer, int entityId) {
+    public NPC(WrappedGameProfile profile, Location location, SpawnCustomizer spawnCustomizer, int entityId) {
         this.entityId = entityId;
         this.location = location;
         this.spawnCustomizer = spawnCustomizer;
@@ -56,7 +56,7 @@ public class NPC {
         return new Builder();
     }
 
-    protected void show(Player player, Plugin plugin, long tabListRemoveTicks) {
+    public void show(Player player, Plugin plugin, long tabListRemoveTicks) {
         seeingPlayers.add(player);
 
         VisibilityModifier modifier = visibility();
@@ -81,7 +81,7 @@ public class NPC {
         }, 10L);
     }
 
-    protected void hide(Player player) {
+    public void hide(Player player) {
         visibility()
                 .queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER)
                 .queueDestroy()

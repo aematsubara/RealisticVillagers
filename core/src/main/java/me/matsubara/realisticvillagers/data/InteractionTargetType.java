@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.data;
 
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -20,7 +21,7 @@ public enum InteractionTargetType {
         UUID playerUUID = player.getUniqueId();
         if (npc.isPartner(playerUUID)) return PARTNER;
         else if (npc.getFather() != null && playerUUID.equals(npc.getFather().getUniqueId())) return CHILD_OFFSPRING;
-        else if (npc.bukkit().isAdult()) return ADULT;
+        else if (!(npc.bukkit() instanceof Villager villager) || villager.isAdult()) return ADULT;
         return CHILD;
     }
 }

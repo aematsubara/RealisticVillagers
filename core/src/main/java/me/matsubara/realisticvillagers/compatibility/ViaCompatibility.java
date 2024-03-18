@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 public class ViaCompatibility implements Compatibility {
 
     public boolean cancelMetadata(@NotNull Player player) {
-        // 48 is the oficial protocol version of 1.8; we want to cancel the metadata packet for players using any version lower than 1.8.
+        // 48 is the oficial protocol version of 1.8; we want to cancel the metadata packet for players using any version lower than 1.8 on 1.18.2+ servers.
         return Via.getAPI().getPlayerVersion(player.getUniqueId()) < 47;
     }
 

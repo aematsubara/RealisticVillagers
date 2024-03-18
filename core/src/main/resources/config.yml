@@ -67,7 +67,7 @@
 # Effects: https://www.digminecraft.com/lists/effect_list_pc.php
 
 # Don't touch this!
-config-version: 4
+config-version: 5
 
 # The rendering distance of the villagers.
 render-distance: 56
@@ -122,12 +122,24 @@ custom-nametags:
   # If true, a small block will be displayed above the text representing the villager's job block
   # (except the unemployed and nitwits).
   show-job-block: true
-  # %villager-name% - name of the villager.
-  # %level% - level of the villager.
-  # %profession% - profession of the villager.
   lines:
-    - "&f%villager-name% &a(Lvl. %level%)"
-    - "&7%profession%"
+    # %villager-name% - name of the villager.
+    # %level% - level of the villager (only for @villager).
+    # %profession% - profession of the villager (only for @villager).
+    villager:
+      - "&f%villager-name% &a(Lvl. %level%)"
+      - "&7%profession%"
+    wandering-trader:
+      - "&dWandering Trader"
+      - "&f%villager-name%"
+
+skin-preview:
+  # The seconds that the preview will last.
+  seconds: 10
+  # %remaining% - the remaining seconds of preview.
+  message: "Preview finishing in %remaining% seconds!"
+  # If true, the message will have a rainbow effect (similar to the jukebox effect when a record is playing).
+  rainbow-message: true
 
 # If the villager must defend the hero of the village (only if the villager has a weapon).
 # NOTE: A player is considered the hero of the village if he has the effect HERO_OF_THE_VILLAGE or
@@ -365,6 +377,7 @@ variable-text:
     shepherd: "Shepherd"
     toolsmith: "Toolsmith"
     weaponsmith: "Weaponsmith"
+    wandering-trader: "Wandering Trader"
   activity:
     play: "Play"
     work: "Work"
@@ -902,11 +915,6 @@ gui:
         display-name: "&bNew skin (BETA)"
         lore:
           - "&7Click to add a new skin!"
-      clear-skin:
-        material: PLAYER_HEAD
-        display-name: "&cClear skin"
-        lore:
-          - "&7Click to go back to your original skin!"
       profession:
         # %profession% - the name of the current profession.
         display-name: "&a%profession%"
@@ -927,7 +935,7 @@ gui:
           - "&7Variants: &e%generated%&7/&e%max-professions%"
           - "&8* %profession%"
           - "&7"
-          - "&7Left click to preview this skin on yourself!"
+          - "&7Left click to preview this skin!"
           - "&6Middle click to select kid skins!"
           - "&cRight click to delete this skin!"
   new-skin:

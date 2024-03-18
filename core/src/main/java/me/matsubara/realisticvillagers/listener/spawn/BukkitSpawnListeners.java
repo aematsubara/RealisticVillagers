@@ -4,10 +4,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -52,7 +49,7 @@ public class BukkitSpawnListeners implements Listener {
 
     @EventHandler
     public void onWorldLoad(@NotNull WorldLoadEvent event) {
-        event.getWorld().getEntitiesByClass(Villager.class).forEach(this::handleSpawn);
+        event.getWorld().getEntitiesByClass(AbstractVillager.class).forEach(this::handleSpawn);
     }
 
     @EventHandler
@@ -69,12 +66,13 @@ public class BukkitSpawnListeners implements Listener {
     @SuppressWarnings({"deprecation", "OptionalGetWithoutIsPresent"})
     public void handleSpawn(Entity entity, @Nullable CreatureSpawnEvent.SpawnReason reason) {
         // Is invalid, ignore since we don't want to track those villagers.
-        if (!(entity instanceof Villager villager)) return;
+        if (!(entity instanceof AbstractVillager villager)) return;
         if (plugin.getTracker().isInvalid(villager, true)) return;
-        if (handleVillagerMarket(villager)) return;
+        if (villager instanceof Villager temp && handleVillagerMarket(temp)) return;
 
         boolean createData = reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG
-                || reason == CreatureSpawnEvent.SpawnReason.CUSTOM;
+                || reason == CreatureSpawnEvent.SpawnReason.CUSTOM
+                || (villager.getType() == EntityType.WANDERING_TRADER && reason == CreatureSpawnEvent.SpawnReason.NATURAL);
 
         INMSConverter converter = plugin.getConverter();
         PersistentDataContainer container = villager.getPersistentDataContainer();

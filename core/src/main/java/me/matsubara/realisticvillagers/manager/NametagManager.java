@@ -30,10 +30,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.BrewerInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Transformation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -69,7 +71,7 @@ public class NametagManager implements Listener {
         if (nametagItemEntity != null && !player.canSee(nametagItemEntity))
             player.showEntity(plugin, nametagItemEntity);
 
-        Villager bukkit = npc.bukkit();
+        LivingEntity bukkit = npc.bukkit();
 
         List<Entity> passengers = bukkit.getPassengers();
         if (passengers.isEmpty()) return;
@@ -83,25 +85,36 @@ public class NametagManager implements Listener {
         ProtocolLibrary.getProtocolManager().sendServerPacket(player, mount);
     }
 
+    public List<String> getLines(@NotNull LivingEntity entity) {
+        EntityType type = entity.getType();
+        if (type == EntityType.VILLAGER) return Config.CUSTOM_NAME_VILLAGER_LINES.asStringList();
+        if (type == EntityType.WANDERING_TRADER) return Config.CUSTOM_NAME_TRADER_LINES.asStringList();
+        return Collections.emptyList();
+    }
+
     private void spawnIfNeeded(IVillagerNPC npc, World world) {
         if (!(npc instanceof Nameable nameable) || world == null) return;
         if (Config.DISABLE_NAMETAGS.asBool()) return;
 
-        Villager bukkit = npc.bukkit();
+        LivingEntity bukkit = npc.bukkit();
         if (bukkit == null) return;
 
         Location at = bukkit.getLocation();
         at.setPitch(0.0f);
 
         TextDisplay nametagEntity = nameable.getNametagEntity();
-        if (!Config.CUSTOM_NAME_LINES.asStringList().isEmpty() && (nametagEntity == null || !nametagEntity.isValid())) {
+        if (!getLines(bukkit).isEmpty()
+                && !npc.bukkit().hasPotionEffect(PotionEffectType.INVISIBILITY)
+                && (nametagEntity == null || !nametagEntity.isValid())) {
             if (nametagEntity != null) invalidate(nametagEntity);
             nameable.setNametagEntity(nametagEntity = world.spawn(at, TextDisplay.class, display -> handleNametag(npc, display, true)));
             bukkit.addPassenger(nametagEntity);
         }
 
         BlockDisplay nametagItemEntity = nameable.getNametagItemEntity();
-        if (nametagEntity != null && Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool() && (nametagItemEntity == null || !nametagItemEntity.isValid())) {
+        if (bukkit.getType() == EntityType.VILLAGER
+                && nametagEntity != null && Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool()
+                && (nametagItemEntity == null || !nametagItemEntity.isValid())) {
             if (nametagItemEntity != null) invalidate(nametagItemEntity);
             nameable.setNametagItemEntity(nametagItemEntity = world.spawn(at, BlockDisplay.class, display -> handleNametagItem(npc, display, true, true, null)));
             bukkit.addPassenger(nametagItemEntity);
@@ -124,7 +137,7 @@ public class NametagManager implements Listener {
 
         TextDisplay nametagEntity = nameable.getNametagEntity();
 
-        boolean nametagInvalidated = nametagEntity != null && Config.CUSTOM_NAME_LINES.asStringList().isEmpty();
+        boolean nametagInvalidated = nametagEntity != null && getLines(npc.bukkit()).isEmpty();
         if (nametagInvalidated) {
             invalidate(nameable, nametagEntity, temp -> temp.setNametagEntity(null));
         }
@@ -156,15 +169,18 @@ public class NametagManager implements Listener {
     private void handleNametag(IVillagerNPC npc, TextDisplay display, boolean transform) {
         if (display == null) return;
 
-        Villager bukkit = npc.bukkit();
-
+        LivingEntity bukkit = npc.bukkit();
         StringBuilder builder = new StringBuilder();
-        List<String> lines = Config.CUSTOM_NAME_LINES.asStringList();
+        List<String> lines = getLines(bukkit);
+
         for (int i = 0; i < lines.size(); i++) {
-            builder.append(PluginUtils.translate(lines.get(i)
+            String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", npc.getVillagerName()));
+
+            builder.append(bukkit instanceof Villager villager ? line
                     .replace("%villager-name%", npc.getVillagerName())
-                    .replace("%level%", String.valueOf(bukkit.getVillagerLevel()))
-                    .replace("%profession%", plugin.getProfessionFormatted(bukkit.getProfession().name().toLowerCase()))));
+                    .replace("%level%", String.valueOf(villager.getVillagerLevel()))
+                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name().toLowerCase())) : line);
+
             if (i != lines.size() - 1) builder.append("\n");
         }
 
@@ -190,14 +206,16 @@ public class NametagManager implements Listener {
     private void handleNametagItem(IVillagerNPC npc, BlockDisplay display, boolean transform, boolean reset, @Nullable Consumer<BlockData> dataFunction) {
         if (display == null || !(npc instanceof Nameable nameable)) return;
 
-        Villager bukkit = npc.bukkit();
+        LivingEntity living = npc.bukkit();
 
         display.setBillboard(Display.Billboard.VERTICAL);
 
         if (!npc.is(Villager.Profession.NONE, Villager.Profession.NITWIT)) {
             BlockData previousData = display.getBlock();
             boolean previousValid = !previousData.getMaterial().isAir() && !reset;
-            BlockData data = previousValid ? previousData : createBlockData(bukkit, SkinGUI.PROFESSION_ICON.get(bukkit.getProfession()));
+
+            Material material = SkinGUI.PROFESSION_ICON.get(((Villager) living).getProfession().name());
+            BlockData data = previousValid ? previousData : createBlockData(living, material);
 
             if (dataFunction != null && previousValid) {
                 dataFunction.accept(data);
@@ -216,7 +234,7 @@ public class NametagManager implements Listener {
             display.setBlock(Material.AIR.createBlockData());
         }
 
-        int amountOfLines = Config.CUSTOM_NAME_LINES.asStringList().size();
+        int amountOfLines = getLines(npc.bukkit()).size();
         if (transform || nameable.getCurrentAmountOfLines() != amountOfLines) {
             nameable.setCurrentAmountOfLines(amountOfLines);
 
@@ -233,12 +251,14 @@ public class NametagManager implements Listener {
         display.setPersistent(false);
     }
 
-    private @NotNull BlockData createBlockData(Villager villager, Material material) {
+    private @NotNull BlockData createBlockData(LivingEntity villager, Material material) {
         BlockData data = getJobBlockData(villager);
         return data != null ? data : material.createBlockData();
     }
 
-    private @Nullable BlockData getJobBlockData(@NotNull Villager villager) {
+    private @Nullable BlockData getJobBlockData(@NotNull LivingEntity villager) {
+        if (!(villager instanceof Villager)) return null;
+
         Location pos = villager.getMemory(MemoryKey.JOB_SITE);
         if (pos == null) return null;
 

@@ -9,13 +9,9 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.npc.NPC;
-import me.matsubara.realisticvillagers.npc.SpawnCustomizer;
 import me.matsubara.realisticvillagers.npc.modifier.MetadataModifier;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Vehicle;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
@@ -27,12 +23,12 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class NPCHandler implements SpawnCustomizer {
+public class NPCHandler extends BasicNPCHandler {
 
     private final RealisticVillagers plugin;
     private final IVillagerNPC villager;
 
-    public NPCHandler(@NotNull RealisticVillagers plugin, Villager villager) {
+    public NPCHandler(@NotNull RealisticVillagers plugin, LivingEntity villager) {
         this.plugin = plugin;
         // No need to check if it's invalid, already checked in VillagerTracker#spawnNPC().
         this.villager = plugin.getConverter().getNPC(villager).orElse(null);
@@ -40,18 +36,20 @@ public class NPCHandler implements SpawnCustomizer {
 
     @Override
     public void handleSpawn(@NotNull NPC npc, @NotNull Player player) {
+        super.handleSpawn(npc, player);
+
         Location location = npc.getLocation();
-
-        npc.rotation().queueRotate(location.getYaw(), location.getPitch()).send(player);
-
+        LivingEntity bukkit = villager.bukkit();
         MetadataModifier metadata = npc.metadata();
-        metadata.queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(player);
-        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, villager.getShoulderEntityLeft()).send(player);
-        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, villager.getShoulderEntityRight()).send(player);
 
-        Villager bukkit = villager.bukkit();
+        if (bukkit.getType() != EntityType.WANDERING_TRADER) {
+            metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, villager.getShoulderEntityLeft()).send(player);
+            metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, villager.getShoulderEntityRight()).send(player);
+        }
 
-        if (bukkit.isSleeping()) {
+        villager.refreshTo(player);
+
+        if (bukkit.isSleeping() && bukkit instanceof Villager temp) {
             Location home = bukkit.getMemory(MemoryKey.HOME);
 
             Set<UUID> sleeping = plugin.getTracker().getHandler().getSleeping();
@@ -60,10 +58,10 @@ public class NPCHandler implements SpawnCustomizer {
             npc.teleport().queueTeleport(location, bukkit.isOnGround()).send(player);
             metadata.queue(MetadataModifier.EntityMetadata.POSE, EnumWrappers.EntityPose.SLEEPING).send(player);
 
-            bukkit.wakeup();
+            temp.wakeup();
 
             plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                if (home != null) bukkit.sleep(home);
+                if (home != null) temp.sleep(home);
                 sleeping.remove(player.getUniqueId());
             }, 2L);
         }

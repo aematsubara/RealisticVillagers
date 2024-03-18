@@ -61,7 +61,7 @@ public final class GiftManager {
 
                 Villager.Profession profession = PluginUtils.getOrNull(Villager.Profession.class, data[0].toUpperCase());
                 if (profession != null) {
-                    predicate = npc -> npc.bukkit().getProfession() == profession;
+                    predicate = npc -> !(npc.bukkit() instanceof Villager villager) || villager.getProfession() == profession;
                 } else {
                     log(path, materialOrTag);
                     continue;

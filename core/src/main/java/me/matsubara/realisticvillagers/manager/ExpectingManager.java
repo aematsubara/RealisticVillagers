@@ -33,6 +33,7 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -253,10 +254,11 @@ public final class ExpectingManager implements Listener {
         boolean isCross = PluginUtils.isItem(gift, plugin.getIsCrossKey());
 
         boolean alreadyMarriedWithPlayer = isRing && npc.isPartner(playerUUID);
-        boolean alreadyHasCross = isCross && PluginUtils.hasAnyOf(npc.bukkit(), plugin.getIsCrossKey());
+        boolean alreadyHasCross = isCross && PluginUtils.hasAnyOf((InventoryHolder) npc.bukkit(), plugin.getIsCrossKey());
+        boolean isAdult = !(npc.bukkit() instanceof Villager villager) || villager.isAdult();
 
         boolean successByRing = isRing
-                && npc.bukkit().isAdult()
+                && isAdult
                 && reputation >= repRequiredToMarry
                 && !npc.isFamily(playerUUID, false)
                 && !npc.hasPartner()
@@ -309,7 +311,7 @@ public final class ExpectingManager implements Listener {
 
         if (success) {
             npc.bukkit().playEffect(EntityEffect.VILLAGER_HAPPY);
-        } else if (isRing && !npc.isFamily(playerUUID, false) && npc.bukkit().isAdult()) {
+        } else if (isRing && !npc.isFamily(playerUUID, false) && isAdult) {
             npc.bukkit().playEffect(EntityEffect.VILLAGER_ANGRY);
 
             Messages.Message message;
@@ -338,7 +340,7 @@ public final class ExpectingManager implements Listener {
             return;
         }
 
-        if (!success && isRing && !npc.bukkit().isAdult()) {
+        if (!success && isRing && !isAdult) {
             dropRing(npc, gift);
         }
 
@@ -352,7 +354,11 @@ public final class ExpectingManager implements Listener {
         npc.drop(gift);
         plugin.getServer().getScheduler().runTaskLater(
                 plugin,
-                () -> npc.bukkit().getInventory().removeItem(plugin.getRing().getResult()),
+                () -> {
+                    if (npc.bukkit() instanceof InventoryHolder holder) {
+                        holder.getInventory().removeItem(plugin.getRing().getResult());
+                    }
+                },
                 2L);
     }
 

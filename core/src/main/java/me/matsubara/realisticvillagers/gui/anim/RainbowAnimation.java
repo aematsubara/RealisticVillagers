@@ -7,6 +7,7 @@ import me.matsubara.realisticvillagers.gui.types.*;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
@@ -96,7 +97,7 @@ public class RainbowAnimation extends BukkitRunnable {
         String name = gui.getName();
 
         if (name.equals("equipment")) {
-            size = gui.getNPC().bukkit().getInventory().getSize();
+            size = ((InventoryHolder) gui.getNPC().bukkit()).getInventory().getSize();
 
             int borderEnd = size + 9;
             int armorStart = borderEnd + 1;

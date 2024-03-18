@@ -13,8 +13,8 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import net.minecraft.nbt.*;
 import net.minecraft.world.entity.EntityType;
 import org.bukkit.Bukkit;
-import org.bukkit.Particle;
 import org.bukkit.block.Block;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
@@ -190,7 +190,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public Villager bukkit() {
+    public LivingEntity bukkit() {
         return Bukkit.getEntity(uuid) instanceof Villager villager ? villager : null;
     }
 
@@ -222,11 +222,6 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     @Override
     public boolean canAttack() {
         return false;
-    }
-
-    @Override
-    public void spawnEntityEventParticle(Particle particle) {
-
     }
 
     @Override
@@ -501,6 +496,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public void toggleFishing() {
+
+    }
+
+    @Override
+    public void refreshTo(Player player) {
 
     }
 

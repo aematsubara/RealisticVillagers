@@ -35,7 +35,12 @@ public enum Config {
     ARROW_STATUS("arrow-status"),
 
     CUSTOM_NAME_SHOW_JOB_BLOCK("custom-nametags.show-job-block"),
-    CUSTOM_NAME_LINES("custom-nametags.lines"),
+    CUSTOM_NAME_VILLAGER_LINES("custom-nametags.lines.villager"),
+    CUSTOM_NAME_TRADER_LINES("custom-nametags.lines.wandering-trader"),
+
+    SKIN_PREVIEW_SECONDS("skin-preview.seconds"),
+    SKIN_PREVIEW_MESSAGE("skin-preview.message"),
+    SKIN_PREVIEW_RAINBOW_MESSAGE("skin-preview.rainbow-message"),
 
     VILLAGER_MAX_HEALTH("villager-max-health"),
 

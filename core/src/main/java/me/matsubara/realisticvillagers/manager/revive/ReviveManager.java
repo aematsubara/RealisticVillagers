@@ -4,7 +4,7 @@ import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
+import me.matsubara.realisticvillagers.event.RealisticRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.util.PluginUtils;
@@ -23,6 +23,7 @@ import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
@@ -135,36 +136,37 @@ public class ReviveManager implements Listener {
     }
 
     @EventHandler
-    public void onVillagerRemove(@NotNull VillagerRemoveEvent event) {
-        VillagerRemoveEvent.RemovalReason reason = event.getReason();
-        if (reason != VillagerRemoveEvent.RemovalReason.KILLED
-                && reason != VillagerRemoveEvent.RemovalReason.DISCARDED) return;
+    public void onVillagerRemove(@NotNull RealisticRemoveEvent event) {
+        RealisticRemoveEvent.RemovalReason reason = event.getReason();
+        if (reason != RealisticRemoveEvent.RemovalReason.KILLED
+                && reason != RealisticRemoveEvent.RemovalReason.DISCARDED) return;
 
-        Villager bukkit = event.getNPC().bukkit();
+        LivingEntity bukkit = event.getNPC().bukkit();
         if (bukkit == null || !bukkit.isDead()) return;
 
         handleTombstone(bukkit);
     }
 
-    private void handleTombstone(Villager villager) {
-        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
+    private void handleTombstone(LivingEntity living) {
+        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(living);
         if (npc.isEmpty()) return;
 
-        EntityDamageEvent damage = villager.getLastDamageCause();
+        EntityDamageEvent damage = living.getLastDamageCause();
         if (damage != null && CAN_NOT_REVIVE.contains(damage.getCause())) {
             return;
         }
 
-        if (ignoreDead.remove(villager.getUniqueId())) return;
+        if (ignoreDead.remove(living.getUniqueId())) return;
 
         if (Config.REVIVE_ONLY_WITH_CROSS.asBool()
-                && !PluginUtils.hasAnyOf(villager, plugin.getIsCrossKey())) return;
+                && living instanceof InventoryHolder holder
+                && !PluginUtils.hasAnyOf(holder, plugin.getIsCrossKey())) return;
 
-        ItemStack head = createHeadItem(npc.get(), plugin.getConverter().getNPCTag(villager, false));
+        ItemStack head = createHeadItem(npc.get(), plugin.getConverter().getNPCTag(living, false));
 
         // Drop head at villager death location.
-        villager.getWorld().dropItemNaturally(
-                villager.getLocation(),
+        living.getWorld().dropItemNaturally(
+                living.getLocation(),
                 head);
     }
 

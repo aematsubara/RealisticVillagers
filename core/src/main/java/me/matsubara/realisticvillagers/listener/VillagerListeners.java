@@ -12,6 +12,7 @@ import me.matsubara.realisticvillagers.gui.types.MainGUI;
 import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import org.apache.commons.lang3.Validate;
 import org.bukkit.ChatColor;
@@ -359,9 +360,9 @@ public final class VillagerListeners implements Listener {
 
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
-        Villager villager = npc.bukkit();
+        LivingEntity living = npc.bukkit();
 
-        VillagerTracker.SkinRelatedData relatedData = tracker.getRelatedData(villager, "none");
+        VillagerTracker.SkinRelatedData relatedData = tracker.getRelatedData(living, "none");
         WrappedSignedProperty property = relatedData.property();
 
         if (property != null && property.getName().equals("error")) {
@@ -388,7 +389,7 @@ public final class VillagerListeners implements Listener {
             return;
         }
 
-        boolean isAdult = villager.isAdult(), forBabies = relatedData.storage().getBoolean("none." + id + ".for-babies");
+        boolean isAdult = !(living instanceof Villager villager) || villager.isAdult(), forBabies = relatedData.storage().getBoolean("none." + id + ".for-babies");
         if ((isAdult && forBabies) || (!isAdult && !forBabies)) {
             messages.send(player, Messages.Message.SKIN_DIFFERENT_AGE_STAGE, string -> string.replace("%age-stage%", (forBabies ? Config.KID : Config.ADULT).asString()));
             return;
@@ -397,7 +398,7 @@ public final class VillagerListeners implements Listener {
         // Here, we change the id of the villager, so then we can check if the skin exists.
         npc.setSkinTextureId(id);
 
-        int skinId = tracker.getRelatedData(villager, "none", false).id();
+        int skinId = tracker.getRelatedData(living, "none", false).id();
         if (skinId == -1) {
             messages.send(player, Messages.Message.SKIN_TEXTURE_NOT_FOUND);
             return;
@@ -406,10 +407,10 @@ public final class VillagerListeners implements Listener {
         messages.send(player, Messages.Message.SKIN_DISGUISED, string -> string
                 .replace("%id%", String.valueOf(skinId))
                 .replace("%sex%", sex.equals("male") ? Config.MALE.asString() : Config.FEMALE.asString())
-                .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession()))
+                .replace("%profession%", plugin.getProfessionFormatted(PluginUtils.getProfessionOrType(living)))
                 .replace("%age-stage%", isAdult ? Config.ADULT.asString() : Config.KID.asString()));
 
-        tracker.refreshNPCSkin(villager, false);
+        tracker.refreshNPCSkin(living, false);
 
         player.getInventory().removeItem(new ItemBuilder(handItem.clone())
                 .setAmount(1)
@@ -419,7 +420,7 @@ public final class VillagerListeners implements Listener {
     @SuppressWarnings({"deprecation", "unchecked"})
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(@NotNull EntityDamageEvent event) {
-        if (!(event.getEntity() instanceof Villager villager)) return;
+        if (!(event.getEntity() instanceof AbstractVillager villager)) return;
         if (plugin.getTracker().isInvalid(villager, true)) return;
 
         Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
@@ -470,7 +471,7 @@ public final class VillagerListeners implements Listener {
         }
     }
 
-    private boolean hasTotem(@NotNull Villager villager) {
+    private boolean hasTotem(@NotNull AbstractVillager villager) {
         EntityEquipment equipment = villager.getEquipment();
         if (equipment == null) return false;
 

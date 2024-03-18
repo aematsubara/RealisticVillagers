@@ -156,7 +156,6 @@ skin:
   # %id%, %profession%, %sex% - properties of the newly added skin.
   added: "&6Added a new skin with id of %id% and profession of %profession% (%sex%/%age-stage%)!"
   error: "&cAn error has occurred... check the console for more information."
-  same-skin: "&cYou can't disguise as yourself!"
   villager-same-skin: "&cThe villager already has this skin!"
   # %id%, %profession%, %sex%, %age-stage% - properties of the disguised skin.
   disguised: "&6Disguised to %id%/%sex%/%profession%/%age-stage%!"

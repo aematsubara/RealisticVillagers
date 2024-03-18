@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.gui.types;
 
 import com.comphenix.protocol.wrappers.Pair;
-import com.mojang.authlib.properties.PropertyMap;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -16,7 +15,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
@@ -44,10 +42,9 @@ public class SkinGUI extends PaginatedGUI {
     private final ItemStack female;
     private final ItemStack adult;
     private final ItemStack kid;
-    private final ItemStack clearSkin;
     private final ItemStack newSkin;
-    private final Map<Villager.Profession, ItemStack> professionItems = new LinkedHashMap<>();
-    private @Setter Villager.Profession currentProfession;
+    private final Map<String, ItemStack> professionItems = new LinkedHashMap<>();
+    private @Setter String currentProfession;
 
     private static final int AGE_STAGE_SLOT = 0;
     private static final int PROFESSION_SLOT = 27;
@@ -56,28 +53,29 @@ public class SkinGUI extends PaginatedGUI {
     private static final int NEXT_SLOT = 25;
     private static final int TOGGLE_SEX = 21;
     private static final int SEARCH_SLOT = 22;
-    private static final int CLEAR_SKIN = 23;
+    private static final int NEW_SKIN = 23;
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    public static final Map<Villager.Profession, Material> PROFESSION_ICON = new LinkedHashMap<>();
+    public static final Map<String, Material> PROFESSION_ICON = new LinkedHashMap<>();
     public static final Map<Integer, ItemStack> CACHE_MALE_HEADS = new ConcurrentHashMap<>();
     public static final Map<Integer, ItemStack> CACHE_FEMALE_HEADS = new ConcurrentHashMap<>();
 
     static {
-        PROFESSION_ICON.put(Villager.Profession.NONE, Material.BARRIER);
-        PROFESSION_ICON.put(Villager.Profession.ARMORER, Material.BLAST_FURNACE);
-        PROFESSION_ICON.put(Villager.Profession.BUTCHER, Material.SMOKER);
-        PROFESSION_ICON.put(Villager.Profession.CARTOGRAPHER, Material.CARTOGRAPHY_TABLE);
-        PROFESSION_ICON.put(Villager.Profession.CLERIC, Material.BREWING_STAND);
-        PROFESSION_ICON.put(Villager.Profession.FARMER, Material.COMPOSTER);
-        PROFESSION_ICON.put(Villager.Profession.FISHERMAN, Material.BARREL);
-        PROFESSION_ICON.put(Villager.Profession.FLETCHER, Material.FLETCHING_TABLE);
-        PROFESSION_ICON.put(Villager.Profession.LEATHERWORKER, Material.CAULDRON);
-        PROFESSION_ICON.put(Villager.Profession.LIBRARIAN, Material.LECTERN);
-        PROFESSION_ICON.put(Villager.Profession.MASON, Material.STONECUTTER);
-        PROFESSION_ICON.put(Villager.Profession.NITWIT, Material.BARRIER);
-        PROFESSION_ICON.put(Villager.Profession.SHEPHERD, Material.LOOM);
-        PROFESSION_ICON.put(Villager.Profession.TOOLSMITH, Material.SMITHING_TABLE);
-        PROFESSION_ICON.put(Villager.Profession.WEAPONSMITH, Material.GRINDSTONE);
+        PROFESSION_ICON.put("NONE", Material.BARRIER);
+        PROFESSION_ICON.put("ARMORER", Material.BLAST_FURNACE);
+        PROFESSION_ICON.put("BUTCHER", Material.SMOKER);
+        PROFESSION_ICON.put("CARTOGRAPHER", Material.CARTOGRAPHY_TABLE);
+        PROFESSION_ICON.put("CLERIC", Material.BREWING_STAND);
+        PROFESSION_ICON.put("FARMER", Material.COMPOSTER);
+        PROFESSION_ICON.put("FISHERMAN", Material.BARREL);
+        PROFESSION_ICON.put("FLETCHER", Material.FLETCHING_TABLE);
+        PROFESSION_ICON.put("LEATHERWORKER", Material.CAULDRON);
+        PROFESSION_ICON.put("LIBRARIAN", Material.LECTERN);
+        PROFESSION_ICON.put("MASON", Material.STONECUTTER);
+        PROFESSION_ICON.put("NITWIT", Material.BARRIER);
+        PROFESSION_ICON.put("SHEPHERD", Material.LOOM);
+        PROFESSION_ICON.put("TOOLSMITH", Material.SMITHING_TABLE);
+        PROFESSION_ICON.put("WEAPONSMITH", Material.GRINDSTONE);
+        PROFESSION_ICON.put("WANDERING_TRADER", Material.EMERALD);
     }
 
     private SkinGUI(RealisticVillagers plugin, Player player, List<ItemStack> heads, boolean isMale, boolean isAdult, @Nullable Integer page, @Nullable String keyword) {
@@ -99,18 +97,10 @@ public class SkinGUI extends PaginatedGUI {
         kid = getGUIItem("kid");
         newSkin = getGUIItem("add-new-skin");
 
-        ItemBuilder builder = new ItemBuilder(getGUIItem("clear-skin"));
-        Pair<Integer, PropertyMap> pair = plugin.getTracker().getOldProperties().get(player.getUniqueId());
-        if (pair != null) {
-            String textures = pair.getSecond().get("textures").iterator().next().getValue();
-            builder.setHead(textures, false);
-        }
-        clearSkin = builder.build();
-
-        for (Villager.Profession profession : Villager.Profession.values()) {
+        for (String profession : PROFESSION_ICON.keySet()) {
             professionItems.put(profession, new ItemBuilder(getGUIItem("profession"))
                     .setType(PROFESSION_ICON.get(profession))
-                    .replace("%profession%", plugin.getProfessionFormatted(profession))
+                    .replace("%profession%", plugin.getProfessionFormatted(profession.toLowerCase().replace("_", "-")))
                     .build());
         }
 
@@ -183,8 +173,11 @@ public class SkinGUI extends PaginatedGUI {
 
         int generated = 0;
         List<String> professions = new ArrayList<>();
-        for (Villager.Profession profession : Villager.Profession.values()) {
-            if (config.contains(profession.name().toLowerCase() + "." + id)) {
+
+
+        for (String key : PROFESSION_ICON.keySet()) {
+            String profession = key.toLowerCase().replace("_", "-");
+            if (config.contains(profession + "." + id)) {
                 professions.add("&a" + plugin.getProfessionFormatted(profession));
                 generated++;
             } else {
@@ -204,7 +197,7 @@ public class SkinGUI extends PaginatedGUI {
                 .replace("%added-by%", addedByString)
                 .replace("%when%", whenString)
                 .replace("%generated%", generated)
-                .replace("%max-professions%", Villager.Profession.values().length)
+                .replace("%max-professions%", PROFESSION_ICON.size())
                 .build();
 
         cache.put(id, item);
@@ -221,8 +214,8 @@ public class SkinGUI extends PaginatedGUI {
 
         ItemStack professionItem;
         if (professionItems != null) {
-            Villager.Profession oldSelected = plugin.getTracker().getSelectedProfession().get(player.getUniqueId());
-            professionItem = professionItems.get((currentProfession = oldSelected != null ? oldSelected : Villager.Profession.NONE));
+            String oldSelected = plugin.getTracker().getSelectedProfession().get(player.getUniqueId());
+            professionItem = professionItems.get((currentProfession = oldSelected != null ? oldSelected : "NONE"));
         } else professionItem = null;
         inventory.setItem(PROFESSION_SLOT + extra, professionItem);
 
@@ -231,6 +224,6 @@ public class SkinGUI extends PaginatedGUI {
         if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, next);
         inventory.setItem(TOGGLE_SEX + extra, keyword != null ? null : isMale ? male : female);
         inventory.setItem(SEARCH_SLOT + extra, keyword != null ? clearSearch : pages > 1 ? search : null);
-        inventory.setItem(CLEAR_SKIN + extra, keyword != null ? null : plugin.getTracker().getOldProperties().containsKey(player.getUniqueId()) ? clearSkin : newSkin);
+        inventory.setItem(NEW_SKIN + extra, keyword != null ? null : newSkin);
     }
 }

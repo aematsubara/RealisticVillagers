@@ -20,7 +20,9 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -114,6 +116,13 @@ public final class PluginUtils {
 
         SET_PROFILE = Reflection.getMethod(craftMetaSkull, "setProfile", GameProfile.class);
         PROFILE = Reflection.getFieldSetter(craftMetaSkull, "profile");
+    }
+
+    public static @NotNull Vector getDirection(@NotNull BlockFace face) {
+        int modX = face.getModX(), modY = face.getModY(), modZ = face.getModZ();
+        Vector direction = new Vector(modX, modY, modZ);
+        if (modX != 0 || modY != 0 || modZ != 0) direction.normalize();
+        return direction;
     }
 
     public static @Nullable BlockFace yawToFace(float yaw, int type) {
@@ -469,11 +478,15 @@ public final class PluginUtils {
                 .getAsString();
     }
 
-    public static boolean hasAnyOf(@NotNull Villager villager, NamespacedKey key) {
-        for (ItemStack item : villager.getInventory().getContents()) {
+    public static boolean hasAnyOf(@NotNull InventoryHolder holder, NamespacedKey key) {
+        for (ItemStack item : holder.getInventory().getContents()) {
             if (isItem(item, key)) return true;
         }
         return false;
+    }
+
+    public static @NotNull String getProfessionOrType(LivingEntity living) {
+        return (living instanceof Villager villager ? villager.getProfession().name() : living.getType().name()).toLowerCase().replace("_", "-");
     }
 
     public static boolean isItem(ItemStack item, NamespacedKey key) {

@@ -121,11 +121,13 @@ public final class Messages {
     public String getVillagerTitleName(@NotNull IVillagerNPC npc) {
         String villagerName = npc.getVillagerName();
 
-        if (npc.is(Villager.Profession.NONE) || !Config.SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE.asBool()) {
+        if (npc.is(Villager.Profession.NONE)
+                || !Config.SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE.asBool()
+                || !(npc.bukkit() instanceof Villager villager)) {
             return villagerName;
         }
 
-        return villagerName + " " + getVillagerTitle(npc.bukkit().getProfession());
+        return villagerName + " " + getVillagerTitle(villager.getProfession());
     }
 
     private @NotNull String getVillagerTitle(Villager.Profession profession) {
@@ -257,7 +259,6 @@ public final class Messages {
         SKIN_DIFFERENT_AGE_STAGE("skin.different-age-stage"),
         SKIN_ADDED("skin.added"),
         SKIN_ERROR("skin.error"),
-        SKIN_SAME_SKIN("skin.same-skin"),
         SKIN_VILLAGER_SAME_SKIN("skin.villager-same-skin"),
         SKIN_DISGUISED("skin.disguised"),
         ONLY_FROM_PLAYER,

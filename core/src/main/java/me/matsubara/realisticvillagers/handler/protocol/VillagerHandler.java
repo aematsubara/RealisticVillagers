@@ -19,16 +19,15 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Raid;
 import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
+import org.bukkit.entity.*;
+import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.comphenix.protocol.PacketType.Play.Server.*;
 
@@ -85,7 +84,7 @@ public class VillagerHandler extends PacketAdapter {
             return;
         }
 
-        if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager)) return;
+        if (!(entity instanceof AbstractVillager villager) || plugin.getTracker().isInvalid(villager)) return;
 
         UUID uuid = entity.getUniqueId();
         int entityId = entity.getEntityId();
@@ -103,7 +102,7 @@ public class VillagerHandler extends PacketAdapter {
         StructureModifier<Byte> bytes = packet.getBytes();
 
         PacketType type = event.getPacketType();
-        if (type == ENTITY_STATUS) {
+        if (type == ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
             handleStatus(plugin.getConverter().getNPC(villager).get(), bytes.readSafely(0));
         }
 
@@ -116,9 +115,7 @@ public class VillagerHandler extends PacketAdapter {
 
         if (npc.isEmpty()) return;
 
-        boolean isSleeping = (villager).isSleeping();
-
-        if (!sleeping.isEmpty() && !sleeping.contains(player.getUniqueId()) && isSleeping) {
+        if (!sleeping.isEmpty() && !sleeping.contains(player.getUniqueId()) && villager.isSleeping()) {
             event.setCancelled(true);
             return;
         }
@@ -131,7 +128,7 @@ public class VillagerHandler extends PacketAdapter {
         if (MOVEMENT_PACKETS.contains(type)) handleNPCLocation(event, villager, npc.get());
     }
 
-    public void handleNPCLocation(@NotNull PacketEvent event, @NotNull Villager villager, NPC npc) {
+    public void handleNPCLocation(@NotNull PacketEvent event, @NotNull AbstractVillager villager, NPC npc) {
         PacketContainer packet = event.getPacket();
         PacketType type = packet.getType();
 
@@ -185,19 +182,39 @@ public class VillagerHandler extends PacketAdapter {
         npc.setLocation(location);
     }
 
-    private void handleStatus(IVillagerNPC npc, byte status) {
+    private void handleStatus(@NotNull IVillagerNPC npc, byte status) {
+        LivingEntity bukkit = npc.bukkit();
+
         Particle particle;
         switch (status) {
             case 12 -> particle = Particle.HEART;
             case 13 -> particle = Particle.VILLAGER_ANGRY;
             case 14 -> particle = Particle.VILLAGER_HAPPY;
             case 42 -> {
-                Raid raid = plugin.getConverter().getRaidAt(npc.bukkit().getLocation());
+                Raid raid = plugin.getConverter().getRaidAt(bukkit.getLocation());
                 particle = raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : Particle.WATER_SPLASH;
             }
             default -> particle = null;
         }
-        if (particle != null) npc.spawnEntityEventParticle(particle);
+        if (particle == null) return;
+
+        Location location = bukkit.getLocation();
+        BoundingBox box = bukkit.getBoundingBox();
+
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        double x = location.getX() + box.getWidthX() * ((2.0d * random.nextDouble() - 1.0d) * 1.05d);
+        double y = location.getY() + box.getHeight() * random.nextDouble() + 1.15d;
+        double z = location.getZ() + box.getWidthZ() * ((2.0d * random.nextDouble() - 1.0d) * 1.05d);
+
+        bukkit.getWorld().spawnParticle(
+                particle,
+                x,
+                y,
+                z,
+                1,
+                random.nextGaussian() * 0.02d,
+                random.nextGaussian() * 0.02d,
+                random.nextGaussian() * 0.02d);
     }
 
     private boolean isCancellableSpawnPacket(@NotNull PacketEvent event) {
@@ -206,6 +223,7 @@ public class VillagerHandler extends PacketAdapter {
 
         if (!ReflectionUtils.supports(19) || type != SPAWN_ENTITY) return false;
 
-        return !PluginUtils.IS_1_20_2_OR_NEW || event.getPacket().getEntityTypeModifier().read(0) == EntityType.VILLAGER;
+        EntityType entityType = event.getPacket().getEntityTypeModifier().read(0);
+        return !PluginUtils.IS_1_20_2_OR_NEW || entityType == EntityType.VILLAGER || entityType == EntityType.WANDERING_TRADER;
     }
 }

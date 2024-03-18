@@ -62,7 +62,9 @@ public final class MainGUI extends InteractGUI {
     private ItemStack noTrades;
 
     private static final BiFunction<MainGUI, String, ItemStack> TRADE_ITEM = (gui, itemName) -> {
-        List<MerchantRecipe> recipes = gui.getNPC().bukkit().getRecipes().stream()
+        if (!(gui.getNPC().bukkit() instanceof Villager villager)) return null;
+
+        List<MerchantRecipe> recipes = villager.getRecipes().stream()
                 .filter(recipe -> recipe.getUses() < recipe.getMaxUses())
                 .toList();
 
@@ -109,7 +111,7 @@ public final class MainGUI extends InteractGUI {
 
         // Only show divorce papers if villager isn't a cleric partner.
         boolean isPartner = npc.isPartner(player.getUniqueId());
-        if (!isPartner && npc.bukkit().getProfession() == Villager.Profession.CLERIC) {
+        if (!isPartner && npc.is(Villager.Profession.CLERIC)) {
             int slot = getItemSlot("divorce-papers");
             inventory.setItem(slot, papers = getGUIItem("divorce-papers"));
         } else {
@@ -128,7 +130,7 @@ public final class MainGUI extends InteractGUI {
         info = setItemInSlot("information", name -> createInfoItem(getGUIItem(name)));
 
         // Iterate through all trades (if possible).
-        if (outOfFullStock(npc.bukkit().getRecipes())) {
+        if (outOfFullStock(((Villager) npc.bukkit()).getRecipes())) {
             noTrades = setGUIItemInSlot("no-trades");
             return;
         }
@@ -299,7 +301,9 @@ public final class MainGUI extends InteractGUI {
         String childrensNames = childrens.isEmpty() ? Config.NO_CHILDRENS.asString() : String.join(", ", childrens);
 
         List<String> effects = new ArrayList<>();
-        for (PotionEffect effect : npc.bukkit().getActivePotionEffects()) {
+        Villager bukkit = (Villager) npc.bukkit();
+
+        for (PotionEffect effect : bukkit.getActivePotionEffects()) {
             String effectName = plugin.getConfig().getString(
                     "variable-text.potion-effect-type." + effect.getType().getKey().getKey().replace("_", "-"),
                     PluginUtils.capitalizeFully(effect.getType().getKey().getKey().replace("_", " ")));
@@ -326,9 +330,9 @@ public final class MainGUI extends InteractGUI {
         }
         String effectsNames = effects.isEmpty() ? Config.NO_EFFECTS.asString() : String.join(", ", effects);
 
-        String age = npc.bukkit().isAdult() ? Config.ADULT.asString() : Config.KID.asString();
+        String age = bukkit.isAdult() ? Config.ADULT.asString() : Config.KID.asString();
 
-        String type = npc.bukkit().getVillagerType().name().toLowerCase();
+        String type = bukkit.getVillagerType().name().toLowerCase();
         type = plugin.getConfig().getString("variable-text.type." + type, type);
 
         String activity = npc.getActivityName(none);
@@ -336,27 +340,27 @@ public final class MainGUI extends InteractGUI {
             activity = plugin.getConfig().getString("variable-text.activity." + activity, activity);
         }
 
-        AttributeInstance maxHealthAttribute = npc.bukkit().getAttribute(Attribute.GENERIC_MAX_HEALTH);
-        int level = npc.bukkit().getVillagerLevel();
+        AttributeInstance maxHealthAttribute = bukkit.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        int level = bukkit.getVillagerLevel();
 
         return new ItemBuilder(item)
                 .replace("%villager-name%", npc.getVillagerName())
                 .replace("%sex%", sex)
                 .replace("%age-stage%", age)
-                .replace("%health%", npc.bukkit().getHealth() + npc.bukkit().getAbsorptionAmount())
-                .replace("%max-health%", maxHealthAttribute != null ? maxHealthAttribute.getValue() : npc.bukkit().getMaxHealth())
+                .replace("%health%", bukkit.getHealth() + bukkit.getAbsorptionAmount())
+                .replace("%max-health%", maxHealthAttribute != null ? maxHealthAttribute.getValue() : bukkit.getMaxHealth())
                 .replace("%food-level%", npc.getFoodLevel())
                 .replace("%max-food-level%", 20)
                 .replace("%type%", type)
-                .replace("%profession%", plugin.getProfessionFormatted(npc.bukkit().getProfession()))
+                .replace("%profession%", plugin.getProfessionFormatted(bukkit.getProfession()))
                 .replace("%level%", level)
-                .replace("%experience%", npc.bukkit().getVillagerExperience())
+                .replace("%experience%", bukkit.getVillagerExperience())
                 .replace("%max-experience%", getMaxXpPerLevel(level))
                 .replace("%activity%", activity)
                 .replace("%father%", fatherName)
                 .replace("%mother%", motherName)
                 .replace("%skin-id%", npc.getSkinTextureId())
-                .replace("%id%", npc.bukkit().getEntityId())
+                .replace("%id%", bukkit.getEntityId())
                 .replace("%current-partner%", currentlyMarried ? partnerName : Config.NO_PARTNERS.asString())
                 .replace("%reputation%", npc.getReputation(player.getUniqueId()))
                 .applyMultiLineLore(partners, "%partner%", "%partners%", null /* Won't be empty. */, partnersNames)

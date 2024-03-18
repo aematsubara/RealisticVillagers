@@ -22,9 +22,9 @@ import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.sensing.Neare
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.sensing.NearestLivingEntitySensor;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.sensing.SecondaryPoiSensor;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.sensing.VillagerHostilesSensor;
+import me.matsubara.realisticvillagers.event.RealisticRemoveEvent;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
-import me.matsubara.realisticvillagers.event.VillagerRemoveEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.nms.v1_20_r1.CustomGossipContainer;
@@ -40,7 +40,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
-import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -108,7 +107,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ArrayUtils;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_20_R1.CraftRegionAccessor;
 import org.bukkit.craftbukkit.v1_20_R1.CraftWorld;
@@ -1311,6 +1313,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public void refreshTo(org.bukkit.entity.Player player) {
+        getEntityData().refresh(((CraftPlayer) player).getHandle());
+    }
+
+    @Override
     public void sendSpawnPacket() {
         sendPacket(new ClientboundAddEntityPacket(this));
         sendPacket(new ClientboundSetEntityDataPacket(getId(), getEntityData().getNonDefaultValues()));
@@ -1325,12 +1332,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         for (ServerPlayer player : ((ServerLevel) level()).players()) {
             player.connection.send(packet);
         }
-    }
-
-    public void startTrading(Player player) {
-        updateSpecialPrices(player);
-        setTradingPlayer(player);
-        openTradingScreen(player, getDisplayName(), getVillagerData().getLevel());
     }
 
     @SuppressWarnings("WhileLoopReplaceableByForEach")
@@ -1645,19 +1646,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void remove(RemovalReason reason) {
         super.remove(reason);
 
-        VillagerRemoveEvent removeEvent = new VillagerRemoveEvent(this, toWrapper(reason));
+        RealisticRemoveEvent removeEvent = new RealisticRemoveEvent(this, RealisticRemoveEvent.RemovalReason.values()[reason.ordinal()]);
         plugin.getServer().getPluginManager().callEvent(removeEvent);
-    }
-
-    @Contract(pure = true)
-    private VillagerRemoveEvent.RemovalReason toWrapper(@NotNull RemovalReason reason) {
-        return switch (reason) {
-            case KILLED -> VillagerRemoveEvent.RemovalReason.KILLED;
-            case DISCARDED -> VillagerRemoveEvent.RemovalReason.DISCARDED;
-            case UNLOADED_TO_CHUNK -> VillagerRemoveEvent.RemovalReason.UNLOADED_TO_CHUNK;
-            case UNLOADED_WITH_PLAYER -> VillagerRemoveEvent.RemovalReason.UNLOADED_WITH_PLAYER;
-            case CHANGED_DIMENSION -> VillagerRemoveEvent.RemovalReason.CHANGED_DIMENSION;
-        };
     }
 
     @Override
@@ -2018,7 +2008,10 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void startTrading(org.bukkit.entity.Player player) {
-        startTrading(((CraftPlayer) player).getHandle());
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        updateSpecialPrices(handle);
+        setTradingPlayer(handle);
+        openTradingScreen(handle, getDisplayName(), getVillagerData().getLevel());
     }
 
     public boolean isExpectingGift() {
@@ -2099,7 +2092,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public org.bukkit.entity.Villager bukkit() {
+    public org.bukkit.entity.LivingEntity bukkit() {
         return getBukkitEntity();
     }
 
@@ -2222,18 +2215,5 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     @Override
     public boolean isInteracting() {
         return interactingWith != null && interactType != null;
-    }
-
-    @Override
-    public void spawnEntityEventParticle(Particle particle) {
-        getBukkitEntity().getWorld().spawnParticle(
-                particle,
-                getRandomX(1.05d),
-                getRandomY() + 1.15d,
-                getRandomZ(1.05d),
-                1,
-                random.nextGaussian() * 0.02d,
-                random.nextGaussian() * 0.02d,
-                random.nextGaussian() * 0.02d);
     }
 }

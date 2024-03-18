@@ -43,10 +43,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Listener;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -90,7 +87,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey tamedByVillagerKey = key("TamedByVillager");
     private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
     private final @Deprecated NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
-    private final NamespacedKey villagerNameKey = key("VillagerName");
+    private final NamespacedKey villagerUUIDKey = key("VillagerUUID");
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
     private final NamespacedKey skinDataKey = key("SkinDataID");
@@ -346,6 +343,16 @@ public final class RealisticVillagers extends JavaPlugin {
                                     }
                                 },
                                 4)
+                        .addChange(
+                                aimVersion(4),
+                                temp -> {
+                                    List<String> lines = temp.getStringList("custom-nametags.lines");
+                                    if (lines.isEmpty()) return;
+
+                                    temp.set("custom-nametags.lines", null);
+                                    temp.set("custom-nametags.lines.villager", lines);
+                                },
+                                5)
                         .build());
 
         Function<FileConfiguration, List<String>> emptyIgnore = config -> Collections.emptyList();
@@ -757,8 +764,8 @@ public final class RealisticVillagers extends JavaPlugin {
         return GiftCategory.appliesToVillager(wantedItems, npc, item, isItemPickup);
     }
 
-    public @Nullable Villager getUnloadedOffline(@NotNull IVillagerNPC offline) {
-        Villager bukkit = offline.bukkit();
+    public @Nullable LivingEntity getUnloadedOffline(@NotNull IVillagerNPC offline) {
+        LivingEntity bukkit = offline.bukkit();
         if (bukkit != null) return bukkit;
 
         Location location = offline.getLastKnownPosition().asLocation();
@@ -776,7 +783,7 @@ public final class RealisticVillagers extends JavaPlugin {
         List<IVillagerNPC> family = tracker.getOfflineVillagers()
                 .stream()
                 .filter(offline -> {
-                    Villager bukkit = offline.bukkit();
+                    Villager bukkit = offline.bukkit() instanceof Villager villager ? villager : null;
                     UUID playerUUID = player.getUniqueId();
                     if (bukkit != null) {
                         Optional<IVillagerNPC> online = converter.getNPC(bukkit);
@@ -794,7 +801,7 @@ public final class RealisticVillagers extends JavaPlugin {
         new WhistleGUI(this, player, family.stream(), keyword);
     }
 
-    public void equipVillager(Villager villager, boolean force) {
+    public void equipVillager(LivingEntity villager, boolean force) {
         if (invalidLoots()) return;
 
         Optional<IVillagerNPC> npc = converter.getNPC(villager);
@@ -853,7 +860,9 @@ public final class RealisticVillagers extends JavaPlugin {
                     continue;
                 }
 
-                villager.getInventory().addItem(item);
+                if (villager instanceof InventoryHolder holder) {
+                    holder.getInventory().addItem(item);
+                }
             }
         }
     }

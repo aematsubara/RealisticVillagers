@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,7 +30,7 @@ public final class EquipmentGUI extends InteractGUI {
             EquipmentSlot.OFF_HAND};
 
     public EquipmentGUI(RealisticVillagers plugin, IVillagerNPC npc, @NotNull Player player) {
-        super(plugin, npc, "equipment", npc.bukkit().getInventory().getSize() + 18, null, true);
+        super(plugin, npc, "equipment", ((InventoryHolder) npc.bukkit()).getInventory().getSize() + 18, null, true);
 
         this.player = player;
         this.close = getGUIItem("close");
@@ -40,9 +41,9 @@ public final class EquipmentGUI extends InteractGUI {
     }
 
     private void fillInventory() {
-        inventory.setContents(npc.bukkit().getInventory().getContents());
+        inventory.setContents(((InventoryHolder) npc.bukkit()).getInventory().getContents());
 
-        int size = npc.bukkit().getInventory().getSize();
+        int size = ((InventoryHolder) npc.bukkit()).getInventory().getSize();
         int borderEnd = size + 9;
 
         inventory.setItem(borderEnd, head);

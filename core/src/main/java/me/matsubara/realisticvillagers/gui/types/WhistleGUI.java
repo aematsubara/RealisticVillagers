@@ -35,7 +35,7 @@ public class WhistleGUI extends PaginatedGUI {
                     String name = npc.getVillagerName();
                     return new ItemBuilder(plugin.getItem("gui.whistle.items.villager").build())
                             .setHead(plugin.getNPCTextureURL(npc), true)
-                            .setData(plugin.getVillagerNameKey(), PersistentDataType.STRING, name)
+                            .setData(plugin.getVillagerUUIDKey(), PersistentDataType.STRING, npc.getUniqueId().toString())
                             .replace("%villager-name%", name)
                             .build();
                 })

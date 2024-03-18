@@ -23,6 +23,7 @@ import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.AbstractHorse;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.HandlerList;
@@ -248,7 +249,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     skinsDisabled,
                     Config.DISABLE_SKINS.asBool(),
                     (npc, state) -> {
-                        Villager bukkit = npc.bukkit();
+                        LivingEntity bukkit = npc.bukkit();
                         if (tracker.isInvalid(bukkit, true)) return;
 
                         if (state) {
@@ -271,7 +272,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                         }
 
                         // Only disable nametags if skins are enabled.
-                        Villager bukkit = npc.bukkit();
+                        LivingEntity bukkit = npc.bukkit();
                         if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
                     });
 
@@ -358,7 +359,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         for (IVillagerNPC offlineVillager : tracker.getOfflineVillagers()) {
             if (!offlineVillager.getUniqueId().equals(partnerUUID)) continue;
 
-            Villager bukkit = offlineVillager.bukkit();
+            LivingEntity bukkit = offlineVillager.bukkit();
             if (bukkit == null) {
                 bukkit = plugin.getUnloadedOffline(offlineVillager);
                 if (bukkit == null) continue;
