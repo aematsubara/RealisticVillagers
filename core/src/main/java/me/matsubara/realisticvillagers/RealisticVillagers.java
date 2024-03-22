@@ -63,6 +63,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
@@ -114,6 +115,9 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private Messages messages;
     private INMSConverter converter;
+
+    private FileConfiguration newConfig = null;
+    private final File configFile = new File(getDataFolder(), "config.yml");
 
     private final List<String> defaultTargets = new ArrayList<>();
     private final Set<Gift> wantedItems = new HashSet<>();
@@ -526,6 +530,31 @@ public final class RealisticVillagers extends JavaPlugin {
         return getItem("divorce-papers").setData(divorcePapersKey, PersistentDataType.INTEGER, 1).build();
     }
 
+    @Override
+    public @NotNull FileConfiguration getConfig() {
+        if (newConfig == null) reloadConfig();
+        return newConfig;
+    }
+
+    @Override
+    public void reloadConfig() {
+        newConfig = YamlConfiguration.loadConfiguration(configFile);
+    }
+
+    @Override
+    public void saveConfig() {
+        try {
+            getConfig().save(configFile);
+        } catch (IOException exception) {
+            getLogger().log(Level.SEVERE, "Could not save config to " + configFile, exception);
+        }
+    }
+
+    @Override
+    public void saveDefaultConfig() {
+        if (!configFile.exists()) saveResource("config.yml", false);
+    }
+
     public ItemBuilder getItem(String path) {
         return getItem(path, null);
     }
@@ -569,7 +598,7 @@ public final class RealisticVillagers extends JavaPlugin {
             if (Strings.isNullOrEmpty(enchantmentString)) continue;
             String[] data = PluginUtils.splitData(enchantmentString);
 
-            Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(data[0].toLowerCase()));
+            @SuppressWarnings("deprecation") Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(data[0].toLowerCase()));
 
             int level;
             try {

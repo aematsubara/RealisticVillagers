@@ -14,6 +14,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Color;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockFace;
@@ -40,6 +41,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -84,6 +86,18 @@ public final class PluginUtils {
 
     public static final boolean IS_1_19_3_OR_NEW = new MinecraftVersion("1.19.3").atOrAbove();
     public static final boolean IS_1_20_2_OR_NEW = new MinecraftVersion("1.20.2").atOrAbove();
+
+    private static final Class<?> ENTITY = ReflectionUtils.getNMSClass("world.entity", "Entity");
+    private static final Class<?> CRAFT_ENTITY = ReflectionUtils.getCraftClass("entity.CraftEntity");
+
+    private static final MethodHandle getHandle = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
+    private static final MethodHandle absMoveTo = Reflection.getMethod(
+            ENTITY,
+            "a",
+            MethodType.methodType(void.class, double.class, double.class, double.class, float.class, float.class),
+            false,
+            false,
+            "setLocation");
 
     static {
         ROMAN_NUMERALS.put(1000, "M");
@@ -499,5 +513,24 @@ public final class PluginUtils {
 
     public static @NotNull String getRandomSex() {
         return ThreadLocalRandom.current().nextBoolean() ? "male" : "female";
+    }
+
+    public static void teleportWithPassengers(@NotNull LivingEntity living, Location targetLocation) {
+        if (living.teleport(targetLocation)) return;
+        if (getHandle == null || CRAFT_ENTITY == null || absMoveTo == null) return;
+
+        // We can't teleport entities with passengers with the API.
+        try {
+            Object nmsEntity = getHandle.invoke(CRAFT_ENTITY.cast(living));
+            absMoveTo.invoke(
+                    nmsEntity,
+                    targetLocation.getX(),
+                    targetLocation.getY(),
+                    targetLocation.getZ(),
+                    targetLocation.getYaw(),
+                    targetLocation.getPitch());
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
     }
 }

@@ -36,6 +36,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -67,8 +68,24 @@ public final class InventoryListeners implements Listener {
         this.plugin = plugin;
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onInventoryDrag(@NotNull InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        InventoryHolder holder = event.getInventory().getHolder();
+        if (!(holder instanceof InteractGUI interact)) return;
+
+        if (event.getRawSlots().stream().noneMatch(integer -> integer < interact.getSize())) return;
+
+        if (cancelEquipment(player, interact)) {
+            event.setCancelled(true);
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClose(@NotNull InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player player)) return;
+
         Inventory inventory = event.getInventory();
         if (!(inventory.getHolder() instanceof InteractGUI gui)) return;
 
@@ -83,9 +100,7 @@ public final class InventoryListeners implements Listener {
         if (gui.shouldStopInteracting()) npc.stopInteracting();
 
         if (!(gui instanceof EquipmentGUI)) return;
-
-        if (!canModifyInventory(npc, (Player) event.getPlayer())) return;
-
+        if (!canModifyInventory(npc, player)) return;
         if (!(npc.bukkit() instanceof Villager villager)) return;
 
         Inventory storage = villager.getInventory();
@@ -111,6 +126,10 @@ public final class InventoryListeners implements Listener {
         }
     }
 
+    private boolean cancelEquipment(Player player, InteractGUI interact) {
+        return !(interact instanceof EquipmentGUI) || (interact.getNPC() != null && !canModifyInventory(interact.getNPC(), player));
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(@NotNull InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -121,7 +140,7 @@ public final class InventoryListeners implements Listener {
         if (inventory.getType() == InventoryType.PLAYER
                 && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
                 && event.getView().getTopInventory().getHolder() instanceof InteractGUI interact
-                && (!(interact instanceof EquipmentGUI) || (interact.getNPC() != null && !canModifyInventory(interact.getNPC(), player)))) {
+                && cancelEquipment(player, interact)) {
             event.setCancelled(true);
             return;
         }
@@ -181,23 +200,25 @@ public final class InventoryListeners implements Listener {
             String villagerUUIDString = meta.getPersistentDataContainer().get(plugin.getVillagerUUIDKey(), PersistentDataType.STRING);
             if (villagerUUIDString == null || villagerUUIDString.isEmpty()) return;
 
+            Location playerLocation = player.getLocation();
+
             UUID villagerUUID = UUID.fromString(villagerUUIDString);
             for (IVillagerNPC offline : tracker.getOfflineVillagers()) {
                 if (!offline.getUniqueId().equals(villagerUUID)) continue;
 
                 Villager bukkit = offline.bukkit() instanceof Villager villager ? villager : null;
                 boolean teleported = true;
-                if (bukkit != null) bukkit.teleport(player);
+                if (bukkit != null) PluginUtils.teleportWithPassengers(bukkit, playerLocation);
                 else {
                     Villager villager = plugin.getUnloadedOffline(offline) instanceof Villager temp ? temp : null;
-                    if (villager != null) villager.teleport(player);
+                    if (villager != null) PluginUtils.teleportWithPassengers(villager, playerLocation);
                     else teleported = false;
                 }
 
                 plugin.getMessages().send(
                         player,
                         teleported ? Messages.Message.WHISTLE_TELEPORTED : Messages.Message.WHISTLE_ERROR,
-                        message -> message.replace("%villager-name%", villagerUUIDString));
+                        message -> message.replace("%villager-name%", offline.getVillagerName()));
                 break;
             }
 

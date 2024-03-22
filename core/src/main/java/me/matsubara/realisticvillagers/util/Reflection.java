@@ -1,11 +1,14 @@
 package me.matsubara.realisticvillagers.util;
 
+import com.cryptomorin.xseries.ReflectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -53,7 +56,6 @@ public final class Reflection {
     }
 
     public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, Class<?>... parameterTypes) {
-        MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
         try {
             Method method = refc.getDeclaredMethod(name, parameterTypes);
             method.setAccessible(true);
@@ -88,6 +90,33 @@ public final class Reflection {
             }
         } catch (SecurityException exception) {
             throw new RuntimeException(exception);
+        }
+    }
+
+    public static @Nullable MethodHandle getMethod(Class<?> refc, String name, MethodType type, boolean isStatic, boolean printStackTrace, String... extraNames) {
+        try {
+            if (isStatic) return LOOKUP.findStatic(refc, name, type);
+            if (ReflectionUtils.MINOR_NUMBER > 17) {
+                Method method = refc.getMethod(name, type.parameterArray());
+                if (!method.getReturnType().isAssignableFrom(type.returnType())) {
+                    throw new NoSuchMethodException();
+                }
+                return LOOKUP.unreflect(method);
+            }
+            return LOOKUP.findVirtual(refc, name, type);
+        } catch (ReflectiveOperationException exception) {
+            if (extraNames != null && extraNames.length > 0) {
+                if (extraNames.length == 1) {
+                    return getMethod(refc, extraNames[0], type, isStatic, printStackTrace);
+                }
+                for (String extra : extraNames) {
+                    int index = ArrayUtils.indexOf(extraNames, extra);
+                    String[] rest = ArrayUtils.remove(extraNames, index);
+                    return getMethod(refc, extra, type, isStatic, printStackTrace, rest);
+                }
+            }
+            if (printStackTrace) exception.printStackTrace();
+            return null;
         }
     }
 
