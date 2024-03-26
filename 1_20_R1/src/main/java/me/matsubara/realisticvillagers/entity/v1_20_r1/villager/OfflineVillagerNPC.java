@@ -500,11 +500,6 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public void refreshTo(Player player) {
-
-    }
-
-    @Override
     public void sendSpawnPacket() {
 
     }
@@ -540,8 +535,18 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public boolean validShoulderEntityLeft() {
+        return false;
+    }
+
+    @Override
     public Object getShoulderEntityLeft() {
         return tag.getCompound(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT);
+    }
+
+    @Override
+    public boolean validShoulderEntityRight() {
+        return false;
     }
 
     @Override
@@ -577,6 +582,31 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     @Override
     public Set<UUID> getPlayers() {
         return players;
+    }
+
+    @Override
+    public byte getHandData() {
+        return 0;
+    }
+
+    @Override
+    public int getEffectColor() {
+        return 0;
+    }
+
+    @Override
+    public boolean getEffectAmbience() {
+        return false;
+    }
+
+    @Override
+    public int getBeeStingers() {
+        return 0;
+    }
+
+    @Override
+    public void attack(LivingEntity entity) {
+
     }
 
     private static @NotNull LastKnownPosition lastPositionFrom(@NotNull CompoundTag tag) {

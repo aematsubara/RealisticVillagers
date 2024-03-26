@@ -72,7 +72,7 @@ config-version: 5
 # The rendering distance of the villagers.
 render-distance: 56
 
-# In order to generate skins faster, you will need to create your own api-key on the mineskin page.
+# To generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
 # NOTE 2: DON'T login with your microsoft account, this is to contribute with a minecraft account to make the requests faster.
 # NOTE 3: You should only login with your google account. If you have problems, try clearing your cookies and try the steps again.
@@ -80,7 +80,7 @@ render-distance: 56
 # To create an api-key, follow the steps below:
 # * Go to https://mineskin.org/account first.
 # * You must have a Google account, then click on "Continue as X".
-# * A secure connection check will be performed by cloudflare, just wait.
+# * A secure connection check will be performed by cloudflare, wait.
 # * If the page just keeps refreshing, go to https://mineskin.org/ and then do the next step, you should already be logged in.
 # * Once you've logged in, go to https://mineskin.org/account again.
 # * Under "API Keys" click on "Manage api keys".
@@ -113,6 +113,18 @@ goat-horn-seek-range: 32
 # If the villager must defend a family member (only if the villager has a weapon).
 villager-defend-family-member: true
 
+# If the villager must defend the hero of the village (only if the villager has a weapon).
+# NOTE: A player is considered the hero of the village if he has the effect HERO_OF_THE_VILLAGE or
+# if he has killed at least one raider and will receive this effect if the defence is successful.
+villager-defend-hero-of-the-village: true
+
+# If the villager must defend the following player (only if the villager has a weapon).
+villager-defend-following-player: true
+
+# Whether villagers must defend players from attacks by other players.
+# NOTE: At least one of the 3 previous options must be enabled.
+villager-defend-attack-players: false
+
 # Whether to disable player nametags.
 disable-nametags: false
 
@@ -140,14 +152,6 @@ skin-preview:
   message: "Preview finishing in %remaining% seconds!"
   # If true, the message will have a rainbow effect (similar to the jukebox effect when a record is playing).
   rainbow-message: true
-
-# If the villager must defend the hero of the village (only if the villager has a weapon).
-# NOTE: A player is considered the hero of the village if he has the effect HERO_OF_THE_VILLAGE or
-# if he has killed at least one raider and will receive this effect if the defense is successful.
-villager-defend-hero-of-the-village: true
-
-# If the villager must defend the following player (only if the villager has a weapon).
-villager-defend-following-player: true
 
 # If true, arrows shot by villagers will pass through other villagers.
 # NOTE: This should always be true to prevent them from killing each other by accident.
@@ -1152,7 +1156,7 @@ tame-cooldown: 600
 # Example: IRON_INGOT*
 #
 # You can also specify the amount of items to be picked from the inventory when looting; if not specified, only one item is picked.
-# (it must be in brackets at the end of the material/tag, but before the * (if used)).
+# (It must be in brackets at the end of the material/tag, but before the * (if used)).
 # Example: IRON_INGOT(2)*
 #
 # This uses the same system as the gifts, you can add materials, tags, and profession condition; check @gift for more information.

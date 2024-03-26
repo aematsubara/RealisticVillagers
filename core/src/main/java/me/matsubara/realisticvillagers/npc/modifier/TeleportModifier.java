@@ -20,28 +20,16 @@ public class TeleportModifier extends NPCModifier {
             PacketContainer container = new PacketContainer(Server.ENTITY_TELEPORT);
             container.getIntegers().write(0, npc.getEntityId());
 
-            double x = location.getX();
-            double y = location.getY();
-            double z = location.getZ();
-
-            if (MINECRAFT_VERSION < 9) {
-                container.getIntegers()
-                        .write(1, (int) Math.floor(x * 32.0d))
-                        .write(2, (int) Math.floor(y * 32.0d))
-                        .write(3, (int) Math.floor(z * 32.0d));
-            } else {
-                container.getDoubles()
-                        .write(0, x)
-                        .write(1, y)
-                        .write(2, z);
-            }
+            container.getDoubles()
+                    .write(0, location.getX())
+                    .write(1, location.getY())
+                    .write(2, location.getZ());
 
             container.getBytes()
                     .write(0, yawAngle)
                     .write(1, pitchAngle);
             container.getBooleans().write(0, onGround);
 
-            npc.setLocation(location);
             return container;
         });
 

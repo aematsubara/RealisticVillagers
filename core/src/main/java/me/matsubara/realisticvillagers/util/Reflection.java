@@ -22,6 +22,15 @@ public final class Reflection {
     private static final Unsafe UNSAFE = getUnsafe();
     private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
+    public static @Nullable Object getFieldValue(MethodHandle handle) {
+        try {
+            return handle.invoke();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            return null;
+        }
+    }
+
     public static MethodHandle getFieldGetter(Class<?> clazz, String name) {
         return getField(clazz, name, true);
     }

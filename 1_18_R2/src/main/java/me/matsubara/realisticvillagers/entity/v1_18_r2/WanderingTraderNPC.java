@@ -15,6 +15,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.v1_18_r2.NMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
@@ -23,6 +24,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -58,6 +60,13 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
     private String villagerName;
     private String sex;
     private int skinTextureId = -1;
+
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_EFFECT_COLOR_ID =
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bL"));
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bM"));
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bO"));
 
     public WanderingTraderNPC(EntityType<? extends WanderingTrader> type, Level level) {
         super(type, level);
@@ -475,11 +484,6 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
     }
 
     @Override
-    public void refreshTo(Player player) {
-        ((CraftPlayer) player).getHandle().connection.connection.send(new ClientboundSetEntityDataPacket(getId(), getEntityData(), true));
-    }
-
-    @Override
     public void sendSpawnPacket() {
         sendPacket(new ClientboundAddEntityPacket(this));
         sendPacket(new ClientboundSetEntityDataPacket(getId(), getEntityData(), true));
@@ -614,8 +618,18 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
     }
 
     @Override
+    public boolean validShoulderEntityLeft() {
+        return false;
+    }
+
+    @Override
     public Object getShoulderEntityLeft() {
         return null;
+    }
+
+    @Override
+    public boolean validShoulderEntityRight() {
+        return false;
     }
 
     @Override
@@ -651,6 +665,31 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
     @Override
     public Set<UUID> getPlayers() {
         return null;
+    }
+
+    @Override
+    public byte getHandData() {
+        return entityData.get(DATA_LIVING_ENTITY_FLAGS);
+    }
+
+    @Override
+    public int getEffectColor() {
+        return entityData.get(DATA_EFFECT_COLOR_ID);
+    }
+
+    @Override
+    public boolean getEffectAmbience() {
+        return entityData.get(DATA_EFFECT_AMBIENCE_ID);
+    }
+
+    @Override
+    public int getBeeStingers() {
+        return entityData.get(DATA_STINGER_COUNT_ID);
+    }
+
+    @Override
+    public void attack(LivingEntity entity) {
+
     }
 
     @Override

@@ -251,15 +251,15 @@ public class NametagManager implements Listener {
         display.setPersistent(false);
     }
 
-    private @NotNull BlockData createBlockData(LivingEntity villager, Material material) {
-        BlockData data = getJobBlockData(villager);
+    private @NotNull BlockData createBlockData(LivingEntity living, Material material) {
+        BlockData data = getJobBlockData(living);
         return data != null ? data : material.createBlockData();
     }
 
-    private @Nullable BlockData getJobBlockData(@NotNull LivingEntity villager) {
-        if (!(villager instanceof Villager)) return null;
+    private @Nullable BlockData getJobBlockData(@NotNull LivingEntity living) {
+        if (!(living instanceof Villager)) return null;
 
-        Location pos = villager.getMemory(MemoryKey.JOB_SITE);
+        Location pos = living.getMemory(MemoryKey.JOB_SITE);
         if (pos == null) return null;
 
         World world = pos.getWorld();

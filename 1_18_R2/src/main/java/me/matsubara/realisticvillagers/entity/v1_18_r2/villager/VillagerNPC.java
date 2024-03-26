@@ -46,6 +46,7 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.DebugPackets;
+import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -110,6 +111,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_18_R2.CraftRegionAccessor;
 import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftLivingEntity;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftVillager;
 import org.bukkit.craftbukkit.v1_18_R2.event.CraftEventFactory;
@@ -293,6 +295,12 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             ArmorItem.class);
 
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getFieldGetter(GateBehavior.class, "e");
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_EFFECT_COLOR_ID =
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(LivingEntity.class, "bL"));
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getFieldGetter(LivingEntity.class, "bM"));
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(LivingEntity.class, "bO"));
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {
         this(type, level, VillagerType.PLAINS);
@@ -1286,11 +1294,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void refreshTo(org.bukkit.entity.Player player) {
-        ((CraftPlayer) player).getHandle().connection.connection.send(new ClientboundSetEntityDataPacket(getId(), getEntityData(), true));
-    }
-
-    @Override
     public void sendSpawnPacket() {
         sendPacket(new ClientboundAddEntityPacket(this));
         sendPacket(new ClientboundSetEntityDataPacket(getId(), getEntityData(), true));
@@ -1510,22 +1513,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public void startSleeping(BlockPos pos) {
-        Optional<Long> lastSlept = brain.getMemory(MemoryModuleType.LAST_SLEPT);
-
         super.startSleeping(pos);
         collides = false;
-
-        if (plugin.getTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_SLEPT, lastSlept);
     }
 
     @Override
     public void stopSleeping() {
-        Optional<Long> lastWoken = getBrain().getMemory(MemoryModuleType.LAST_WOKEN);
-
         super.stopSleeping();
         collides = true;
-
-        if (plugin.getTracker().fixSleep()) brain.setMemory(MemoryModuleType.LAST_WOKEN, lastWoken);
     }
 
     @Override
@@ -1799,8 +1794,35 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
+    @Override
     public boolean isReviving() {
         return revivingTicks > 0;
+    }
+
+    @Override
+    public byte getHandData() {
+        return entityData.get(DATA_LIVING_ENTITY_FLAGS);
+    }
+
+    @Override
+    public int getEffectColor() {
+        return entityData.get(DATA_EFFECT_COLOR_ID);
+    }
+
+    @Override
+    public boolean getEffectAmbience() {
+        return entityData.get(DATA_EFFECT_AMBIENCE_ID);
+    }
+
+    @Override
+    public int getBeeStingers() {
+        return entityData.get(DATA_STINGER_COUNT_ID);
+    }
+
+    @Override
+    public void attack(org.bukkit.entity.LivingEntity entity) {
+        // Maybe we should check if the NPC can attack and the target isn't a family member.
+        VillagerPanicTrigger.handleFightReaction(getBrain(), ((CraftLivingEntity) entity).getHandle());
     }
 
     @Override
@@ -1945,8 +1967,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public boolean validShoulderEntityLeft() {
+        return shoulderEntityLeft != null && !shoulderEntityLeft.isEmpty();
+    }
+
+    @Override
     public Object getShoulderEntityLeft() {
         return shoulderEntityLeft;
+    }
+
+    @Override
+    public boolean validShoulderEntityRight() {
+        return shoulderEntityRight != null && !shoulderEntityRight.isEmpty();
     }
 
     @Override

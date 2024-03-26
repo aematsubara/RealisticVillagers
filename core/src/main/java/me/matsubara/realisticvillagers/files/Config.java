@@ -93,6 +93,7 @@ public enum Config {
     VILLAGER_DEFEND_FAMILY_MEMBER("villager-defend-family-member"),
     VILLAGER_DEFEND_HERO_OF_THE_VILLAGE("villager-defend-hero-of-the-village"),
     VILLAGER_DEFEND_FOLLOWING_PLAYER("villager-defend-following-player"),
+    VILLAGER_DEFEND_ATTACK_PLAYERS("villager-defend-attack-players"),
 
     REPUTATION_REQUIRED_TO_MARRY("reputation-required-to-marry"),
     REPUTATION_REQUIRED_TO_PROCREATE("reputation-required-to-procreate"),

@@ -240,11 +240,11 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public void loadDataFromTag(org.bukkit.entity.LivingEntity villager, @NotNull String tag) {
+    public void loadDataFromTag(org.bukkit.entity.LivingEntity living, @NotNull String tag) {
         try {
             CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseTag(tag);
 
-            Optional<IVillagerNPC> npc = getNPC(villager);
+            Optional<IVillagerNPC> npc = getNPC(living);
             if (npc.isEmpty()) return;
 
             if (npc.get() instanceof VillagerNPC temp) {

@@ -1,10 +1,12 @@
 package me.matsubara.realisticvillagers.tracker;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.wrappers.Pair;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.google.common.collect.Lists;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -66,6 +68,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
+import static com.comphenix.protocol.PacketType.Play.Server.*;
+
 @Getter
 public final class VillagerTracker implements Listener {
 
@@ -89,10 +93,7 @@ public final class VillagerTracker implements Listener {
 
     public VillagerTracker(RealisticVillagers plugin) {
         this.plugin = plugin;
-        this.pool = NPCPool
-                .builder(plugin)
-                .tabListRemoveTicks(40)
-                .build();
+        this.pool = new NPCPool(plugin);
         this.spawnListeners = new BukkitSpawnListeners(plugin);
 
         this.mineskinClient = new MineskinClient("MineSkin-JavaClient");
@@ -105,8 +106,13 @@ public final class VillagerTracker implements Listener {
 
         manager.registerEvents(this, plugin);
 
+        @SuppressWarnings("deprecation") ArrayList<PacketType> types = Lists.newArrayList(SPAWN_ENTITY, SPAWN_ENTITY_LIVING, ENTITY_STATUS);
+        if (plugin.getServer().getPluginManager().getPlugin("ViaVersion") != null) {
+            types.add(ENTITY_METADATA);
+        }
+
         ProtocolManager protocol = ProtocolLibrary.getProtocolManager();
-        protocol.addPacketListener(handler = new VillagerHandler(plugin));
+        protocol.addPacketListener(handler = new VillagerHandler(plugin, types));
     }
 
     public void updateMineskinApiKey() {
@@ -121,8 +127,8 @@ public final class VillagerTracker implements Listener {
         return null;
     }
 
-    private void removeData(@NotNull LivingEntity villager) {
-        IVillagerNPC info = getOfflineByUUID(villager.getUniqueId());
+    private void removeData(@NotNull LivingEntity living) {
+        IVillagerNPC info = getOfflineByUUID(living.getUniqueId());
         if (info != null) offlineVillagers.remove(info);
     }
 
@@ -137,13 +143,13 @@ public final class VillagerTracker implements Listener {
         return getOfflineByUUID(uuid);
     }
 
-    private void markAsDeath(LivingEntity villager) {
-        handlePartner(villager);
-        removeData(villager);
+    private void markAsDeath(LivingEntity living) {
+        handlePartner(living);
+        removeData(living);
     }
 
-    private void handlePartner(LivingEntity villager) {
-        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
+    private void handlePartner(LivingEntity living) {
+        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(living);
 
         IVillagerNPC npc = optional.orElse(null);
         if (npc == null) return;
@@ -197,12 +203,12 @@ public final class VillagerTracker implements Listener {
         }
     }
 
-    public @Nullable IVillagerNPC updateData(LivingEntity villager) {
+    public @Nullable IVillagerNPC updateData(LivingEntity living) {
         // Update the data after being unloaded.
-        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
+        Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(living);
         if (npc.isEmpty()) return null;
 
-        removeData(villager);
+        removeData(living);
 
         IVillagerNPC offline = npc.get().getOffline();
         offlineVillagers.add(offline);
@@ -291,7 +297,7 @@ public final class VillagerTracker implements Listener {
 
     @EventHandler
     public void onEntityPotionEffect(@NotNull EntityPotionEffectEvent event) {
-        if (event.getModifiedType() != PotionEffectType.INVISIBILITY) return;
+        if (!event.getModifiedType().equals(PotionEffectType.INVISIBILITY)) return;
 
         if (!(event.getEntity() instanceof LivingEntity living)) return;
         if (isInvalid(living)) return;
@@ -312,7 +318,6 @@ public final class VillagerTracker implements Listener {
     @EventHandler
     public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         UUID uniqueId = event.getPlayer().getUniqueId();
-        handler.getSleeping().remove(uniqueId);
         selectedProfession.remove(uniqueId);
     }
 
@@ -328,37 +333,37 @@ public final class VillagerTracker implements Listener {
         return pool.getNPC(entityId);
     }
 
-    public static final Set<EntityType> VALID_ENTITIES = Set.of(EntityType.VILLAGER, EntityType.WANDERING_TRADER);
-
-    public boolean isInvalid(@NotNull LivingEntity living, boolean ignoreSkinsState) {
-        return (!ignoreSkinsState && Config.DISABLE_SKINS.asBool())
-                || !VALID_ENTITIES.contains(living.getType())
-                || (living instanceof Villager villager && !plugin.getCompatibilityManager().shouldTrack(villager))
+    public boolean isInvalid(@NotNull LivingEntity living, boolean ignoreSkinState) {
+        return (!ignoreSkinState && Config.DISABLE_SKINS.asBool())
+                || (!(living instanceof WanderingTrader) && (!(living instanceof Villager villager) || !plugin.getCompatibilityManager().shouldTrack(villager)))
                 || plugin.isDisabledIn(living.getWorld())
                 || plugin.getConverter().getNPC(living).isEmpty();
     }
 
-    public boolean isInvalid(LivingEntity villager) {
-        return isInvalid(villager, false);
+    public boolean isInvalid(LivingEntity living) {
+        return isInvalid(living, false);
     }
 
-    public void spawnNPC(LivingEntity villager) {
-        if (isInvalid(villager)) return;
+    public void spawnNPC(LivingEntity living) {
+        if (isInvalid(living)) return;
 
-        int entityId = villager.getEntityId();
+        int entityId = living.getEntityId();
         if (hasNPC(entityId)) return;
 
-        WrappedSignedProperty textures = getTextures(villager);
+        WrappedSignedProperty textures = getTextures(living);
         if (textures.getName().equals("error")) {
-            CompletableFuture<Skin> creator = getCreator(villager, textures);
+            CompletableFuture<Skin> creator = getCreator(living, textures);
             if (creator != null)
-                creator.thenAcceptAsync(skin -> spawnNPC(villager), mineskinClient.getRequestExecutor());
+                creator.thenAcceptAsync(skin -> spawnNPC(living), mineskinClient.getRequestExecutor());
             return;
         }
 
-        String defaultName = plugin.getConverter().getNPC(villager)
-                .map(IVillagerNPC::getVillagerName)
-                .orElse(villager.getName());
+        Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(living);
+
+        IVillagerNPC npc = optional.orElse(null);
+        if (npc == null) return;
+
+        String defaultName = npc.getVillagerName();
 
         String name;
         if (Config.DISABLE_NAMETAGS.asBool()
@@ -376,9 +381,9 @@ public final class VillagerTracker implements Listener {
 
         NPC.builder()
                 .profile(profile)
-                .location(villager.getLocation())
-                .spawnCustomizer(new NPCHandler(plugin, villager))
+                .spawnCustomizer(new NPCHandler(plugin))
                 .entityId(entityId)
+                .entity(npc)
                 .build(pool);
     }
 
@@ -398,8 +403,8 @@ public final class VillagerTracker implements Listener {
         return team != null ? team : scoreboard.registerNewTeam(NAMETAG_TEAM_NAME);
     }
 
-    public @NotNull WrappedSignedProperty getTextures(LivingEntity villager) {
-        SkinRelatedData data = getRelatedData(villager, null, false);
+    public @NotNull WrappedSignedProperty getTextures(LivingEntity living) {
+        SkinRelatedData data = getRelatedData(living, null, false);
 
         WrappedSignedProperty property = data.property();
         if (property != null && property.getName().equals("error")) {
@@ -410,8 +415,8 @@ public final class VillagerTracker implements Listener {
     }
 
     @Contract("_, _ -> new")
-    public @NotNull SkinRelatedData getRelatedData(LivingEntity villager, @Nullable String differentProfession) {
-        return getRelatedData(villager, differentProfession, true);
+    public @NotNull SkinRelatedData getRelatedData(LivingEntity living, @Nullable String differentProfession) {
+        return getRelatedData(living, differentProfession, true);
     }
 
     @Contract("_, _, _ -> new")
@@ -489,10 +494,6 @@ public final class VillagerTracker implements Listener {
         if (kidId == -1) npc.setKidSkinTextureId(newId);
 
         return newId;
-    }
-
-    public boolean fixSleep() {
-        return !handler.getSleeping().isEmpty();
     }
 
     public Pair<File, FileConfiguration> getFile(String fileName) {
@@ -654,18 +655,18 @@ public final class VillagerTracker implements Listener {
         return name.isEmpty() || name.equals(VillagerTracker.HIDE_NAMETAG_NAME);
     }
 
-    public void refreshNPCSkin(LivingEntity villager, boolean happyParticles) {
+    public void refreshNPCSkin(LivingEntity living, boolean happyParticles) {
         // If the skin doesn't exist, first we create it, THEN we refresh.
-        WrappedSignedProperty textures = getTextures(villager);
+        WrappedSignedProperty textures = getTextures(living);
         if (!textures.getName().equals("error")) {
-            refreshNPC(villager);
+            refreshNPC(living);
             return;
         }
 
-        CompletableFuture<Skin> creator = getCreator(villager, textures);
+        CompletableFuture<Skin> creator = getCreator(living, textures);
         if (creator == null) return;
 
-        creator.thenAcceptAsync(skin -> refreshNPC(villager), mineskinClient.getRequestExecutor());
+        creator.thenAcceptAsync(skin -> refreshNPC(living), mineskinClient.getRequestExecutor());
 
         if (!happyParticles) return;
 
@@ -677,7 +678,7 @@ public final class VillagerTracker implements Listener {
                     cancel();
                     return;
                 }
-                if (random.nextInt(35) == 0) villager.playEffect(EntityEffect.VILLAGER_HAPPY);
+                if (random.nextInt(35) == 0) living.playEffect(EntityEffect.VILLAGER_HAPPY);
             }
         }.runTaskTimer(plugin, 1L, 1L);
     }
@@ -715,9 +716,9 @@ public final class VillagerTracker implements Listener {
         return future;
     }
 
-    private void refreshNPC(@NotNull LivingEntity villager) {
-        removeNPC(villager.getEntityId());
-        spawnNPC(villager);
+    private void refreshNPC(@NotNull LivingEntity living) {
+        removeNPC(living.getEntityId());
+        spawnNPC(living);
     }
 
     public record SkinRelatedData(String sex,

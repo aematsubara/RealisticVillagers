@@ -5,15 +5,16 @@ import com.comphenix.protocol.wrappers.EnumWrappers.PlayerInfoAction;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
-import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
+import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.npc.modifier.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -28,12 +29,12 @@ public class NPC {
     private final int entityId;
     private final WrappedGameProfile profile;
     private final SpawnCustomizer spawnCustomizer;
-    private Location location;
+    private final IVillagerNPC villager;
 
-    public NPC(WrappedGameProfile profile, Location location, SpawnCustomizer spawnCustomizer, int entityId) {
+    public NPC(WrappedGameProfile profile, SpawnCustomizer spawnCustomizer, int entityId, IVillagerNPC villager) {
         this.entityId = entityId;
-        this.location = location;
         this.spawnCustomizer = spawnCustomizer;
+        this.villager = villager;
 
         // No profile -> create a random one.
         if (profile == null) {
@@ -56,41 +57,39 @@ public class NPC {
         return new Builder();
     }
 
-    public void show(Player player, Plugin plugin, long tabListRemoveTicks) {
+    public void show(Player player, RealisticVillagers plugin) {
+        show(player, plugin, null);
+    }
+
+    public void show(Player player, RealisticVillagers plugin, @Nullable Location location) {
         seeingPlayers.add(player);
 
         VisibilityModifier modifier = visibility();
         modifier.queuePlayerListChange(PlayerInfoAction.ADD_PLAYER).send(player);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            modifier.queueSpawn().send(player);
+            modifier.queueSpawn(location).send(player);
             spawnCustomizer.handleSpawn(this, player);
 
-            if (spawnCustomizer instanceof NPCHandler handler) {
-                NametagManager nametagManager = handler.getPlugin().getNametagManager();
-                if (nametagManager != null) nametagManager.showNametag(handler.getVillager(), player);
-            }
+            NametagManager nametagManager = plugin.getNametagManager();
+            if (nametagManager != null) nametagManager.showNametag(villager, player);
 
-            if (tabListRemoveTicks >= 0) {
-                // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
-                Bukkit.getScheduler().runTaskLater(
-                        plugin,
-                        () -> modifier.queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER).send(player),
-                        tabListRemoveTicks);
-            }
+            // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
+            Bukkit.getScheduler().runTaskLater(
+                    plugin,
+                    () -> modifier.queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER).send(player),
+                    40);
         }, 10L);
     }
 
-    public void hide(Player player) {
+    public void hide(Player player, @NotNull RealisticVillagers plugin) {
         visibility()
                 .queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER)
                 .queueDestroy()
                 .send(player);
 
-        if (spawnCustomizer instanceof NPCHandler handler) {
-            NametagManager nametagManager = handler.getPlugin().getNametagManager();
-            if (nametagManager != null) nametagManager.hideNametag(handler.getVillager(), player);
-        }
+        NametagManager nametagManager = plugin.getNametagManager();
+        if (nametagManager != null) nametagManager.hideNametag(villager, player);
 
         removeSeeingPlayer(player);
     }
@@ -127,28 +126,12 @@ public class NPC {
         return new TeleportModifier(this);
     }
 
-    public void setLocation(Location location) {
-        this.location = location;
-    }
-
-    public WrappedGameProfile getProfile() {
-        return profile;
-    }
-
-    public int getEntityId() {
-        return entityId;
-    }
-
-    public Location getLocation() {
-        return location;
-    }
-
     public static class Builder {
 
         private WrappedGameProfile profile;
         private int entityId = -1;
+        private IVillagerNPC villager;
 
-        private Location location = new Location(Bukkit.getWorlds().get(0), 0D, 0D, 0D);
         private SpawnCustomizer spawnCustomizer = (npc, player) -> {
         };
 
@@ -157,11 +140,6 @@ public class NPC {
 
         public Builder profile(WrappedGameProfile profile) {
             this.profile = profile;
-            return this;
-        }
-
-        public Builder location(Location location) {
-            this.location = Preconditions.checkNotNull(location, "location");
             return this;
         }
 
@@ -175,6 +153,11 @@ public class NPC {
             return this;
         }
 
+        public Builder entity(IVillagerNPC villager) {
+            this.villager = villager;
+            return this;
+        }
+
         @NotNull
         public NPC build(NPCPool pool) {
             if (entityId == -1) {
@@ -185,7 +168,7 @@ public class NPC {
                 throw new IllegalArgumentException("No profile given!");
             }
 
-            NPC npc = new NPC(profile, location, spawnCustomizer, entityId);
+            NPC npc = new NPC(profile, spawnCustomizer, entityId, villager);
             pool.takeCareOf(npc);
             return npc;
         }

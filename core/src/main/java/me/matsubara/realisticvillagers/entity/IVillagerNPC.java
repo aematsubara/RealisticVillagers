@@ -165,8 +165,6 @@ public interface IVillagerNPC {
 
     void toggleFishing();
 
-    void refreshTo(Player player);
-
     void sendSpawnPacket();
 
     void sendDestroyPacket();
@@ -183,7 +181,11 @@ public interface IVillagerNPC {
 
     void setEquipped(boolean equipped);
 
+    boolean validShoulderEntityLeft();
+
     Object getShoulderEntityLeft();
+
+    boolean validShoulderEntityRight();
 
     Object getShoulderEntityRight();
 
@@ -198,4 +200,14 @@ public interface IVillagerNPC {
     boolean isReviving();
 
     Set<UUID> getPlayers();
+
+    byte getHandData();
+
+    int getEffectColor();
+
+    boolean getEffectAmbience();
+
+    int getBeeStingers();
+
+    void attack(LivingEntity entity);
 }

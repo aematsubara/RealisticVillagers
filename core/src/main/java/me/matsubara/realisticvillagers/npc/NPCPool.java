@@ -1,17 +1,16 @@
 package me.matsubara.realisticvillagers.npc;
 
-import com.google.common.base.Preconditions;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -22,29 +21,24 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NPCPool implements Listener {
 
     private final RealisticVillagers plugin;
-    private final long tabListRemoveTicks;
     private final Map<Integer, NPC> npcMap = new ConcurrentHashMap<>();
 
     private static final double BUKKIT_VIEW_DISTANCE = Math.pow(Bukkit.getViewDistance() << 4, 2);
 
-    private NPCPool(RealisticVillagers plugin, long tabListRemoveTicks) {
+    public NPCPool(RealisticVillagers plugin) {
         this.plugin = plugin;
-        this.tabListRemoveTicks = tabListRemoveTicks;
-
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        this.plugin.getServer().getPluginManager().registerEvents(this, plugin);
         tick();
-    }
-
-    @Contract(value = "_ -> new", pure = true)
-    public static @NotNull Builder builder(RealisticVillagers plugin) {
-        return new Builder(plugin);
     }
 
     protected void tick() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 for (NPC npc : npcMap.values()) {
-                    Location npcLocation = npc.getLocation();
+                    LivingEntity bukkit = npc.getVillager().bukkit();
+                    if (bukkit == null) continue;
+
+                    Location npcLocation = bukkit.getLocation();
                     Location playerLocation = player.getLocation();
 
                     World npcWorld = npcLocation.getWorld();
@@ -53,7 +47,7 @@ public class NPCPool implements Listener {
                     if (!npcWorld.equals(playerLocation.getWorld())
                             || !npcWorld.isChunkLoaded(npcLocation.getBlockX() >> 4, npcLocation.getBlockZ() >> 4)) {
                         // Hide NPC if the NPC isn't in the same world of the player or the NPC isn't on a loaded chunk.
-                        if (npc.isShownFor(player)) npc.hide(player);
+                        if (npc.isShownFor(player)) npc.hide(player, plugin);
                         continue;
                     }
 
@@ -61,9 +55,9 @@ public class NPCPool implements Listener {
                     boolean inRange = npcLocation.distanceSquared(playerLocation) <= Math.min(renderDistance * renderDistance, BUKKIT_VIEW_DISTANCE);
 
                     if (!inRange && npc.isShownFor(player)) {
-                        npc.hide(player);
+                        npc.hide(player, plugin);
                     } else if (inRange && !npc.isShownFor(player)) {
-                        npc.show(player, plugin, tabListRemoveTicks);
+                        npc.show(player, plugin);
                     }
                 }
             }
@@ -85,7 +79,7 @@ public class NPCPool implements Listener {
     public void removeNPC(int entityId) {
         getNPC(entityId).ifPresent(npc -> {
             npcMap.remove(entityId);
-            npc.getSeeingPlayers().forEach(npc::hide);
+            npc.getSeeingPlayers().forEach(player -> npc.hide(player, plugin));
         });
     }
 
@@ -95,7 +89,7 @@ public class NPCPool implements Listener {
 
         npcMap.values().stream()
                 .filter(npc -> npc.isShownFor(player))
-                .forEach(npc -> npc.hide(player));
+                .forEach(npc -> npc.hide(player, plugin));
     }
 
     @EventHandler
@@ -105,24 +99,5 @@ public class NPCPool implements Listener {
         npcMap.values().stream()
                 .filter(npc -> npc.isShownFor(player))
                 .forEach(npc -> npc.removeSeeingPlayer(player));
-    }
-
-    public static class Builder {
-
-        private final RealisticVillagers plugin;
-        private long tabListRemoveTicks = 30;
-
-        private Builder(RealisticVillagers plugin) {
-            this.plugin = Preconditions.checkNotNull(plugin, "Plugin can't be null!");
-        }
-
-        public Builder tabListRemoveTicks(long tabListRemoveTicks) {
-            this.tabListRemoveTicks = tabListRemoveTicks;
-            return this;
-        }
-
-        public NPCPool build() {
-            return new NPCPool(plugin, tabListRemoveTicks);
-        }
     }
 }

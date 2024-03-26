@@ -17,7 +17,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
 import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
@@ -28,6 +27,7 @@ import org.apache.commons.lang3.Validate;
 import org.bukkit.ChatColor;
 import org.bukkit.GameEvent;
 import org.bukkit.Material;
+import org.bukkit.Raid;
 import org.bukkit.entity.*;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
@@ -46,6 +46,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,14 +80,14 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
         if (id == null) return;
 
         Optional<NPC> npc;
-        if ((npc = plugin.getTracker().getNPC(id)).isEmpty()
-                || !(npc.get().getSpawnCustomizer() instanceof NPCHandler handler)) {
+        if ((npc = plugin.getTracker().getNPC(id)).isEmpty()) {
             return;
         }
 
         // PlayerInteractEntityEvent won't be called if this one is cancelled.
+        // With this change, we fix the client freezing for some seconds when right-clicking a villager.
         EquipmentSlot slot = actionWrapper.getHand() == EnumWrappers.Hand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        if (handleInteract(event.getPlayer(), slot, handler.getVillager().bukkit())) {
+        if (handleInteract(event.getPlayer(), slot, npc.get().getVillager().bukkit())) {
             event.setCancelled(true);
         }
     }
@@ -454,6 +455,8 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
     @SuppressWarnings({"deprecation", "unchecked"})
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(@NotNull EntityDamageEvent event) {
+        tryToDefendPlayer(event);
+
         if (!(event.getEntity() instanceof AbstractVillager villager)) return;
         if (plugin.getTracker().isInvalid(villager, true)) return;
 
@@ -502,6 +505,44 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
             ((Map<EntityDamageEvent.DamageModifier, Double>) MODIFIERS.invoke(event)).put(modifier, base);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
+        }
+    }
+
+    private void tryToDefendPlayer(@NotNull EntityDamageEvent event) {
+        if (!Config.VILLAGER_DEFEND_ATTACK_PLAYERS.asBool()) return;
+
+        if (!(event.getEntity() instanceof Player player)
+                || !(event instanceof EntityDamageByEntityEvent byEntity)
+                || !(byEntity.getDamager() instanceof Player damager)) return;
+
+        for (Entity nearby : player.getNearbyEntities(16.0d, 16.0d, 16.0d)) {
+            if (!(nearby instanceof Villager villager)) continue;
+
+            Optional<IVillagerNPC> optional = plugin.getConverter().getNPC(villager);
+
+            // If the NPC can't attack or the damager is part of the family of the NPC, continue.
+            IVillagerNPC npc = optional.orElse(null);
+            if (npc == null
+                    || !npc.canAttack()
+                    || npc.isFamily(damager.getUniqueId(), true)) return;
+
+            if (npc.isFamily(player.getUniqueId(), true) && Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) {
+                npc.attack(damager);
+                continue;
+            }
+
+            Raid raid;
+            if (player.hasPotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE)
+                    || ((raid = player.getWorld().locateNearestRaid(player.getLocation(), 5)) != null
+                    && raid.getHeroes().contains(player.getUniqueId()))
+                    && Config.VILLAGER_DEFEND_HERO_OF_THE_VILLAGE.asBool()) {
+                npc.attack(damager);
+                continue;
+            }
+
+            if (player.getUniqueId().equals(npc.getInteractingWith()) && Config.VILLAGER_DEFEND_FOLLOWING_PLAYER.asBool()) {
+                npc.attack(damager);
+            }
         }
     }
 

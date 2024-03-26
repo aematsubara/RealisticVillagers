@@ -1,11 +1,13 @@
 package me.matsubara.realisticvillagers.task;
 
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
-import me.matsubara.realisticvillagers.handler.npc.BasicNPCHandler;
 import me.matsubara.realisticvillagers.npc.NPC;
+import me.matsubara.realisticvillagers.npc.modifier.MetadataModifier;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.md_5.bungee.api.ChatColor;
@@ -27,6 +29,8 @@ import java.awt.*;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.comphenix.protocol.PacketType.Play.Server.REL_ENTITY_MOVE_LOOK;
+
 public class PreviewTask extends BukkitRunnable {
 
     private final RealisticVillagers plugin;
@@ -34,6 +38,7 @@ public class PreviewTask extends BukkitRunnable {
     private final NPC npc;
     private final int seconds;
 
+    private Location targetLocation;
     private int tick;
     private int hue;
     private float yaw;
@@ -47,19 +52,24 @@ public class PreviewTask extends BukkitRunnable {
 
         plugin.getTracker().checkNametagTeam();
 
-        Location targetLocation = getPlayerTargetLocation(player);
+        targetLocation = getPlayerTargetLocation(player);
 
         WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), VillagerTracker.HIDE_NAMETAG_NAME);
         profile.getProperties().put("textures", textures);
 
         this.npc = new NPC(profile,
-                targetLocation,
-                new BasicNPCHandler(),
-                ThreadLocalRandom.current().nextInt(10000, Integer.MAX_VALUE));
+                (npc, seeing) -> {
+                    npc.rotation().queueHeadRotation(targetLocation.getYaw()).send(seeing);
+
+                    MetadataModifier metadata = npc.metadata();
+                    metadata.queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(seeing);
+                },
+                ThreadLocalRandom.current().nextInt(10000, Integer.MAX_VALUE),
+                null);
 
         this.yaw = targetLocation.getYaw();
 
-        npc.show(player, plugin, 40L);
+        npc.show(player, plugin, targetLocation);
 
         plugin.getTracker().getPreviews().put(player.getUniqueId(), this);
     }
@@ -67,16 +77,23 @@ public class PreviewTask extends BukkitRunnable {
     @Override
     public void run() {
         if (tick == seconds * 20 || !player.isValid()) {
-            npc.hide(player);
+            npc.hide(player, plugin);
             cancel();
             return;
         }
 
-        Location location = getPlayerTargetLocation(player);
-        location.setYaw(yaw = yaw(yaw + ROTATION_SPEED));
+        targetLocation = getPlayerTargetLocation(player);
+        targetLocation.setYaw(yaw = yaw(yaw + ROTATION_SPEED));
 
-        npc.teleport().queueTeleport(location, false).send(player);
-        npc.rotation().queueRotate(location.getYaw(), location.getPitch()).send(player);
+        npc.teleport().queueTeleport(targetLocation, false).send(player);
+        npc.rotation().queueHeadRotation(targetLocation.getYaw()).send(player);
+
+        PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
+        moveLook.getIntegers().write(0, npc.getEntityId());
+        moveLook.getBytes().write(0, (byte) (yaw * 256.0f / 360.0f));
+        moveLook.getBytes().write(1, (byte) (targetLocation.getPitch() * 256f / 360f));
+
+        ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
 
         boolean rainbow = Config.SKIN_PREVIEW_RAINBOW_MESSAGE.asBool();
         if (rainbow || tick % 20 == 0) {
@@ -92,7 +109,7 @@ public class PreviewTask extends BukkitRunnable {
             hue += 6;
         }
 
-        if (tick % 20 == 0) spawnParticles(location, player);
+        if (tick % 20 == 0) spawnParticles(targetLocation, player);
 
         tick++;
     }
@@ -100,7 +117,7 @@ public class PreviewTask extends BukkitRunnable {
     @Override
     public synchronized void cancel() throws IllegalStateException {
         super.cancel();
-        npc.hide(player);
+        npc.hide(player, plugin);
         plugin.getTracker().getPreviews().remove(player.getUniqueId());
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR); // Clear message.
     }

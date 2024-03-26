@@ -23,6 +23,7 @@ import org.bukkit.entity.*;
 import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,7 +36,6 @@ import static com.comphenix.protocol.PacketType.Play.Server.*;
 public class VillagerHandler extends PacketAdapter {
 
     private final RealisticVillagers plugin;
-    private final @Getter Set<UUID> sleeping = ConcurrentHashMap.newKeySet();
     private final @Getter Set<UUID> allowSpawn = ConcurrentHashMap.newKeySet();
 
     private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
@@ -46,17 +46,15 @@ public class VillagerHandler extends PacketAdapter {
             REL_ENTITY_MOVE,
             REL_ENTITY_MOVE_LOOK);
 
-    private static final PacketType[] LISTEN_PACKETS = ImmutableList.builder()
-            .addAll(MOVEMENT_PACKETS)
-            .add(SPAWN_ENTITY, SPAWN_ENTITY_LIVING, ENTITY_STATUS, ENTITY_METADATA)
-            .build()
-            .stream()
-            .map(object -> (PacketType) object)
-            .filter(PacketType::isSupported)
-            .toArray(PacketType[]::new);
-
-    public VillagerHandler(RealisticVillagers plugin) {
-        super(plugin, ListenerPriority.HIGHEST, LISTEN_PACKETS);
+    public VillagerHandler(RealisticVillagers plugin, Collection<PacketType> packets) {
+        super(plugin, ListenerPriority.HIGHEST, ImmutableList.builder()
+                .addAll(MOVEMENT_PACKETS)
+                .addAll(packets)
+                .build()
+                .stream()
+                .map(object -> (PacketType) object)
+                .filter(PacketType::isSupported)
+                .toArray(PacketType[]::new));
         this.plugin = plugin;
     }
 
@@ -94,7 +92,7 @@ public class VillagerHandler extends PacketAdapter {
         if (isCancellableSpawnPacket(event)) {
             if (!allowSpawn.contains(uuid)) {
                 event.setCancelled(true);
-                npc.ifPresent(value -> handleNPCLocation(event, villager, value));
+                npc.ifPresent(value -> rotateBody(event, villager));
             }
             return;
         }
@@ -107,79 +105,40 @@ public class VillagerHandler extends PacketAdapter {
         }
 
         // Cancel metadata packet for players using 1.7 (or lower).
-        if (type == ENTITY_METADATA
-                && plugin.getServer().getPluginManager().getPlugin("ViaVersion") != null
-                && plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
+        if (type == ENTITY_METADATA && plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
             event.setCancelled(true);
         }
 
         if (npc.isEmpty()) return;
 
-        if (!sleeping.isEmpty() && !sleeping.contains(player.getUniqueId()) && villager.isSleeping()) {
-            event.setCancelled(true);
-            return;
-        }
-
-        // Dont modify locaiton while reviving.
+        // Dont modify location while reviving.
         if (plugin.getConverter().getNPC(villager)
                 .map(IVillagerNPC::isReviving)
                 .orElse(false)) return;
 
-        if (MOVEMENT_PACKETS.contains(type)) handleNPCLocation(event, villager, npc.get());
+        if (MOVEMENT_PACKETS.contains(type)) rotateBody(event, villager);
     }
 
-    public void handleNPCLocation(@NotNull PacketEvent event, @NotNull AbstractVillager villager, NPC npc) {
+    private void rotateBody(@NotNull PacketEvent event, @NotNull AbstractVillager villager) {
         PacketContainer packet = event.getPacket();
+
         PacketType type = packet.getType();
+        if (type != ENTITY_HEAD_ROTATION) return;
 
         StructureModifier<Byte> bytes = packet.getBytes();
         Location location = villager.getLocation();
 
-        boolean isTeleport;
-        if (type == ENTITY_HEAD_ROTATION) {
-            float yaw = (bytes.read(0) * 360.f) / 256.0f;
-            float pitch = location.getPitch();
+        float pitch = location.getPitch();
 
-            location.setYaw(yaw);
-            location.setPitch(pitch);
+        // Rotate body with the head.
+        if (plugin.getConverter().getNPC(villager).get().isShakingHead()) return;
 
-            boolean shakingHead = plugin.getConverter().getNPC(villager).get().isShakingHead();
+        PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
+        moveLook.getIntegers().write(0, villager.getEntityId());
+        moveLook.getBytes().write(0, bytes.read(0));
+        moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
 
-            // Rotate body with the head.
-            if (!villager.isSleeping() && !shakingHead) {
-                PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
-                moveLook.getIntegers().write(0, villager.getEntityId());
-                moveLook.getBytes().write(0, bytes.read(0));
-                moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
-
-                ProtocolLibrary.getProtocolManager().sendServerPacket(event.getPlayer(), moveLook);
-            }
-        } else if (type == ENTITY_LOOK || type == REL_ENTITY_MOVE || type == REL_ENTITY_MOVE_LOOK) {
-            StructureModifier<Short> shorts = packet.getShorts();
-            double changeInX = shorts.read(0) / 4096.0d;
-            double changeInY = shorts.read(1) / 4096.0d;
-            double changeInZ = shorts.read(2) / 4096.0d;
-
-            boolean hasRot = packet.getBooleans().read(0);
-            float yaw = hasRot ? (bytes.read(0) * 360.f) / 256.0f : location.getYaw();
-            float pitch = hasRot ? (bytes.read(1) * 360.f) / 256.0f : location.getPitch();
-
-            location.add(changeInX, changeInY, changeInZ);
-            location.setYaw(yaw);
-            location.setPitch(pitch);
-        } else if ((isTeleport = type == ENTITY_TELEPORT) || type == SPAWN_ENTITY_LIVING || type == SPAWN_ENTITY) {
-            StructureModifier<Double> doubles = packet.getDoubles();
-            location.setX(doubles.read(0));
-            location.setY(doubles.read(1));
-            location.setZ(doubles.read(2));
-
-            if (isTeleport) {
-                location.setYaw((bytes.read(0) * 360.f) / 256.0f);
-                location.setPitch((bytes.read(1) * 360.f) / 256.0f);
-            }
-        }
-
-        npc.setLocation(location);
+        ProtocolLibrary.getProtocolManager().sendServerPacket(event.getPlayer(), moveLook);
     }
 
     private void handleStatus(@NotNull IVillagerNPC npc, byte status) {

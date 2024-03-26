@@ -14,7 +14,7 @@ import java.util.UUID;
 
 public interface INMSConverter {
 
-    Optional<IVillagerNPC> getNPC(LivingEntity villager);
+    Optional<IVillagerNPC> getNPC(LivingEntity living);
 
     void registerEntities();
 
@@ -24,7 +24,7 @@ public interface INMSConverter {
 
     void createBaby(Location location, String name, String sex, UUID mother, Player father);
 
-    void loadDataFromTag(LivingEntity villager, String tag);
+    void loadDataFromTag(LivingEntity living, String tag);
 
     UUID getPartnerUUIDFromPlayerNBT(File file);
 

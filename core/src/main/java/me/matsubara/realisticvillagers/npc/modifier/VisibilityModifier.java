@@ -2,12 +2,17 @@ package me.matsubara.realisticvillagers.npc.modifier;
 
 import com.comphenix.protocol.PacketType.Play.Server;
 import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.*;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
+import com.comphenix.protocol.wrappers.PlayerInfoData;
+import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.comphenix.protocol.wrappers.WrappedProfilePublicKey;
 import com.google.common.collect.Lists;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -81,7 +86,7 @@ public class VisibilityModifier extends NPCModifier {
         return this;
     }
 
-    public VisibilityModifier queueSpawn() {
+    public VisibilityModifier queueSpawn(@Nullable Location location) {
         queueInstantly((npc, player) -> {
             PacketContainer container = new PacketContainer(PluginUtils.IS_1_20_2_OR_NEW ? Server.SPAWN_ENTITY : Server.NAMED_ENTITY_SPAWN);
             container.getIntegers().write(0, npc.getEntityId());
@@ -91,28 +96,16 @@ public class VisibilityModifier extends NPCModifier {
                 container.getEntityTypeModifier().write(0, EntityType.PLAYER);
             }
 
-            double x = npc.getLocation().getX();
-            double y = npc.getLocation().getY();
-            double z = npc.getLocation().getZ();
+            Location at = location != null ? location : npc.getVillager().bukkit().getLocation();
 
-            if (MINECRAFT_VERSION < 9) {
-                container.getIntegers()
-                        .write(1, (int) Math.floor(x * 32.0d))
-                        .write(2, (int) Math.floor(y * 32.0d))
-                        .write(3, (int) Math.floor(z * 32.0d));
-            } else {
-                container.getDoubles()
-                        .write(0, x)
-                        .write(1, y)
-                        .write(2, z);
-            }
+            container.getDoubles()
+                    .write(0, at.getX())
+                    .write(1, at.getY())
+                    .write(2, at.getZ());
 
             container.getBytes()
-                    .write(0, (byte) (npc.getLocation().getYaw() * 256.0f / 360.0f))
-                    .write(1, (byte) (npc.getLocation().getPitch() * 256.0f / 360.0f));
-            if (MINECRAFT_VERSION < 15) {
-                container.getDataWatcherModifier().write(0, new WrappedDataWatcher());
-            }
+                    .write(0, (byte) (at.getYaw() * 256.0f / 360.0f))
+                    .write(1, (byte) (at.getPitch() * 256.0f / 360.0f));
 
             return container;
         });
