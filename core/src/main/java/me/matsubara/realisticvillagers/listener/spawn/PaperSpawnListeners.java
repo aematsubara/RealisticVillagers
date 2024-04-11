@@ -30,13 +30,13 @@ public class PaperSpawnListeners implements EventExecutor {
                     clazz,
                     new Listener() {
                     },
-                    EventPriority.NORMAL,
+                    EventPriority.HIGHEST,
                     this,
                     plugin,
                     false);
 
             pluginManager.registerEvents(new Listener() {
-                @EventHandler(ignoreCancelled = true)
+                @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
                 public void onCreatureSpawn(CreatureSpawnEvent event) {
                     plugin.getTracker().getSpawnListeners().onCreatureSpawn(event);
                 }

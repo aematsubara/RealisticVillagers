@@ -51,6 +51,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.lang.ArrayUtils;
@@ -58,6 +59,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Raid;
+import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.craftbukkit.v1_18_R2.CraftRaid;
 import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
@@ -82,6 +84,7 @@ import java.io.*;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unchecked")
@@ -101,6 +104,8 @@ public class NMSConverter implements INMSConverter {
 
     // Other.
     private static final MethodHandle TIMELINES = Reflection.getFieldGetter(Schedule.class, "g");
+    private static final MethodHandle RULE_TYPE = Reflection.getFieldGetter(GameRules.Value.class, "a");
+    private static final Field RULE_CALLBACK;
 
     private static final Random RANDOM = new Random();
     private static final Map<String, Activity> ACTIVITIES;
@@ -110,6 +115,13 @@ public class NMSConverter implements INMSConverter {
             && !name.contains("mcc");
 
     static {
+        try {
+            //noinspection JavaReflectionMemberAccess
+            RULE_CALLBACK = GameRules.Type.class.getDeclaredField("c");
+        } catch (NoSuchFieldException exception) {
+            throw new RuntimeException(exception);
+        }
+
         Map<String, Activity> activities = new HashMap<>();
         for (Field field : Activity.class.getDeclaredFields()) {
             if (!field.getType().equals(Activity.class)) continue;
@@ -416,6 +428,33 @@ public class NMSConverter implements INMSConverter {
         villager.setRevivingTicks(60);
 
         level.addFreshEntity(villager, CreatureSpawnEvent.SpawnReason.DEFAULT);
+    }
+
+    @Override
+    public void addGameRuleListener(World world) {
+        try {
+            GameRules.Key<GameRules.BooleanValue> rule = GameRules.RULE_MOBGRIEFING;
+
+            String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
+
+            GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
+            if (Boolean.FALSE.equals(nmsRule.get())) {
+                plugin.getLogger().warning(warn);
+            }
+
+            Object type = RULE_TYPE.invoke(nmsRule);
+
+            Reflection.setFieldUsingUnsafe(
+                    RULE_CALLBACK,
+                    type,
+                    (BiConsumer<ServerLevel, GameRules.BooleanValue>) (level, value) -> {
+                        if (value.get()) return;
+                        plugin.getLogger().warning(warn);
+                    }
+            );
+        } catch (Throwable exception) {
+            exception.printStackTrace();
+        }
     }
 
     private void refreshSchedule(@NotNull String name) {

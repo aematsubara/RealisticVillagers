@@ -6,6 +6,7 @@ import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -24,7 +25,7 @@ public class BukkitSpawnListeners implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onCreatureSpawn(@NotNull CreatureSpawnEvent event) {
         LivingEntity entity = event.getEntity();
 
@@ -41,18 +42,18 @@ public class BukkitSpawnListeners implements Listener {
                 tag);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onEntitiesLoad(@NotNull EntitiesLoadEvent event) {
         if (!event.getChunk().isLoaded()) return;
         event.getEntities().forEach(this::handleSpawn);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onWorldLoad(@NotNull WorldLoadEvent event) {
         event.getWorld().getEntitiesByClass(AbstractVillager.class).forEach(this::handleSpawn);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onChunkLoad(@NotNull ChunkLoadEvent event) {
         for (Entity entity : event.getChunk().getEntities()) {
             handleSpawn(entity);

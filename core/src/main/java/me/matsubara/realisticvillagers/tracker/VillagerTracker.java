@@ -35,6 +35,7 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.world.EntitiesUnloadEvent;
+import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
@@ -192,6 +193,11 @@ public final class VillagerTracker implements Listener {
             return playerFile;
         }
         return null;
+    }
+
+    @EventHandler
+    public void onWorldInit(@NotNull WorldInitEvent event) {
+        plugin.getConverter().addGameRuleListener(event.getWorld());
     }
 
     @EventHandler
@@ -395,7 +401,15 @@ public final class VillagerTracker implements Listener {
 
         Team team = getNametagTeam(scoreboard);
         team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        team.addEntry(HIDE_NAMETAG_NAME);
+
+        if (team.hasEntry(HIDE_NAMETAG_NAME)
+                || scoreboard.getEntryTeam(HIDE_NAMETAG_NAME) != null) return;
+
+        try {
+            team.addEntry(HIDE_NAMETAG_NAME);
+        } catch (IllegalStateException ignored) {
+            // Nothing we can do, maybe the NPC was added to another team by another plugin?
+        }
     }
 
     private @NotNull Team getNametagTeam(@NotNull Scoreboard scoreboard) {

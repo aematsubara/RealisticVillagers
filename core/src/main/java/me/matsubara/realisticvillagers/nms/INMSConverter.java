@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.Location;
 import org.bukkit.Raid;
+import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -43,4 +44,6 @@ public interface INMSConverter {
     IVillagerNPC getNPCFromTag(String tag);
 
     void spawnFromTag(Location location, String tag);
+
+    void addGameRuleListener(World world);
 }
