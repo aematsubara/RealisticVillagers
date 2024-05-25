@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.compatibility;
 
+import me.matsubara.realisticvillagers.RealisticVillagers;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.plugin.Plugin;
@@ -11,8 +12,13 @@ import java.util.Map;
 
 public class CompatibilityManager {
 
+    private final RealisticVillagers plugin;
     private final List<Compatibility> compatibilities = new ArrayList<>();
     private final Map<String, Compatibility> external = new HashMap<>();
+
+    public CompatibilityManager(RealisticVillagers plugin) {
+        this.plugin = plugin;
+    }
 
     public void addCompatibility(Compatibility compatibility) {
         compatibilities.add(compatibility);
@@ -30,6 +36,7 @@ public class CompatibilityManager {
     }
 
     public boolean shouldCancelMetadata(Player player) {
-        return ((ViaCompatibility) external.computeIfAbsent("ViaVersion", name -> new ViaCompatibility())).cancelMetadata(player);
+        return plugin.getServer().getPluginManager().getPlugin("ViaVersion") != null &&
+                ((ViaCompatibility) external.computeIfAbsent("ViaVersion", name -> new ViaCompatibility())).cancelMetadata(player);
     }
 }

@@ -160,4 +160,56 @@ public final class Reflection {
             UNSAFE.putObject(base, offset, newValue);
         }
     }
+
+    public static @Nullable MethodHandle getField(Class<?> refc, Class<?> instc, String name, boolean isGetter, String... extraNames) {
+        try {
+            Field temp = getFieldHandleRaw(refc, instc, name);
+            MethodHandle handle = temp != null ? (isGetter ? LOOKUP.unreflectGetter(temp) : LOOKUP.unreflectSetter(temp)) : null;
+
+            if (handle != null) return handle;
+
+            if (extraNames != null && extraNames.length > 0) {
+                if (extraNames.length == 1) return getField(refc, instc, extraNames[0], isGetter);
+                return getField(refc, instc, extraNames[0], isGetter, removeFirst(extraNames));
+            }
+        } catch (IllegalAccessException exception) {
+            exception.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private static @NotNull String[] removeFirst(@NotNull String[] array) {
+        int length = array.length;
+
+        String[] result = new String[length - 1];
+        System.arraycopy(array, 1, result, 0, length - 1);
+
+        return result;
+    }
+
+    public static @Nullable Field getFieldRaw(Class<?> refc, Class<?> instc, String name, String... extraNames) {
+        Field handle = getFieldHandleRaw(refc, instc, name);
+        if (handle != null) return handle;
+
+        if (extraNames != null && extraNames.length > 0) {
+            if (extraNames.length == 1) return getFieldRaw(refc, instc, extraNames[0]);
+            return getFieldRaw(refc, instc, extraNames[0], removeFirst(extraNames));
+        }
+
+        return null;
+    }
+
+    private static @Nullable Field getFieldHandleRaw(@NotNull Class<?> refc, Class<?> inscofc, String name) {
+        for (Field field : refc.getDeclaredFields()) {
+            field.setAccessible(true);
+
+            if (!field.getName().equalsIgnoreCase(name)) continue;
+
+            if (field.getType().isInstance(inscofc) || field.getType().isAssignableFrom(inscofc)) {
+                return field;
+            }
+        }
+        return null;
+    }
 }

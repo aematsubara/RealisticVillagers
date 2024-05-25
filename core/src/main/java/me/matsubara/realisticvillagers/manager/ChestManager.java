@@ -1,6 +1,6 @@
 package me.matsubara.realisticvillagers.manager;
 
-import com.comphenix.protocol.ProtocolLibrary;
+import com.github.retrooper.packetevents.PacketEvents;
 import com.google.common.collect.Sets;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -31,7 +31,7 @@ public class ChestManager implements Listener {
 
     public ChestManager(@NotNull RealisticVillagers plugin) {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        ProtocolLibrary.getProtocolManager().addPacketListener(new ChestHandler(plugin));
+        PacketEvents.getAPI().getEventManager().registerListener(new ChestHandler(plugin));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

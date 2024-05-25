@@ -4,6 +4,7 @@ import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.*;
+import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
@@ -153,6 +154,6 @@ public class RainbowAnimation extends BukkitRunnable {
     }
 
     public static boolean isCachedBackground(RainbowAnimation animation, @Nullable ItemStack item) {
-        return item != null && (item.isSimilar(getCachedFrame(item.getType())) || item.isSimilar(animation.getDefaultItem()));
+        return item != null && (InventoryListeners.sameItems(item, getCachedFrame(item.getType())) || InventoryListeners.sameItems(item, animation.getDefaultItem()));
     }
 }

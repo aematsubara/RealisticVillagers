@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.command;
 
-import com.comphenix.protocol.wrappers.Pair;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
@@ -16,6 +15,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Shape;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -138,7 +138,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            WrappedSignedProperty textures = tracker.getTextures(sex, "none", id);
+            TextureProperty textures = tracker.getTextures(sex, "none", id);
             if (textures.getName().equals("error")) {
                 messages.send(sender, Messages.Message.SKIN_TEXTURE_NOT_FOUND);
                 return true;
@@ -323,7 +323,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         return null;
     }
 
-    private void handleForceDivorce(CommandSender sender, String @NotNull [] args) {
+    private void handleForceDivorce(CommandSender sender, @NotNull String[] args) {
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
         INMSConverter converter = plugin.getConverter();
@@ -384,7 +384,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         return getItemCommand(sender, args, itemGetter, shape.getResult());
     }
 
-    private boolean getItemCommand(CommandSender sender, String @NotNull [] args, String itemGetter, ItemStack item) {
+    private boolean getItemCommand(CommandSender sender, @NotNull String[] args, String itemGetter, ItemStack item) {
         if (!args[0].equalsIgnoreCase(itemGetter)) return false;
 
         boolean isOther = args.length > 1;
@@ -418,7 +418,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        if (!command.getName().equalsIgnoreCase("realisticvillagers")) return null;
+        if (!sender.hasPermission("realisticvillagers.help")) return Collections.emptyList();
 
         if (args.length == 1) {
             return StringUtil.copyPartialMatches(args[0], COMMAND_ARGS, new ArrayList<>());
@@ -472,7 +472,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         int skins = (InteractGUI.getValidSize(plugin, "skin", 36) / 9 - 3) * 7;
 
         Pair<File, FileConfiguration> pair = plugin.getTracker().getFile(sex + ".yml");
-        FileConfiguration config = pair.getSecond();
+        FileConfiguration config = pair.getValue();
 
         ConfigurationSection section = config.getConfigurationSection("none");
         if (section == null) return -1;

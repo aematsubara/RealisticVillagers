@@ -99,11 +99,7 @@ public enum EntityHead {
     }
 
     public @Nullable EntityType getType() {
-        try {
-            return EntityType.valueOf(name());
-        } catch (IllegalArgumentException exception) {
-            return null;
-        }
+        return PluginUtils.getOrNull(EntityType.class, name());
     }
 
     public ItemStack getHead() {

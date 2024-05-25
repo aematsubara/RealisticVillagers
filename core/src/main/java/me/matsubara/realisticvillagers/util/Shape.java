@@ -47,11 +47,13 @@ public final class Shape {
             if (Strings.isNullOrEmpty(ingredient)) continue;
             String[] split = PluginUtils.splitData(ingredient);
 
-            Material type = Material.valueOf(split[0]);
+            Material type = PluginUtils.getOrNull(Material.class, split[0]);
+            if (type == null) continue;
+
             char key = split.length > 1 ? split[1].charAt(0) : ' ';
 
             if (shaped) {
-                // Empty space are used for AIR.
+                // Empty space is used for AIR.
                 if (key == ' ') continue;
                 ((ShapedRecipe) recipe).setIngredient(key, type);
             } else {

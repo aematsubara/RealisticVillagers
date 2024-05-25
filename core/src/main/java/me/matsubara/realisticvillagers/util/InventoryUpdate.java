@@ -28,13 +28,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Set;
 
@@ -53,6 +51,7 @@ public final class InventoryUpdate {
     private static final Class<?> CONTAINER;
     private static final Class<?> CONTAINERS;
     private static final Class<?> ENTITY_PLAYER;
+    private static final Class<?> ENTITY_HUMAN;
     private static final Class<?> I_CHAT_MUTABLE_COMPONENT;
 
     // Methods.
@@ -85,6 +84,7 @@ public final class InventoryUpdate {
         // Check if we use containers, otherwise, can throw errors on older versions.
         CONTAINERS = useContainers() ? ReflectionUtils.getNMSClass("world.inventory", "Containers") : null;
         ENTITY_PLAYER = ReflectionUtils.getNMSClass("server.level", "EntityPlayer");
+        ENTITY_HUMAN = ReflectionUtils.getNMSClass("world.entity.player", "EntityHuman");
         CONTAINER = ReflectionUtils.getNMSClass("world.inventory", "Container");
         I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? ReflectionUtils.getNMSClass("network.chat", "IChatMutableComponent") : null;
 
@@ -94,16 +94,16 @@ public final class InventoryUpdate {
         literal = SUPPORTS_19 ? getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true) : null;
 
         // Initialize constructors.
-        chatMessage = SUPPORTS_19 ? null : getConstructor(CHAT_MESSAGE, String.class, Object[].class);
+        chatMessage = SUPPORTS_19 ? null : Reflection.getConstructor(CHAT_MESSAGE, String.class, Object[].class);
         packetPlayOutOpenWindow =
                 (useContainers()) ?
-                        getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, CONTAINERS, I_CHAT_BASE_COMPONENT) :
+                        Reflection.getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, CONTAINERS, I_CHAT_BASE_COMPONENT) :
                         // Older versions use String instead of Containers, and require an int for the inventory size.
-                        getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, String.class, I_CHAT_BASE_COMPONENT, int.class);
+                        Reflection.getConstructor(PACKET_PLAY_OUT_OPEN_WINDOW, int.class, String.class, I_CHAT_BASE_COMPONENT, int.class);
 
         // Initialize fields.
-        activeContainer = getField(ENTITY_PLAYER, CONTAINER, "activeContainer", "bV", "bW", "bU", "bP", "containerMenu");
-        windowId = getField(CONTAINER, int.class, "windowId", "j", "containerId");
+        activeContainer = Reflection.getField(ENTITY_HUMAN, CONTAINER, "activeContainer", true, "bV", "bW", "bU", "bP", "containerMenu");
+        windowId = Reflection.getField(CONTAINER, int.class, "windowId", true, "j", "containerId");
     }
 
     /**
@@ -194,55 +194,6 @@ public final class InventoryUpdate {
             player.updateInventory();
         } catch (Throwable throwable) {
             throwable.printStackTrace();
-        }
-    }
-
-    private static @Nullable MethodHandle getField(Class<?> refc, Class<?> instc, String name, String... extraNames) {
-        MethodHandle handle = getFieldHandle(refc, instc, name);
-        if (handle != null) return handle;
-
-        if (extraNames != null && extraNames.length > 0) {
-            if (extraNames.length == 1) return getField(refc, instc, extraNames[0]);
-            return getField(refc, instc, extraNames[0], removeFirst(extraNames));
-        }
-
-        return null;
-    }
-
-    private static String @NotNull [] removeFirst(String @NotNull [] array) {
-        int length = array.length;
-
-        String[] result = new String[length - 1];
-        System.arraycopy(array, 1, result, 0, length - 1);
-
-        return result;
-    }
-
-    private static @Nullable MethodHandle getFieldHandle(@NotNull Class<?> refc, Class<?> inscofc, String name) {
-        try {
-            for (Field field : refc.getFields()) {
-                field.setAccessible(true);
-
-                if (!field.getName().equalsIgnoreCase(name)) continue;
-
-                if (field.getType().isInstance(inscofc) || field.getType().isAssignableFrom(inscofc)) {
-                    return LOOKUP.unreflectGetter(field);
-                }
-            }
-            return null;
-        } catch (ReflectiveOperationException ignored) {
-            return null;
-        }
-    }
-
-    private static @Nullable MethodHandle getConstructor(@NotNull Class<?> refc, Class<?>... types) {
-        try {
-            Constructor<?> constructor = refc.getDeclaredConstructor(types);
-            constructor.setAccessible(true);
-            return LOOKUP.unreflectConstructor(constructor);
-        } catch (ReflectiveOperationException exception) {
-            exception.printStackTrace();
-            return null;
         }
     }
 

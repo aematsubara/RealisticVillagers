@@ -222,7 +222,7 @@ public class MonumentAnimation extends BukkitRunnable {
     }
 
     @Contract(pure = true)
-    public static BlockFace @NotNull [] getRotatedArray(BlockFace @NotNull [] array, int startElement) {
+    public static @NotNull BlockFace[] getRotatedArray(@NotNull BlockFace[] array, int startElement) {
         int startIndex = 0;
         for (int i = 0; i < array.length; i++) {
             if (i == startElement) {

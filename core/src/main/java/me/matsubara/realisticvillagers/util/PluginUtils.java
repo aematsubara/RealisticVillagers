@@ -1,6 +1,5 @@
 package me.matsubara.realisticvillagers.util;
 
-import com.comphenix.protocol.utility.MinecraftVersion;
 import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonParser;
@@ -34,6 +33,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.yaml.snakeyaml.parser.ParserException;
 import org.yaml.snakeyaml.scanner.ScannerException;
 
 import java.awt.*;
@@ -84,20 +84,17 @@ public final class PluginUtils {
     private static final MethodHandle SET_PROFILE;
     private static final MethodHandle PROFILE;
 
-    public static final boolean IS_1_19_3_OR_NEW = new MinecraftVersion("1.19.3").atOrAbove();
-    public static final boolean IS_1_20_2_OR_NEW = new MinecraftVersion("1.20.2").atOrAbove();
-
-    private static final Class<?> ENTITY = ReflectionUtils.getNMSClass("world.entity", "Entity");
     private static final Class<?> CRAFT_ENTITY = ReflectionUtils.getCraftClass("entity.CraftEntity");
 
     private static final MethodHandle getHandle = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
     private static final MethodHandle absMoveTo = Reflection.getMethod(
-            ENTITY,
+            ReflectionUtils.getNMSClass("world.entity", "Entity"),
             "a",
             MethodType.methodType(void.class, double.class, double.class, double.class, float.class, float.class),
             false,
             false,
-            "setLocation");
+            "setLocation",
+            "absMoveTo");
 
     static {
         ROMAN_NUMERALS.put(1000, "M");
@@ -358,7 +355,7 @@ public final class PluginUtils {
         return number == key ? value : value + toRoman(number - key);
     }
 
-    public static boolean isSteveSkin(java.awt.@NotNull Color color) {
+    public static boolean isSteveSkin(@NotNull java.awt.Color color) {
         return color.getRed() > 0 || color.getGreen() > 0 || color.getBlue() > 0;
     }
 
@@ -445,10 +442,22 @@ public final class PluginUtils {
             Logger logger = plugin.getLogger();
 
             logger.severe("An error occurred while reloading the file {" + file.getName() + "}.");
-            if (backup != null
-                    && exception instanceof InvalidConfigurationException invalid
-                    && invalid.getCause() instanceof ScannerException scanner) {
-                handleScannerError(backup, scanner.getProblemMark().getLine());
+
+            boolean errorLogged = false;
+            if (backup != null && exception instanceof InvalidConfigurationException invalid) {
+                errorLogged = true;
+
+                Throwable cause = invalid.getCause();
+                if (cause instanceof ScannerException scanner) {
+                    handleError(backup, scanner.getProblemMark().getLine());
+                } else if (cause instanceof ParserException parser) {
+                    handleError(backup, parser.getProblemMark().getLine());
+                } else {
+                    errorLogged = false;
+                }
+            }
+
+            if (errorLogged) {
                 logger.severe("The file will be restarted and a copy of the old file will be saved indicating which line had an error.");
             } else {
                 logger.severe("The file will be restarted and a copy of the old file will be saved.");
@@ -467,12 +476,12 @@ public final class PluginUtils {
         }
     }
 
-    private static void handleScannerError(@NotNull File backup, int line) {
+    private static void handleError(@NotNull File backup, int line) {
         try {
             Path path = backup.toPath();
 
             List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
-            lines.set(line, lines.get(line) + " <--------------------< ERROR <--------------------<");
+            lines.set(line, lines.get(line) + " # <--------------------< ERROR <--------------------<");
 
             Files.write(path, lines, StandardCharsets.UTF_8);
         } catch (IOException exception) {

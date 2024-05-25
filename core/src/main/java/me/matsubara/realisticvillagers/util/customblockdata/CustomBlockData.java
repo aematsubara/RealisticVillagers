@@ -124,7 +124,7 @@ public class CustomBlockData implements PersistentDataContainer {
         this.plugin = plugin;
     }
 
-    private static Map.@NotNull Entry<UUID, BlockVector> getBlockEntry(final @NotNull Block block) {
+    private static @NotNull Map.Entry<UUID, BlockVector> getBlockEntry(final @NotNull Block block) {
         final UUID uuid = block.getWorld().getUID();
         final BlockVector blockVector = new BlockVector(block.getX(), block.getY(), block.getZ());
         return new AbstractMap.SimpleEntry<>(uuid, blockVector);
@@ -387,10 +387,11 @@ public class CustomBlockData implements PersistentDataContainer {
         return pdc.has(namespacedKey, persistentDataType);
     }
 
+    /*
     @Override
     public boolean has(@NotNull NamespacedKey key) {
         return false;
-    }
+    }*/
 
     @Override
     public @Nullable <T, Z> Z get(final @NotNull NamespacedKey namespacedKey, final @NotNull PersistentDataType<T, Z> persistentDataType) {
@@ -418,10 +419,11 @@ public class CustomBlockData implements PersistentDataContainer {
         return pdc.isEmpty();
     }
 
+    /*
     @Override
     public void copyTo(@NotNull PersistentDataContainer other, boolean replace) {
 
-    }
+    }*/
 
     @Override
     public @NotNull PersistentDataAdapterContext getAdapterContext() {

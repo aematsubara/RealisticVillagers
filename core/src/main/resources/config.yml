@@ -697,8 +697,6 @@ gui:
         display-name: "&cCombat"
         lore:
           - "&7Click to manage combat of this villager."
-        flags:
-          - HIDE_ATTRIBUTES
         only-if-allowed: false
   equipment:
     title: "%villager-name%'s inventory"

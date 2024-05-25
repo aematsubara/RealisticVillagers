@@ -1,12 +1,13 @@
 package me.matsubara.realisticvillagers;
 
-import com.comphenix.protocol.wrappers.Pair;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.cryptomorin.xseries.ReflectionUtils;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
+import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
@@ -35,6 +36,7 @@ import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
@@ -64,6 +66,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
@@ -122,7 +125,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final List<String> defaultTargets = new ArrayList<>();
     private final Set<Gift> wantedItems = new HashSet<>();
     private final Map<String, List<ItemLoot>> loots = new HashMap<>();
-    private final Consumer<File> loadConsumer = file -> tracker.getFiles().put(file.getName(), new Pair<>(file, YamlConfiguration.loadConfiguration(file)));
+    private final Consumer<File> loadConsumer = file -> tracker.getFiles().put(file.getName(), Pair.of(file, YamlConfiguration.loadConfiguration(file)));
 
     private List<String> worlds;
 
@@ -146,7 +149,19 @@ public final class RealisticVillagers extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        compatibilityManager = new CompatibilityManager();
+        PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
+        PacketEvents.getAPI().getSettings().reEncodeByDefault(true)
+                .checkForUpdates(false)
+                .bStats(false);
+        PacketEvents.getAPI().load();
+
+        long now = System.nanoTime();
+
+        Logger logger = getLogger();
+        logger.info("****************************************");
+        logger.info("Loading compatibilities...");
+
+        compatibilityManager = new CompatibilityManager(this);
 
         // Shopkeeper, Citizens & (probably) RainbowsPro; for VillagerMarket, the villager shouldn't have AI in order to work properly.
         compatibilityManager.addCompatibility(villager -> villager.hasAI() && !villager.hasMetadata("shopkeeper") && !villager.hasMetadata("NPC"));
@@ -156,36 +171,65 @@ public final class RealisticVillagers extends JavaPlugin {
             compatibilityManager.addCompatibility(new EMCompatibility());
         }
 
-        String internalName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3].toLowerCase();
+        logger.info("Compatibilities loaded!");
+        logger.info("");
+        logger.info("Registering custom entities...");
+
+        String[] packageVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.");
+        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase() : "v1_20_r4";
         try {
             Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
             converter = (INMSConverter) converterConstructor.newInstance(this);
             converter.registerEntities();
         } catch (ReflectiveOperationException exception) {
-            getLogger().severe("NMSConverter couldn't find a valid implementation for this server version.");
+            logger.severe("NMSConverter couldn't find a valid implementation for this server version.");
             exception.printStackTrace();
         }
+
+        logger.info("Custom entities registered!");
+        logger.info("");
+
+        logLoadingTime(true, now);
+
+        logger.info("****************************************");
     }
 
     @Override
     public void onEnable() {
+        long now = System.nanoTime();
+
+        Logger logger = getLogger();
+        logger.info("****************************************");
+
         PluginManager manager = getServer().getPluginManager();
-        if (manager.getPlugin("ProtocolLib") == null) {
-            getLogger().severe("This plugin requires ProtocolLib, disabling...");
+        if (manager.getPlugin("packetevents") == null) {
+            getLogger().severe("This plugin requires PacketEvents, disabling...");
             manager.disablePlugin(this);
             return;
         }
 
+        logger.info("Loading skin files...");
+
         saveSkins("male");
         saveSkins("female");
+
+        logger.info("Skins loaded!");
+        logger.info("");
+
         saveResource("names.yml");
 
         saveDefaultConfig();
         messages = new Messages(this);
 
+        logger.info("Updating configuration files...");
+
         // This may take some time at startup, but it's necessary only once.
         updateConfigs();
+
+        logger.info("Configuration files updated!");
+        logger.info("");
+        logger.info("Creating managers...");
 
         reviveManager = new ReviveManager(this);
         giftManager = new GiftManager(this);
@@ -195,15 +239,30 @@ public final class RealisticVillagers extends JavaPlugin {
         nametagManager = ReflectionUtils.supports(20, 2) ? new NametagManager(this) : null;
         CustomBlockData.registerListener(this);
 
+        logger.info("Managers created!");
+        logger.info("");
+        logger.info("Creating recipes...");
+
         ring = createWeddingRing();
         whistle = createWhistle();
         cross = createCross();
 
+        logger.info("Recipes created!");
+        logger.info("");
+        logger.info("Loading entity data from all worlds...");
+
         converter.loadData();
+
+        logger.info("Data loaded!");
+        logger.info("");
+        logger.info("Loading loots from the configuration files...");
 
         reloadDefaultTargetEntities();
         reloadWantedItems();
         reloadLoots();
+
+        logger.info("Loots loaded!");
+        logger.info("");
 
         registerEvents(
                 new BlockListeners(this),
@@ -221,6 +280,29 @@ public final class RealisticVillagers extends JavaPlugin {
         MainCommand main = new MainCommand(this);
         command.setExecutor(main);
         command.setTabCompleter(main);
+
+        logLoadingTime(false, now);
+
+        logger.info("****************************************");
+    }
+
+    @Override
+    public void onDisable() {
+        PacketEvents.getAPI().terminate();
+
+        if (converter == null || tracker == null) return;
+
+        for (World world : Bukkit.getWorlds()) {
+            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
+                if (tracker.isInvalid(villager, true)) continue;
+                converter.getNPC(villager).ifPresent(IVillagerNPC::stopExchangeables);
+            }
+        }
+    }
+
+    private void logLoadingTime(boolean loading, long now) {
+        String time = String.format(Locale.ROOT, "%.3fs", (double) (System.nanoTime() - now) / 1.0E9);
+        getLogger().info((loading ? "Loading" : "Enabling") + " took " + time + "!");
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -235,18 +317,6 @@ public final class RealisticVillagers extends JavaPlugin {
         }
     }
 
-    @Override
-    public void onDisable() {
-        if (converter == null || tracker == null) return;
-
-        for (World world : Bukkit.getWorlds()) {
-            for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                if (tracker.isInvalid(villager, true)) continue;
-                converter.getNPC(villager).ifPresent(IVillagerNPC::stopExchangeables);
-            }
-        }
-    }
-
     private void fillIgnoredSections(FileConfiguration config) {
         for (String guiType : GUI_TYPES) {
             ConfigurationSection section = config.getConfigurationSection("gui." + guiType + ".items");
@@ -258,7 +328,7 @@ public final class RealisticVillagers extends JavaPlugin {
         }
     }
 
-    private void registerEvents(Listener @NotNull ... listeners) {
+    private void registerEvents(@NotNull Listener... listeners) {
         for (Listener listener : listeners) {
             getServer().getPluginManager().registerEvents(listener, this);
         }
@@ -588,7 +658,8 @@ public final class RealisticVillagers extends JavaPlugin {
         }
 
         for (String flag : config.getStringList(path + ".flags")) {
-            builder.addItemFlags(ItemFlag.valueOf(flag.toUpperCase()));
+            ItemFlag flagValue = PluginUtils.getOrNull(ItemFlag.class, flag.toUpperCase());
+            if (flagValue != null) builder.addItemFlags(flagValue);
         }
 
         int modelData = config.getInt(path + ".model-data", Integer.MIN_VALUE);
@@ -598,7 +669,7 @@ public final class RealisticVillagers extends JavaPlugin {
             if (Strings.isNullOrEmpty(enchantmentString)) continue;
             String[] data = PluginUtils.splitData(enchantmentString);
 
-            @SuppressWarnings("deprecation") Enchantment enchantment = Enchantment.getByKey(NamespacedKey.minecraft(data[0].toLowerCase()));
+            Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(data[0].toLowerCase()));
 
             int level;
             try {
@@ -693,7 +764,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         if (npc == null) return UNKNOWN_HEAD_TEXTURE;
 
-        WrappedSignedProperty textures = tracker.getTextures(npc.getSex(), "none", npc.getSkinTextureId());
+        TextureProperty textures = tracker.getTextures(npc.getSex(), "none", npc.getSkinTextureId());
         return textures.getName().equals("error") ? UNKNOWN_HEAD_TEXTURE : PluginUtils.getURLFromTexture(textures.getValue());
     }
 
@@ -746,16 +817,13 @@ public final class RealisticVillagers extends JavaPlugin {
         defaultTargets.clear();
 
         for (String entity : getConfig().getStringList("default-target-entities")) {
-            try {
-                EntityType type = EntityType.valueOf(entity.toUpperCase());
+            EntityType type = PluginUtils.getOrNull(EntityType.class, entity.toUpperCase());
+            if (type == null) continue;
 
-                Class<? extends Entity> clazz = type.getEntityClass();
-                if (clazz == null || !Monster.class.isAssignableFrom(clazz)) continue;
+            Class<? extends Entity> clazz = type.getEntityClass();
+            if (clazz == null || !Monster.class.isAssignableFrom(clazz)) continue;
 
-                defaultTargets.add(entity);
-            } catch (IllegalArgumentException ignored) {
-
-            }
+            defaultTargets.add(entity);
         }
     }
 
@@ -989,7 +1057,7 @@ public final class RealisticVillagers extends JavaPlugin {
         return getDataFolder() + File.separator + "skins";
     }
 
-    public String getProfessionFormatted(Villager.@NotNull Profession profession) {
+    public String getProfessionFormatted(@NotNull Villager.Profession profession) {
         return getProfessionFormatted(profession.name().toLowerCase());
     }
 

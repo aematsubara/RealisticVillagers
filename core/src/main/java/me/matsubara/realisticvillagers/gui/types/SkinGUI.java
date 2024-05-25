@@ -1,6 +1,5 @@
 package me.matsubara.realisticvillagers.gui.types;
 
-import com.comphenix.protocol.wrappers.Pair;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -9,6 +8,7 @@ import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.PaginatedGUI;
 import me.matsubara.realisticvillagers.util.InventoryUpdate;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -114,7 +114,7 @@ public class SkinGUI extends PaginatedGUI {
         }
         CompletableFuture.supplyAsync((Supplier<List<ItemStack>>) () -> {
             Pair<File, FileConfiguration> pair = plugin.getTracker().getFile(sex + ".yml");
-            FileConfiguration config = pair.getSecond();
+            FileConfiguration config = pair.getValue();
 
             ConfigurationSection section = config.getConfigurationSection("none");
             if (section == null) return Collections.emptyList();

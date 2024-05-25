@@ -31,7 +31,6 @@ import me.matsubara.realisticvillagers.nms.v1_19_r3.CustomGossipContainer;
 import me.matsubara.realisticvillagers.nms.v1_19_r3.NMSConverter;
 import me.matsubara.realisticvillagers.nms.v1_19_r3.VillagerFoodData;
 import me.matsubara.realisticvillagers.npc.NPC;
-import me.matsubara.realisticvillagers.npc.modifier.MetadataModifier;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
@@ -686,7 +685,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return isHoldingWeapon();
     }
 
-    public boolean is(VillagerProfession @NotNull ... professions) {
+    public boolean is(@NotNull VillagerProfession... professions) {
         for (VillagerProfession profession : professions) {
             if (getProfession() == profession) return true;
         }
@@ -1006,7 +1005,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         ifTargetPresent(type, entityType -> targetEntities.remove(entityType));
     }
 
-    private void ifTargetPresent(org.bukkit.entity.@NotNull EntityType type, Consumer<EntityType<?>> consumer) {
+    private void ifTargetPresent(@NotNull org.bukkit.entity.EntityType type, Consumer<EntityType<?>> consumer) {
         EntityType.byString(type.name().toLowerCase()).ifPresent(consumer);
     }
 
@@ -1383,7 +1382,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean is(org.bukkit.entity.Villager.Profession @NotNull ... professions) {
+    public boolean is(@NotNull org.bukkit.entity.Villager.Profession... professions) {
         for (org.bukkit.entity.Villager.Profession profession : professions) {
             if (is(CraftVillager.bukkitToNmsProfession(profession))) return true;
         }
@@ -1465,7 +1464,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 && (type == null || !isChangingItem(type));
     }
 
-    public boolean isDoingNothing(ChangeItemType @NotNull ... types) {
+    public boolean isDoingNothing(@NotNull ChangeItemType... types) {
         for (ChangeItemType type : types) {
             ChangeItemType changing = getChangingItem(type);
             if (changing != null && !ArrayUtils.contains(types, changing)) {
@@ -1980,9 +1979,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         Optional<NPC> npc = plugin.getTracker().getNPC(getId());
         if (npc.isEmpty()) return;
 
-        MetadataModifier metadata = npc.get().metadata();
-        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, getShoulderEntityLeft()).send();
-        metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, getShoulderEntityRight()).send();
+        npc.get().metadata().updateShoulderEntities();
     }
 
     private boolean spawnEntityFromShoulder(CompoundTag tag) {
@@ -2078,7 +2075,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return active.isPresent() && active.get().equals(checkActivity);
     }
 
-    public boolean checkCurrentActivity(Activity @NotNull ... checkActivities) {
+    public boolean checkCurrentActivity(@NotNull Activity... checkActivities) {
         for (Activity checkActivity : checkActivities) {
             if (checkCurrentActivity(checkActivity)) return true;
         }

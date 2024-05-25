@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.listener;
 
-import com.comphenix.protocol.wrappers.Pair;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
@@ -24,6 +23,7 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.wesjd.anvilgui.AnvilGUI;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -167,16 +167,16 @@ public final class InventoryListeners implements Listener {
             event.setCancelled(true);
 
             if (current == null) return;
-            if (current.isSimilar(whistle.getClose())) {
+            if (sameItems(current, whistle.getClose())) {
                 closeInventory(player);
                 return;
-            } else if (current.isSimilar(whistle.getPrevious())) {
+            } else if (sameItems(current, whistle.getPrevious())) {
                 whistle.previousPage(isShiftClick);
                 return;
-            } else if (current.isSimilar(whistle.getNext())) {
+            } else if (sameItems(current, whistle.getNext())) {
                 whistle.nextPage(isShiftClick);
                 return;
-            } else if (current.isSimilar(whistle.getSearch())) {
+            } else if (sameItems(current, whistle.getSearch())) {
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
                             if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
@@ -189,7 +189,7 @@ public final class InventoryListeners implements Listener {
                         .plugin(plugin)
                         .open((Player) event.getWhoClicked());
                 return;
-            } else if (current.isSimilar(whistle.getClearSearch())) {
+            } else if (sameItems(current, whistle.getClearSearch())) {
                 openWhistleGUI(player, null);
                 return;
             }
@@ -233,12 +233,12 @@ public final class InventoryListeners implements Listener {
 
             if (current != null) {
                 if (RainbowAnimation.isCachedBackground(equipment.getAnimation(), current)
-                        || current.isSimilar(equipment.getHead())
-                        || current.isSimilar(equipment.getClose())) {
+                        || sameItems(current, equipment.getHead())
+                        || sameItems(current, equipment.getClose())) {
                     event.setCancelled(true);
                 }
 
-                if (current.isSimilar(equipment.getClose())) closeInventory(player);
+                if (sameItems(current, equipment.getClose())) closeInventory(player);
             }
             return;
         }
@@ -248,16 +248,16 @@ public final class InventoryListeners implements Listener {
         if (current == null) return;
 
         if (interact instanceof PlayersGUI players) {
-            if (current.isSimilar(players.getClose())) {
+            if (sameItems(current, players.getClose())) {
                 closeInventory(player);
                 return;
-            } else if (current.isSimilar(players.getPrevious())) {
+            } else if (sameItems(current, players.getPrevious())) {
                 players.previousPage(isShiftClick);
                 return;
-            } else if (current.isSimilar(players.getNext())) {
+            } else if (sameItems(current, players.getNext())) {
                 players.nextPage(isShiftClick);
                 return;
-            } else if (current.isSimilar(players.getSearch())) {
+            } else if (sameItems(current, players.getSearch())) {
                 players.setShouldStopInteracting(false);
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
@@ -271,11 +271,11 @@ public final class InventoryListeners implements Listener {
                         .plugin(plugin)
                         .open(player);
                 return;
-            } else if (current.isSimilar(players.getClearSearch())) {
+            } else if (sameItems(current, players.getClearSearch())) {
                 players.setShouldStopInteracting(false);
                 openPlayersGUI(npc, player, null);
                 return;
-            } else if (current.isSimilar(players.getAddNewPlayer())) {
+            } else if (sameItems(current, players.getAddNewPlayer())) {
                 players.setShouldStopInteracting(false);
                 openAddNewPlayerGUI(player, npc);
                 return;
@@ -300,13 +300,13 @@ public final class InventoryListeners implements Listener {
         }
 
         if (interact instanceof CombatGUI combat) {
-            if (current.isSimilar(combat.getClose())) {
+            if (sameItems(current, combat.getClose())) {
                 closeInventory(player);
-            } else if (current.isSimilar(combat.getPrevious())) {
+            } else if (sameItems(current, combat.getPrevious())) {
                 combat.previousPage(isShiftClick);
-            } else if (current.isSimilar(combat.getNext())) {
+            } else if (sameItems(current, combat.getNext())) {
                 combat.nextPage(isShiftClick);
-            } else if (current.isSimilar(combat.getSearch())) {
+            } else if (sameItems(current, combat.getSearch())) {
                 combat.setShouldStopInteracting(false);
 
                 AtomicBoolean success = new AtomicBoolean(false);
@@ -325,7 +325,7 @@ public final class InventoryListeners implements Listener {
                         .itemLeft(new ItemStack(Material.PAPER))
                         .plugin(plugin)
                         .open((Player) event.getWhoClicked());
-            } else if (current.isSimilar(combat.getClearSearch())) {
+            } else if (sameItems(current, combat.getClearSearch())) {
                 combat.setShouldStopInteracting(false);
                 openCombatGUI(npc, player, null, combat.isAnimal());
             } else if (current.getItemMeta() != null) {
@@ -335,7 +335,7 @@ public final class InventoryListeners implements Listener {
                 String type = container.get(plugin.getEntityTypeKey(), PersistentDataType.STRING);
                 if (type == null) return;
 
-                EntityType targetType = EntityType.valueOf(type);
+                EntityType targetType = PluginUtils.getOrNull(EntityType.class, type);
 
                 boolean enable = !npc.isTarget(targetType);
                 if (enable) {
@@ -357,17 +357,17 @@ public final class InventoryListeners implements Listener {
         int reputation = npc.getReputation(playerUUID);
 
         if (interact instanceof CombatSettingsGUI settings) {
-            if (current.isSimilar(settings.getPlayers())) {
+            if (sameItems(current, settings.getPlayers())) {
                 settings.setShouldStopInteracting(false);
                 if (npc.getPlayers().isEmpty()) {
                     openAddNewPlayerGUI(player, npc);
                 } else {
                     openPlayersGUI(npc, player, null);
                 }
-            } else if (current.isSimilar(settings.getAnimals())) {
+            } else if (sameItems(current, settings.getAnimals())) {
                 settings.setShouldStopInteracting(false);
                 openCombatGUI(npc, player, null, true);
-            } else if (current.isSimilar(settings.getMonsters())) {
+            } else if (sameItems(current, settings.getMonsters())) {
                 settings.setShouldStopInteracting(false);
                 openCombatGUI(npc, player, null, false);
             }
@@ -383,19 +383,19 @@ public final class InventoryListeners implements Listener {
 
         if (!(npc.bukkit() instanceof Villager villager)) return;
 
-        if (current.isSimilar(main.getFollow())) {
+        if (sameItems(current, main.getFollow())) {
             handleFollorOrStay(npc, player, InteractType.FOLLOW_ME, false);
-        } else if (current.isSimilar(main.getStay())) {
+        } else if (sameItems(current, main.getStay())) {
             handleFollorOrStay(npc, player, InteractType.STAY_HERE, false);
-        } else if (current.isSimilar(main.getInfo())) {
+        } else if (sameItems(current, main.getInfo())) {
             return;
-        } else if (current.isSimilar(main.getInspect())) {
+        } else if (sameItems(current, main.getInspect())) {
             main.setShouldStopInteracting(false);
             runTask(() -> new EquipmentGUI(plugin, npc, player));
             return;
-        } else if (current.isSimilar(main.getGift())) {
+        } else if (sameItems(current, main.getGift())) {
             handleExpecting(player, npc, ExpectingType.GIFT, Messages.Message.THROW_GIFT, Messages.Message.GIFT_EXPECTING);
-        } else if (current.isSimilar(main.getProcreate())) {
+        } else if (sameItems(current, main.getProcreate())) {
             // Return if it's a kid.
             if (conditionNotMet(player, villager.isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
 
@@ -423,7 +423,7 @@ public final class InventoryListeners implements Listener {
 
             npc.setProcreatingWith(playerUUID);
             new BabyTask(plugin, villager, player).runTaskTimer(plugin, 0L, 20L);
-        } else if (current.isSimilar(main.getDivorce())) {
+        } else if (sameItems(current, main.getDivorce())) {
             // Return if it's a kid.
             if (conditionNotMet(player, villager.isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
 
@@ -451,7 +451,7 @@ public final class InventoryListeners implements Listener {
 
             // Divorce, remove and drop previous wedding ring.
             npc.divorceAndDropRing(player);
-        } else if (current.isSimilar(main.getCombat())) {
+        } else if (sameItems(current, main.getCombat())) {
             if (notAllowedToModify(player,
                     isPartner,
                     isFamily,
@@ -461,7 +461,7 @@ public final class InventoryListeners implements Listener {
             main.setShouldStopInteracting(false);
             runTask(() -> new CombatSettingsGUI(plugin, npc, player));
             return;
-        } else if (current.isSimilar(main.getHome())) {
+        } else if (sameItems(current, main.getHome())) {
             if (notAllowedToModify(player,
                     isPartner,
                     isFamily,
@@ -469,7 +469,7 @@ public final class InventoryListeners implements Listener {
                     true,
                     "realisticvillagers.bypass.sethome")) return;
             handleExpecting(player, npc, ExpectingType.BED, Messages.Message.SELECT_BED, Messages.Message.SET_HOME_EXPECTING);
-        } else if (current.isSimilar(main.getPapers())) {
+        } else if (sameItems(current, main.getPapers())) {
             // If it's (ask) papers item, then the villager is INDEED a cleric.
             if (!plugin.isMarried(player)) {
                 messages.send(player, npc, Messages.Message.CLERIC_NOT_MARRIED);
@@ -483,7 +483,7 @@ public final class InventoryListeners implements Listener {
             } else {
                 messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
             }
-        } else if (current.isSimilar(main.getTrade()) || current.isSimilar(main.getNoTrades())) {
+        } else if (sameItems(current, main.getTrade()) || sameItems(current, main.getNoTrades())) {
             // VTL support.
             if (handleVTL(player, villager)) return;
 
@@ -512,7 +512,7 @@ public final class InventoryListeners implements Listener {
                 if (type.equalsIgnoreCase("proud-of")) {
                     interactType = GUIInteractType.BE_PROUD_OF;
                 } else {
-                    interactType = GUIInteractType.valueOf(type);
+                    interactType = PluginUtils.getOrNull(GUIInteractType.class, type);
                 }
 
                 boolean isProudOf;
@@ -534,6 +534,23 @@ public final class InventoryListeners implements Listener {
         }
 
         closeInventory(player);
+    }
+
+    public static boolean sameItems(@NotNull ItemStack first, @Nullable ItemStack second) {
+        if (second == null) return false;
+
+        ItemMeta firstMeta = first.getItemMeta();
+        ItemMeta secondMeta = second.getItemMeta();
+
+        boolean similar = first.isSimilar(second);
+        if (firstMeta == null || secondMeta == null) {
+            return similar;
+        }
+
+        String firstMetaAsString = firstMeta.getAsString();
+        String secondMetaAsString = secondMeta.getAsString();
+
+        return similar || firstMetaAsString.replace("\"minecraft:container\":[],", "").equals(secondMetaAsString);
     }
 
     private void openAddNewPlayerGUI(Player player, IVillagerNPC npc) {
@@ -606,8 +623,10 @@ public final class InventoryListeners implements Listener {
 
     public void handleFollorOrStay(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull InteractType type, boolean forced) {
         String typeName = type.name(), typeShortName = typeName.split("_")[0];
-        Config bypass = Config.valueOf("FAMILY_BYPASS_ASK_TO_" + typeShortName);
-        Config required = Config.valueOf("REPUTATION_REQUIRED_TO_ASK_TO_" + typeShortName);
+
+        Config bypass = PluginUtils.getOrNull(Config.class, "FAMILY_BYPASS_ASK_TO_" + typeShortName);
+        Config required = PluginUtils.getOrNull(Config.class, "REPUTATION_REQUIRED_TO_ASK_TO_" + typeShortName);
+        if (bypass == null || required == null) return;
 
         Messages messages = plugin.getMessages();
         if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase().replace("_", ""))
@@ -742,16 +761,16 @@ public final class InventoryListeners implements Listener {
         boolean isAdult = skin.isAdult();
 
         String currentSex = skin.isMale() ? "male" : "female";
-        if (current.isSimilar(skin.getClose())) {
+        if (sameItems(current, skin.getClose())) {
             closeInventory(player);
             return;
-        } else if (current.isSimilar(skin.getPrevious())) {
+        } else if (sameItems(current, skin.getPrevious())) {
             skin.previousPage(isShiftClick);
             return;
-        } else if (current.isSimilar(skin.getNext())) {
+        } else if (sameItems(current, skin.getNext())) {
             skin.nextPage(isShiftClick);
             return;
-        } else if (current.isSimilar(skin.getSearch())) {
+        } else if (sameItems(current, skin.getSearch())) {
             new AnvilGUI.Builder()
                     .onClick((slot, snapshot) -> {
                         if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
@@ -764,16 +783,16 @@ public final class InventoryListeners implements Listener {
                     .plugin(plugin)
                     .open((Player) event.getWhoClicked());
             return;
-        } else if (current.isSimilar(skin.getClearSearch())) {
+        } else if (sameItems(current, skin.getClearSearch())) {
             openSkinGUI(player, currentSex, isAdult, null);
             return;
-        } else if (current.isSimilar(skin.getMale()) || current.isSimilar(skin.getFemale())) {
+        } else if (sameItems(current, skin.getMale()) || sameItems(current, skin.getFemale())) {
             openSkinGUI(player, skin.isMale() ? "female" : "male", isAdult, null);
             return;
-        } else if (current.isSimilar(skin.getAdult()) || current.isSimilar(skin.getKid())) {
+        } else if (sameItems(current, skin.getAdult()) || sameItems(current, skin.getKid())) {
             openSkinGUI(player, currentSex, !isAdult, null);
             return;
-        } else if (current.isSimilar(skin.getNewSkin())) {
+        } else if (sameItems(current, skin.getNewSkin())) {
             if (Config.MINESKIN_API_KEY.asString().isEmpty()) {
                 messages.send(player, Messages.Message.NO_MINESKIN_API_KEY);
                 closeInventory(player);
@@ -801,7 +820,7 @@ public final class InventoryListeners implements Listener {
         if (click == ClickType.RIGHT) {
             String fileName = sex + ".yml";
             Pair<File, FileConfiguration> pair = tracker.getFile(fileName);
-            FileConfiguration config = pair.getSecond();
+            FileConfiguration config = pair.getValue();
 
             ConfigurationSection noneSection = config.getConfigurationSection("none");
             if (noneSection != null && noneSection.getKeys(false).size() == 1) {
@@ -820,7 +839,7 @@ public final class InventoryListeners implements Listener {
             }
 
             try {
-                config.save(pair.getFirst());
+                config.save(pair.getKey());
             } catch (IOException exception) {
                 exception.printStackTrace();
             }
@@ -853,7 +872,7 @@ public final class InventoryListeners implements Listener {
         } else if (click == ClickType.MIDDLE) {
             String fileName = sex + ".yml";
             Pair<File, FileConfiguration> pair = tracker.getFile(fileName);
-            FileConfiguration config = pair.getSecond();
+            FileConfiguration config = pair.getValue();
 
             ConfigurationSection noneSection = config.getConfigurationSection("none");
             if (noneSection == null) return;
@@ -862,7 +881,7 @@ public final class InventoryListeners implements Listener {
             config.set("none." + id + ".for-babies", forBabies);
 
             try {
-                config.save(pair.getFirst());
+                config.save(pair.getKey());
 
                 // Refresh inventory.
                 for (Player online : Bukkit.getOnlinePlayers()) {
@@ -906,7 +925,7 @@ public final class InventoryListeners implements Listener {
 
         String profession = skin.getCurrentProfession().toLowerCase().replace("_", "-");
 
-        WrappedSignedProperty textures = tracker.getTextures(sex, profession, id);
+        TextureProperty textures = tracker.getTextures(sex, profession, id);
         if (textures.getName().equals("error")) {
             // This will take a bit of time since it's running in another thread...
             messages.send(player, Messages.Message.SKIN_WAIT_WHILE_CREATING);
@@ -917,7 +936,7 @@ public final class InventoryListeners implements Listener {
                 future.thenAcceptAsync(skinObject -> {
                     // For some unknown reason, needs to be done sync.
                     Texture texture = skinObject.data.texture;
-                    runTask(() -> startPreview(player, new WrappedSignedProperty("textures", texture.value, texture.signature)));
+                    runTask(() -> startPreview(player, new TextureProperty("textures", texture.value, texture.signature)));
                 }, tracker.getMineskinClient().getRequestExecutor());
             } else {
                 VillagerTracker.SkinRelatedData tempData = new VillagerTracker.SkinRelatedData(sex, profession, id, null, null, null);
@@ -932,7 +951,7 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
-    private void startPreview(@NotNull Player player, WrappedSignedProperty textures) {
+    private void startPreview(@NotNull Player player, TextureProperty textures) {
         PreviewTask currentPreview = plugin.getTracker().getPreviews().remove(player.getUniqueId());
         if (currentPreview != null && !currentPreview.isCancelled()) {
             currentPreview.cancel();
@@ -951,7 +970,7 @@ public final class InventoryListeners implements Listener {
         int index = -1;
         for (Map.Entry<String, ItemStack> entry : map.entrySet()) {
             index++;
-            if (current.isSimilar(entry.getValue())) {
+            if (sameItems(current, entry.getValue())) {
                 isCurrent = true;
                 break;
             }
@@ -988,13 +1007,13 @@ public final class InventoryListeners implements Listener {
 
         Messages messages = plugin.getMessages();
 
-        if (current.isSimilar(skin.getFromConsole())) {
+        if (sameItems(current, skin.getFromConsole())) {
             messages.send(player, Messages.Message.ONLY_FROM_CONSOLE);
             closeInventory(player);
             return;
         }
 
-        if (!current.isSimilar(skin.getFromPlayer())) return;
+        if (!sameItems(current, skin.getFromPlayer())) return;
 
         // Add new skin from a player.
         new AnvilGUI.Builder()
@@ -1081,6 +1100,6 @@ public final class InventoryListeners implements Listener {
 
     public boolean notAllowedToModifyInventoryOrName(@NotNull Player player, @NotNull IVillagerNPC npc, Config whoCanModify, String permission) {
         UUID playerUUID = player.getUniqueId();
-        return notAllowedToModify(player, npc.isFamily(playerUUID, true), npc.isPartner(playerUUID), whoCanModify, false, permission);
+        return notAllowedToModify(player, npc.isPartner(playerUUID), npc.isFamily(playerUUID, true), whoCanModify, false, permission);
     }
 }

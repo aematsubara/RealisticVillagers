@@ -415,7 +415,11 @@ public final class MainGUI extends InteractGUI {
         ONLY_IF_ALLOWED("only-if-allowed", (npc, player, name) -> {
             UUID playerUUID = player.getUniqueId();
             String finalName = (name.equals("set-home") ? "home" : name).toUpperCase();
-            return switch (Config.valueOf("WHO_CAN_MODIFY_VILLAGER_" + finalName).asString("FAMILY").toUpperCase()) {
+
+            Config configSetting = PluginUtils.getOrNull(Config.class, "WHO_CAN_MODIFY_VILLAGER_" + finalName);
+            if (configSetting == null) return false;
+
+            return switch (configSetting.asString("FAMILY").toUpperCase()) {
                 case "FAMILY" -> npc.isFamily(playerUUID, true);
                 case "PARTNER" -> npc.isPartner(playerUUID);
                 case "EVERYONE" -> true;

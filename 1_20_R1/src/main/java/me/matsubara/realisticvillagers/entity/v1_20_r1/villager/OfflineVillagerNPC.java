@@ -111,7 +111,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         return tag;
     }
 
-    private @NotNull ListTag newDoubleList(double @NotNull ... nums) {
+    private @NotNull ListTag newDoubleList(@NotNull double... nums) {
         ListTag list = new ListTag();
         for (double num : nums) {
             list.add(DoubleTag.valueOf(num));

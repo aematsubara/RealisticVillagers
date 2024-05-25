@@ -77,7 +77,7 @@ public abstract class InteractGUI implements InventoryHolder {
                 .build();
     }
 
-    protected void clear(int[] @NotNull ... arrays) {
+    protected void clear(@NotNull int[]... arrays) {
         for (int[] array : arrays) {
             for (int i : array) {
                 inventory.clear(i);

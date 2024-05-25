@@ -1,6 +1,5 @@
 package me.matsubara.realisticvillagers.listener;
 
-import com.comphenix.protocol.wrappers.Pair;
 import com.cryptomorin.xseries.ReflectionUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
@@ -13,6 +12,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -60,7 +60,7 @@ public final class PlayerListeners implements Listener {
         babyGrowCount.removeAll(event.getPlayer().getUniqueId());
     }
 
-    private void discoverRecipes(Player player, NamespacedKey @NotNull ... keys) {
+    private void discoverRecipes(Player player, @NotNull NamespacedKey... keys) {
         for (NamespacedKey key : keys) {
             if (key != null) player.discoverRecipe(key);
         }
@@ -221,24 +221,24 @@ public final class PlayerListeners implements Listener {
 
         // If player isn't in map, add new entry with this baby.
         if (!babyGrowCount.containsKey(playerUUID)) {
-            babyGrowCount.put(playerUUID, new Pair<>(procreation, 3));
+            babyGrowCount.put(playerUUID, Pair.of(procreation, 3));
         }
 
         Collection<Pair<Long, Integer>> pairs = babyGrowCount.get(playerUUID);
 
         // If player is already in map, but this baby isn't in, add it.
-        boolean existsInList = pairs.stream().anyMatch(longIntegerPair -> longIntegerPair.getFirst() == procreation);
-        if (!existsInList) babyGrowCount.put(playerUUID, new Pair<>(procreation, 3));
+        boolean existsInList = pairs.stream().anyMatch(longIntegerPair -> longIntegerPair.getKey() == procreation);
+        if (!existsInList) babyGrowCount.put(playerUUID, Pair.of(procreation, 3));
 
         // Check for counts and send messages.
         Pair<Long, Integer> pairToRemove = null;
         for (Pair<Long, Integer> pair : pairs) {
-            if (pair.getFirst() != procreation) continue;
+            if (pair.getKey() != procreation) continue;
 
-            int count = pair.getSecond();
+            int count = pair.getValue();
             if (count > 0) {
                 messages.send(player, Messages.Message.BABY_COUNTDOWN, string -> string.replace("%countdown%", String.valueOf(count)));
-                pair.setSecond(count - 1);
+                pair.setValue(count - 1);
                 return;
             }
 

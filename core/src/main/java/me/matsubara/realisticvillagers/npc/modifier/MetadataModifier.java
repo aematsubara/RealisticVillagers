@@ -1,14 +1,18 @@
 package me.matsubara.realisticvillagers.npc.modifier;
 
-import com.comphenix.protocol.PacketType.Play.Server;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.utility.MinecraftReflection;
-import com.comphenix.protocol.wrappers.*;
+import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
+import com.github.retrooper.packetevents.protocol.entity.data.EntityDataType;
+import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
+import com.github.retrooper.packetevents.protocol.entity.pose.EntityPose;
+import com.github.retrooper.packetevents.protocol.nbt.NBTCompound;
+import com.github.retrooper.packetevents.protocol.player.SkinSection;
+import com.github.retrooper.packetevents.util.Vector3i;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
+import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.npc.NPC;
-import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,121 +21,90 @@ import java.util.function.Function;
 
 public class MetadataModifier extends NPCModifier {
 
-    private final List<WrappedWatchableObject> metadata = new ArrayList<>();
+    private final List<EntityData> metadata = new ArrayList<>();
 
     public MetadataModifier(NPC npc) {
         super(npc);
     }
 
     public <I, O> MetadataModifier queue(@NotNull EntityMetadata<I, O> metadata, I value) {
-        return queue(metadata, null, value);
-    }
-
-    public <I, O> MetadataModifier queue(@NotNull EntityMetadata<I, O> metadata, @Nullable WrappedDataWatcher.Serializer serializer, I value) {
-        int index = metadata.index();
-        O object = metadata.mapper().apply(value);
-        return serializer != null ? queue(index, object, serializer) : queue(index, object, metadata.outputType());
-    }
-
-    public <T> MetadataModifier queue(int index, T value, Class<T> clazz) {
-        return queue(index, value, WrappedDataWatcher.Registry.get(clazz));
-    }
-
-    public <T> MetadataModifier queue(int index, T value, WrappedDataWatcher.Serializer serializer) {
-        metadata.add(serializer == null ?
-                new WrappedWatchableObject(index, value) :
-                new WrappedWatchableObject(new WrappedDataWatcher.WrappedDataWatcherObject(index, serializer), value));
+        this.metadata.add(new EntityData(metadata.index(), metadata.outputType(), metadata.mapper().apply(value)));
         return this;
     }
 
     @Override
     public void send(@NotNull Iterable<? extends Player> players) {
-        queueInstantly((npc, layer) -> {
-            PacketContainer container = new PacketContainer(Server.ENTITY_METADATA);
-            container.getIntegers().write(0, npc.getEntityId());
-
-            if (PluginUtils.IS_1_19_3_OR_NEW) {
-                List<WrappedDataValue> wrappedDataValues = new ArrayList<>(metadata.size());
-                for (WrappedWatchableObject object : metadata) {
-                    if (object != null) wrappedDataValues.add(new WrappedDataValue(
-                            object.getIndex(),
-                            object.getWatcherObject().getSerializer(),
-                            object.getRawValue()));
-                }
-                container.getDataValueCollectionModifier().write(0, wrappedDataValues);
-            } else {
-                container.getWatchableCollectionModifier().write(0, metadata);
-            }
-
-            return container;
-        });
-
+        queueInstantly((npc, layer) -> new WrapperPlayServerEntityMetadata(npc.getEntityId(), metadata));
         super.send(players);
     }
 
-    @SuppressWarnings("unchecked")
-    public record EntityMetadata<I, O>(int index, Class<O> outputType, Function<I, O> mapper) {
+    public void updateShoulderEntities() {
+        IVillagerNPC npc = this.npc.getVillager();
+        queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, npc.getShoulderEntityLeft()).send();
+        queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, npc.getShoulderEntityRight()).send();
+    }
+
+    public record EntityMetadata<I, O>(int index, EntityDataType<O> outputType, Function<I, O> mapper) {
 
         public static @NotNull EntityMetadata<Byte, Byte> ENTITY_DATA = new EntityMetadata<>(
                 0,
-                Byte.class,
+                EntityDataTypes.BYTE,
                 input -> input);
 
-        public static final EntityMetadata<EnumWrappers.EntityPose, Object> POSE = new EntityMetadata<>(
+        public static final EntityMetadata<EntityPose, EntityPose> POSE = new EntityMetadata<>(
                 6,
-                (Class<Object>) EnumWrappers.getEntityPoseClass(),
-                EnumWrappers.EntityPose::toNms);
+                EntityDataTypes.ENTITY_POSE,
+                pose -> pose);
 
         public static EntityMetadata<Integer, Integer> TICKS_FROZEN = new EntityMetadata<>(
                 7,
-                Integer.class,
+                EntityDataTypes.INT,
                 integer -> integer);
 
         public static EntityMetadata<Byte, Byte> HAND_DATA = new EntityMetadata<>(
                 8,
-                Byte.class,
+                EntityDataTypes.BYTE,
                 input -> input);
 
         public static EntityMetadata<Integer, Integer> EFFECT_COLOR = new EntityMetadata<>(
                 10,
-                Integer.class,
+                EntityDataTypes.INT,
                 integer -> integer);
 
         public static EntityMetadata<Boolean, Boolean> EFFECT_AMBIENCE = new EntityMetadata<>(
                 11,
-                Boolean.class,
+                EntityDataTypes.BOOLEAN,
                 bool -> bool);
 
         public static EntityMetadata<Integer, Integer> ARROW_COUNT = new EntityMetadata<>(
                 12,
-                Integer.class,
+                EntityDataTypes.INT,
                 integer -> integer);
 
         public static EntityMetadata<Integer, Integer> BEE_STINGER = new EntityMetadata<>(
                 13,
-                Integer.class,
+                EntityDataTypes.INT,
                 integer -> integer);
 
-        @SuppressWarnings("rawtypes")
-        public static EntityMetadata<BlockPosition, Optional> BED_POS = new EntityMetadata<>(
+        public static EntityMetadata<Vector3i, Optional<Vector3i>> BED_POS = new EntityMetadata<>(
                 14,
-                Optional.class,
-                position -> Optional.of(BlockPosition.getConverter().getGeneric(position)));
+                EntityDataTypes.OPTIONAL_BLOCK_POSITION,
+                Optional::of);
 
         public static final EntityMetadata<Boolean, Byte> SKIN_LAYERS = new EntityMetadata<>(
                 17,
-                Byte.class,
-                input -> (byte) (input ? 126 : 0));
+                EntityDataTypes.BYTE,
+                input -> input ? SkinSection.ALL.getMask() : 0);
 
-        public static final EntityMetadata<Object, Object> SHOULDER_ENTITY_LEFT = new EntityMetadata<>(
+        public static final EntityMetadata<Object, NBTCompound> SHOULDER_ENTITY_LEFT = new EntityMetadata<>(
                 19,
-                (Class<Object>) MinecraftReflection.getNBTCompoundClass(),
-                object -> object);
+                EntityDataTypes.NBT,
+                SpigotReflectionUtil::fromMinecraftNBT);
 
-        public static final EntityMetadata<Object, Object> SHOULDER_ENTITY_RIGHT = new EntityMetadata<>(
+        public static final EntityMetadata<Object, NBTCompound> SHOULDER_ENTITY_RIGHT = new EntityMetadata<>(
                 20,
-                (Class<Object>) MinecraftReflection.getNBTCompoundClass(),
-                object -> object);
+                EntityDataTypes.NBT,
+                SpigotReflectionUtil::fromMinecraftNBT);
 
     }
 }

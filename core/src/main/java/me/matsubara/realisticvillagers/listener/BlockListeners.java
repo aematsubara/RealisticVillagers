@@ -77,7 +77,7 @@ public class BlockListeners implements Listener {
         block.getWorld().dropItemNaturally(block.getLocation().add(0.5d, 0.5d, 0.5d), plugin.getReviveManager().createHeadItem(npc, tag));
     }
 
-    private void cancel(Event @NotNull ... events) {
+    private void cancel(@NotNull Event... events) {
         for (Event event : events) {
             if (event instanceof Cancellable cancellable) cancellable.setCancelled(true);
         }

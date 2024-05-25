@@ -1,9 +1,10 @@
 package me.matsubara.realisticvillagers.task;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
+import com.github.retrooper.packetevents.protocol.player.UserProfile;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityRelativeMoveAndRotation;
+import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.npc.NPC;
@@ -26,10 +27,8 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
-
-import static com.comphenix.protocol.PacketType.Play.Server.REL_ENTITY_MOVE_LOOK;
 
 public class PreviewTask extends BukkitRunnable {
 
@@ -45,7 +44,7 @@ public class PreviewTask extends BukkitRunnable {
 
     private static final float ROTATION_SPEED = 5.0f;
 
-    public PreviewTask(@NotNull RealisticVillagers plugin, Player player, WrappedSignedProperty textures) {
+    public PreviewTask(@NotNull RealisticVillagers plugin, Player player, TextureProperty textures) {
         this.plugin = plugin;
         this.player = player;
         this.seconds = Config.SKIN_PREVIEW_SECONDS.asInt();
@@ -54,8 +53,8 @@ public class PreviewTask extends BukkitRunnable {
 
         targetLocation = getPlayerTargetLocation(player);
 
-        WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), VillagerTracker.HIDE_NAMETAG_NAME);
-        profile.getProperties().put("textures", textures);
+        UserProfile profile = new UserProfile(UUID.randomUUID(), VillagerTracker.HIDE_NAMETAG_NAME);
+        profile.setTextureProperties(List.of(textures));
 
         this.npc = new NPC(profile,
                 (npc, seeing) -> {
@@ -64,7 +63,7 @@ public class PreviewTask extends BukkitRunnable {
                     MetadataModifier metadata = npc.metadata();
                     metadata.queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(seeing);
                 },
-                ThreadLocalRandom.current().nextInt(10000, Integer.MAX_VALUE),
+                SpigotReflectionUtil.generateEntityId(),
                 null);
 
         this.yaw = targetLocation.getYaw();
@@ -88,12 +87,17 @@ public class PreviewTask extends BukkitRunnable {
         npc.teleport().queueTeleport(targetLocation, false).send(player);
         npc.rotation().queueHeadRotation(targetLocation.getYaw()).send(player);
 
-        PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
-        moveLook.getIntegers().write(0, npc.getEntityId());
-        moveLook.getBytes().write(0, (byte) (yaw * 256.0f / 360.0f));
-        moveLook.getBytes().write(1, (byte) (targetLocation.getPitch() * 256f / 360f));
+        WrapperPlayServerEntityRelativeMoveAndRotation wrapper = new WrapperPlayServerEntityRelativeMoveAndRotation(
+                npc.getEntityId(),
+                0.0d,
+                0.0d,
+                0.0d,
+                yaw,
+                targetLocation.getPitch(),
+                false);
 
-        ProtocolLibrary.getProtocolManager().sendServerPacket(player, moveLook);
+        Object channel = PacketEvents.getAPI().getPlayerManager().getChannel(player);
+        PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);
 
         boolean rainbow = Config.SKIN_PREVIEW_RAINBOW_MESSAGE.asBool();
         if (rainbow || tick % 20 == 0) {

@@ -1,12 +1,8 @@
 package me.matsubara.realisticvillagers.tracker;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.wrappers.Pair;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
-import com.google.common.collect.Lists;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
+import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -22,6 +18,7 @@ import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.npc.NPCPool;
 import me.matsubara.realisticvillagers.task.PreviewTask;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
 import org.bukkit.World;
@@ -69,8 +66,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 
-import static com.comphenix.protocol.PacketType.Play.Server.*;
-
 @Getter
 public final class VillagerTracker implements Listener {
 
@@ -107,13 +102,7 @@ public final class VillagerTracker implements Listener {
 
         manager.registerEvents(this, plugin);
 
-        @SuppressWarnings("deprecation") ArrayList<PacketType> types = Lists.newArrayList(SPAWN_ENTITY, SPAWN_ENTITY_LIVING, ENTITY_STATUS);
-        if (plugin.getServer().getPluginManager().getPlugin("ViaVersion") != null) {
-            types.add(ENTITY_METADATA);
-        }
-
-        ProtocolManager protocol = ProtocolLibrary.getProtocolManager();
-        protocol.addPacketListener(handler = new VillagerHandler(plugin, types));
+        PacketEvents.getAPI().getEventManager().registerListener(handler = new VillagerHandler(plugin));
     }
 
     public void updateMineskinApiKey() {
@@ -356,7 +345,7 @@ public final class VillagerTracker implements Listener {
         int entityId = living.getEntityId();
         if (hasNPC(entityId)) return;
 
-        WrappedSignedProperty textures = getTextures(living);
+        TextureProperty textures = getTextures(living);
         if (textures.getName().equals("error")) {
             CompletableFuture<Skin> creator = getCreator(living, textures);
             if (creator != null)
@@ -382,8 +371,8 @@ public final class VillagerTracker implements Listener {
             name = defaultName;
         }
 
-        WrappedGameProfile profile = new WrappedGameProfile(UUID.randomUUID(), name);
-        profile.getProperties().put("textures", textures);
+        UserProfile profile = new UserProfile(UUID.randomUUID(), name);
+        profile.setTextureProperties(List.of(textures));
 
         NPC.builder()
                 .profile(profile)
@@ -417,10 +406,10 @@ public final class VillagerTracker implements Listener {
         return team != null ? team : scoreboard.registerNewTeam(NAMETAG_TEAM_NAME);
     }
 
-    public @NotNull WrappedSignedProperty getTextures(LivingEntity living) {
+    public @NotNull TextureProperty getTextures(LivingEntity living) {
         SkinRelatedData data = getRelatedData(living, null, false);
 
-        WrappedSignedProperty property = data.property();
+        TextureProperty property = data.property();
         if (property != null && property.getName().equals("error")) {
             return property;
         }
@@ -445,7 +434,7 @@ public final class VillagerTracker implements Listener {
 
         String sexFile = sex + ".yml";
         Pair<File, FileConfiguration> pair = getFile(sexFile);
-        FileConfiguration config = pair.getSecond();
+        FileConfiguration config = pair.getValue();
 
         ConfigurationSection section = config.getConfigurationSection(differentProfession != null ? differentProfession : profession);
         if (section == null) {
@@ -471,27 +460,27 @@ public final class VillagerTracker implements Listener {
         return newKeys.isEmpty() ? keys : newKeys;
     }
 
-    public @NotNull WrappedSignedProperty getTextures(String sex, String profession, int which) {
+    public @NotNull TextureProperty getTextures(String sex, String profession, int which) {
         Pair<File, FileConfiguration> pair = getFile(sex + ".yml");
-        FileConfiguration config = pair.getSecond();
+        FileConfiguration config = pair.getValue();
 
         return getTextures(config, sex, profession, which);
     }
 
-    private @NotNull WrappedSignedProperty getTextures(@NotNull FileConfiguration config, String sex, String profession, int which) {
+    private @NotNull TextureProperty getTextures(@NotNull FileConfiguration config, String sex, String profession, int which) {
         String texture = config.getString(profession + "." + which + ".texture");
         String signature = config.getString(profession + "." + which + ".signature");
 
         if (texture != null && signature != null) {
-            return new WrappedSignedProperty("textures", texture, signature);
+            return new TextureProperty("textures", texture, signature);
         }
 
         return error("Invalid textures! No skin found for id {" + which + "} with profession of {" + profession + "} and sex of {" + sex + "}.", "false");
     }
 
     @Contract("_, _ -> new")
-    private @NotNull WrappedSignedProperty error(String message, String severe) {
-        return WrappedSignedProperty.fromValues("error", message, severe);
+    private @NotNull TextureProperty error(String message, String severe) {
+        return new TextureProperty("error", message, severe);
     }
 
     private int getSkinId(@NotNull IVillagerNPC npc, Set<String> originalIds, @NotNull Set<String> ids, boolean random) {
@@ -516,7 +505,7 @@ public final class VillagerTracker implements Listener {
 
     public String getRandomNameBySex(String sex) {
         Pair<File, FileConfiguration> pair = getFile("names.yml");
-        FileConfiguration config = pair.getSecond();
+        FileConfiguration config = pair.getValue();
 
         List<String> names = config.getStringList(sex);
 
@@ -537,7 +526,7 @@ public final class VillagerTracker implements Listener {
 
     public void addNewSkin(CommandSender sender, Integer id, String profession, String sex, boolean isAdult, String texture, String signature) {
         Pair<File, FileConfiguration> pair = getFile(sex + ".yml");
-        FileConfiguration config = pair.getSecond();
+        FileConfiguration config = pair.getValue();
 
         // Find available id.
         int key = -1;
@@ -572,7 +561,7 @@ public final class VillagerTracker implements Listener {
 
         try {
             int finalKey = key;
-            config.save(pair.getFirst());
+            config.save(pair.getKey());
             plugin.getMessages().send(sender, Messages.Message.SKIN_ADDED, string -> string
                     .replace("%id%", String.valueOf(finalKey))
                     .replace("%profession%", plugin.getProfessionFormatted(profession))
@@ -588,7 +577,7 @@ public final class VillagerTracker implements Listener {
             Messages messages = plugin.getMessages();
             Logger logger = plugin.getLogger();
 
-            WrappedSignedProperty textures = getTextures(sex, "none", id);
+            TextureProperty textures = getTextures(sex, "none", id);
             if (textures.getName().equals("error")) {
                 messages.send(sender, Messages.Message.SKIN_ERROR);
                 logger.severe(textures.getValue());
@@ -671,7 +660,7 @@ public final class VillagerTracker implements Listener {
 
     public void refreshNPCSkin(LivingEntity living, boolean happyParticles) {
         // If the skin doesn't exist, first we create it, THEN we refresh.
-        WrappedSignedProperty textures = getTextures(living);
+        TextureProperty textures = getTextures(living);
         if (!textures.getName().equals("error")) {
             refreshNPC(living);
             return;
@@ -697,7 +686,7 @@ public final class VillagerTracker implements Listener {
         }.runTaskTimer(plugin, 1L, 1L);
     }
 
-    private @Nullable CompletableFuture<Skin> getCreator(LivingEntity living, @NotNull WrappedSignedProperty textures) {
+    private @Nullable CompletableFuture<Skin> getCreator(LivingEntity living, @NotNull TextureProperty textures) {
         Logger logger = plugin.getLogger();
 
         // Only log if error is severe.
@@ -708,7 +697,7 @@ public final class VillagerTracker implements Listener {
 
         VillagerTracker.SkinRelatedData data = getRelatedData(living, "none");
 
-        WrappedSignedProperty property = data.property();
+        TextureProperty property = data.property();
         if (property != null && property.getName().equals("error")) {
             logger.severe(property.getValue());
             return null;
@@ -740,7 +729,7 @@ public final class VillagerTracker implements Listener {
                                   int id,
                                   FileConfiguration storage,
                                   ConfigurationSection section,
-                                  WrappedSignedProperty property) {
+                                  TextureProperty property) {
 
         @Contract(pure = true)
         @Override

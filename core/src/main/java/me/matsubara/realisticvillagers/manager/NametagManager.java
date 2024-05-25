@@ -1,8 +1,7 @@
 package me.matsubara.realisticvillagers.manager;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetPassengers;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Nameable;
@@ -78,11 +77,10 @@ public class NametagManager implements Listener {
 
         int[] ids = passengers.stream().mapToInt(Entity::getEntityId).toArray();
 
-        PacketContainer mount = new PacketContainer(PacketType.Play.Server.MOUNT);
-        mount.getIntegers().write(0, bukkit.getEntityId());
-        mount.getIntegerArrays().write(0, ids);
+        WrapperPlayServerSetPassengers wrapper = new WrapperPlayServerSetPassengers(bukkit.getEntityId(), ids);
 
-        ProtocolLibrary.getProtocolManager().sendServerPacket(player, mount);
+        Object channel = PacketEvents.getAPI().getPlayerManager().getChannel(player);
+        PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);
     }
 
     public List<String> getLines(@NotNull LivingEntity entity) {

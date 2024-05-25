@@ -1,8 +1,6 @@
 package me.matsubara.realisticvillagers.npc;
 
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.EnumWrappers.PlayerInfoAction;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import com.google.common.base.Preconditions;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -18,42 +16,26 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-@SuppressWarnings("deprecation")
 @Getter
 public class NPC {
 
     private final Collection<Player> seeingPlayers = new CopyOnWriteArraySet<>();
     private final int entityId;
-    private final WrappedGameProfile profile;
+    private final UserProfile profile;
     private final SpawnCustomizer spawnCustomizer;
     private final IVillagerNPC villager;
 
-    public NPC(WrappedGameProfile profile, SpawnCustomizer spawnCustomizer, int entityId, IVillagerNPC villager) {
+    public NPC(UserProfile profile, SpawnCustomizer spawnCustomizer, int entityId, IVillagerNPC villager) {
         this.entityId = entityId;
         this.spawnCustomizer = spawnCustomizer;
         this.villager = villager;
-
-        // No profile -> create a random one.
-        if (profile == null) {
-            this.profile = new WrappedGameProfile(UUID.randomUUID(), randomName());
-        } else if (profile.getName() == null || profile.getUUID() == null) {
-            this.profile = new WrappedGameProfile(
-                    profile.getUUID() == null ? UUID.randomUUID() : profile.getUUID(),
-                    profile.getName() == null ? randomName() : profile.getName());
-        } else {
-            this.profile = profile;
-        }
-    }
-
-    private static @NotNull String randomName() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        this.profile = profile;
     }
 
     @Contract(" -> new")
-    public static NPC.@NotNull Builder builder() {
+    public static @NotNull Builder builder() {
         return new Builder();
     }
 
@@ -65,7 +47,7 @@ public class NPC {
         seeingPlayers.add(player);
 
         VisibilityModifier modifier = visibility();
-        modifier.queuePlayerListChange(PlayerInfoAction.ADD_PLAYER).send(player);
+        modifier.queuePlayerListChange(false).send(player);
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             modifier.queueSpawn(location).send(player);
@@ -77,14 +59,14 @@ public class NPC {
             // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
             Bukkit.getScheduler().runTaskLater(
                     plugin,
-                    () -> modifier.queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER).send(player),
+                    () -> modifier.queuePlayerListChange(true).send(player),
                     40);
         }, 10L);
     }
 
     public void hide(Player player, @NotNull RealisticVillagers plugin) {
         visibility()
-                .queuePlayerListChange(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER)
+                .queuePlayerListChange(true)
                 .queueDestroy()
                 .send(player);
 
@@ -128,7 +110,7 @@ public class NPC {
 
     public static class Builder {
 
-        private WrappedGameProfile profile;
+        private UserProfile profile;
         private int entityId = -1;
         private IVillagerNPC villager;
 
@@ -138,7 +120,7 @@ public class NPC {
         private Builder() {
         }
 
-        public Builder profile(WrappedGameProfile profile) {
+        public Builder profile(UserProfile profile) {
             this.profile = profile;
             return this;
         }

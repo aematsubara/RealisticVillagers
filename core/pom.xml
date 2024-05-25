@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.2.3</version>
+        <version>3.3</version>
     </parent>
 
     <pluginRepositories>
@@ -33,7 +33,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.3.1-SNAPSHOT</version>
+                <version>3.5.4-SNAPSHOT</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -63,6 +63,18 @@
                                     <pattern>com.cryptomorin</pattern>
                                     <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
                                 </relocation>
+                                <!--                                <relocation>-->
+                                <!--                                    <pattern>com.github.retrooper.packetevents</pattern>-->
+                                <!--                                    <shadedPattern>me.matsubara.realisticvillagers.util.packetevents.api</shadedPattern>-->
+                                <!--                                </relocation>-->
+                                <!--                                <relocation>-->
+                                <!--                                    <pattern>io.github.retrooper.packetevents</pattern>-->
+                                <!--                                    <shadedPattern>me.matsubara.realisticvillagers.util.packetevents.impl</shadedPattern>-->
+                                <!--                                </relocation>-->
+                                <!--                                <relocation>-->
+                                <!--                                    <pattern>net.kyori</pattern>-->
+                                <!--                                    <shadedPattern>me.matsubara.realisticvillagers.util.kyori</shadedPattern>-->
+                                <!--                                </relocation>-->
                             </relocations>
                             <filters>
                                 <filter>
@@ -75,6 +87,7 @@
                                     <artifact>com.github.cryptomorin:XSeries</artifact>
                                     <includes>
                                         <include>com/cryptomorin/xseries/ReflectionUtils*</include>
+                                        <include>com/cryptomorin/xseries/particles/XParticle*</include>
                                     </includes>
                                 </filter>
                                 <filter>
@@ -125,12 +138,12 @@
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </repository>
         <repository>
-            <id>dmulloy2-repo</id>
-            <url>https://repo.dmulloy2.net/repository/public/</url>
-        </repository>
-        <repository>
             <id>codemc-snapshots</id>
             <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
+        <repository>
+            <id>codemc-releases</id>
+            <url>https://repo.codemc.io/repository/maven-releases/</url>
         </repository>
         <repository>
             <id>maven-central</id>
@@ -155,21 +168,14 @@
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.4-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <!-- ProtocolLib -->
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>5.2.0-SNAPSHOT</version>
+            <version>1.20.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- AnvilGUI -->
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.9.2-SNAPSHOT</version>
+            <version>1.9.4-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>
@@ -221,7 +227,14 @@
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>9.8.1</version>
+            <version>10.0.0</version>
+        </dependency>
+        <!-- PacketEvents -->
+        <dependency>
+            <groupId>com.github.retrooper.packetevents</groupId>
+            <artifactId>spigot</artifactId>
+            <version>2.3.0</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

@@ -1,21 +1,22 @@
 package me.matsubara.realisticvillagers.handler.protocol;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
-import com.comphenix.protocol.wrappers.BlockPosition;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
+import com.github.retrooper.packetevents.event.simple.PacketPlaySendEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.resources.ResourceLocation;
+import com.github.retrooper.packetevents.util.Vector3i;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockAction;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSoundEffect;
+import com.google.common.collect.ImmutableSet;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.manager.ChestManager;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.DoubleChestInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.Vector;
@@ -25,38 +26,49 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class ChestHandler extends PacketAdapter {
+public class ChestHandler extends SimplePacketListenerAbstract {
 
     private final RealisticVillagers plugin;
+    private final Set<PacketType.Play.Server> listenTo = ImmutableSet.of(
+            PacketType.Play.Server.NAMED_SOUND_EFFECT,
+            PacketType.Play.Server.BLOCK_ACTION);
 
     public ChestHandler(RealisticVillagers plugin) {
-        super(
-                plugin,
-                ListenerPriority.HIGHEST,
-                PacketType.Play.Server.NAMED_SOUND_EFFECT,
-                PacketType.Play.Server.BLOCK_ACTION);
+        super(PacketListenerPriority.HIGHEST);
         this.plugin = plugin;
     }
 
     @Override
-    public void onPacketSending(@NotNull PacketEvent event) {
-        PacketContainer packet = event.getPacket();
-        World world = event.getPlayer().getWorld();
+    public void onPacketPlaySend(@NotNull PacketPlaySendEvent event) {
+        if (event.isCancelled() || !listenTo.contains(event.getPacketType())) return;
 
-        if (packet.getType() == PacketType.Play.Server.NAMED_SOUND_EFFECT) {
+        Player player = (Player) event.getPlayer();
+
+        World world;
+        try {
+            world = player.getWorld();
+        } catch (UnsupportedOperationException exception) {
+            // Should "fix" -> UnsupportedOperationException: The method getWorld is not supported for temporary players.
+            return;
+        }
+
+        if (event.getPacketType() == PacketType.Play.Server.SOUND_EFFECT) {
+            WrapperPlayServerSoundEffect soundWrapper = new WrapperPlayServerSoundEffect(event);
+
             Sound sound;
             try {
-                sound = packet.getSoundEffects().readSafely(0);
+                ResourceLocation name = soundWrapper.getSound().getName();
+                sound = Registry.SOUNDS.get(NamespacedKey.minecraft(name.getKey()));
             } catch (IllegalStateException | NullPointerException exception) {
                 // Should "fix" IllegalStateException: Unable to invoke method public static org.bukkit.Sound org.bukkit.craftbukkit.v1_19_R2.CraftSound.getBukkit(net.minecraft.sounds.SoundEffect);
                 return;
             }
             if (sound != Sound.BLOCK_CHEST_OPEN && sound != Sound.BLOCK_CHEST_CLOSE) return;
 
-            StructureModifier<Integer> integers = packet.getIntegers();
-            double x = (float) integers.readSafely(0) / 8.0f;
-            double y = (float) integers.readSafely(1) / 8.0f;
-            double z = (float) integers.readSafely(2) / 8.0f;
+            Vector3i integers = soundWrapper.getEffectPosition();
+            double x = (float) integers.getX() / 8.0f;
+            double y = (float) integers.getY() / 8.0f;
+            double z = (float) integers.getZ() / 8.0f;
             Location location = new Location(world, x, y, z);
 
             Block block = location.getBlock();
@@ -68,20 +80,22 @@ public class ChestHandler extends PacketAdapter {
             return;
         }
 
-        Material material = packet.getBlocks().readSafely(0);
+        WrapperPlayServerBlockAction blockAction = new WrapperPlayServerBlockAction(event);
+
+        Material material = SpigotConversionUtil.toBukkitBlockData(blockAction.getBlockType()).getMaterial();
         if (material != Material.CHEST) return;
 
         // We only want to cancel the close animation if a villager has the inventory open.
-        boolean open = packet.getIntegers().readSafely(1) == 1;
+        boolean open = /*packet.getIntegers().readSafely(1) == 1*/ blockAction.getBlockType().isOpen();
         if (open) return;
 
-        BlockPosition pos = packet.getBlockPositionModifier().readSafely(0);
-        Location location = pos.toLocation(world);
+        Vector3i pos = blockAction.getBlockPosition();
+        Location location = new Location(world, pos.x, pos.y, pos.z);
 
         Block block = world.getBlockAt(location);
         if (block.getType() != Material.CHEST) return;
 
-        Vector vector = pos.toVector();
+        Vector vector = location.toVector();
 
         ChestManager chestManager = plugin.getChestManager();
         if (chestManager.getVillagerChests().containsKey(vector)) {

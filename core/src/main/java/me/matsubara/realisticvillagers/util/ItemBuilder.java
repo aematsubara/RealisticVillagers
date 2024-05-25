@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.util;
 
+import com.cryptomorin.xseries.ReflectionUtils;
 import org.bukkit.*;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
@@ -9,10 +10,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.*;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.invoke.MethodHandle;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -22,6 +23,14 @@ import java.util.function.UnaryOperator;
 public final class ItemBuilder {
 
     private final ItemStack item;
+
+    private static final MethodHandle SET_BASE_POTION_TYPE;
+
+    static {
+        SET_BASE_POTION_TYPE = ReflectionUtils.supports(20, 6) ?
+                Reflection.getMethod(PotionMeta.class, "setBasePotionType", PotionType.class) :
+                null;
+    }
 
     public ItemBuilder(@NotNull ItemStack item) {
         this.item = item.clone();
@@ -176,7 +185,16 @@ public final class ItemBuilder {
     public ItemBuilder setBasePotionData(PotionType type) {
         if (!(item.getItemMeta() instanceof PotionMeta meta)) return this;
 
-        meta.setBasePotionData(new PotionData(type));
+        if (SET_BASE_POTION_TYPE != null) {
+            try {
+                SET_BASE_POTION_TYPE.invoke(meta, type);
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        } else {
+            meta.setBasePotionData(new org.bukkit.potion.PotionData(type));
+        }
+
         item.setItemMeta(meta);
         return this;
     }

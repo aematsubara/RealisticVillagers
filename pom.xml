@@ -6,7 +6,7 @@
 
     <groupId>me.matsubara</groupId>
     <artifactId>realisticvillagers-parent</artifactId>
-    <version>3.2.3</version>
+    <version>3.3</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -23,6 +23,7 @@
         <module>1_20_R1</module>
         <module>1_20_R2</module>
         <module>1_20_R3</module>
+        <module>1_20_R4</module>
         <module>core</module>
         <module>dist</module>
     </modules>
@@ -39,7 +40,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.26</version>
+            <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

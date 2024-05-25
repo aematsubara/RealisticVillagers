@@ -1,14 +1,14 @@
 package me.matsubara.realisticvillagers.listener;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.comphenix.protocol.wrappers.WrappedEnumEntityUseAction;
-import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.cryptomorin.xseries.ReflectionUtils;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
+import com.github.retrooper.packetevents.event.simple.PacketPlayReceiveEvent;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.protocol.player.InteractionHand;
+import com.github.retrooper.packetevents.protocol.player.TextureProperty;
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.InteractType;
@@ -55,29 +55,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public final class VillagerListeners extends PacketAdapter implements Listener {
+public final class VillagerListeners extends SimplePacketListenerAbstract implements Listener {
 
     private final RealisticVillagers plugin;
 
     private static final MethodHandle MODIFIERS = Reflection.getFieldGetter(EntityDamageEvent.class, "modifiers");
 
     public VillagerListeners(RealisticVillagers plugin) {
-        super(plugin, ListenerPriority.HIGHEST, PacketType.Play.Client.USE_ENTITY);
+        super(PacketListenerPriority.HIGHEST);
         this.plugin = plugin;
-        ProtocolLibrary.getProtocolManager().addPacketListener(this);
+        PacketEvents.getAPI().getEventManager().registerListener(this);
     }
 
     @Override
-    public void onPacketReceiving(@NotNull PacketEvent event) {
-        PacketContainer packet = event.getPacket();
+    public void onPacketPlayReceive(@NotNull PacketPlayReceiveEvent event) {
+        if (event.getPacketType() != PacketType.Play.Client.INTERACT_ENTITY) return;
 
-        WrappedEnumEntityUseAction actionWrapper = packet.getEnumEntityUseActions().readSafely(0);
+        WrapperPlayClientInteractEntity wrapper = new WrapperPlayClientInteractEntity(event);
 
-        EnumWrappers.EntityUseAction action = actionWrapper.getAction();
-        if (action == EnumWrappers.EntityUseAction.ATTACK) return;
+        WrapperPlayClientInteractEntity.InteractAction action = wrapper.getAction();
+        if (action == WrapperPlayClientInteractEntity.InteractAction.ATTACK) return;
 
-        Integer id = packet.getIntegers().readSafely(0);
-        if (id == null) return;
+        int id = wrapper.getEntityId();
 
         Optional<NPC> npc;
         if ((npc = plugin.getTracker().getNPC(id)).isEmpty()) {
@@ -86,8 +85,8 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
 
         // PlayerInteractEntityEvent won't be called if this one is cancelled.
         // With this change, we fix the client freezing for some seconds when right-clicking a villager.
-        EquipmentSlot slot = actionWrapper.getHand() == EnumWrappers.Hand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        if (handleInteract(event.getPlayer(), slot, npc.get().getVillager().bukkit())) {
+        EquipmentSlot slot = wrapper.getHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
+        if (handleInteract((Player) event.getPlayer(), slot, action, npc.get().getVillager().bukkit())) {
             event.setCancelled(true);
         }
     }
@@ -103,7 +102,7 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
 
         if (event.getLocation().getBlock().getType() != Material.BELL) return;
 
-        // Play swing hand animation when ringing bell.
+        // Play swing hand animation when ringing a bell.
         if (event.getEntity() instanceof Villager villager) {
             villager.swingMainHand();
         }
@@ -187,7 +186,7 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
         }
     }
 
-    private void addToDrops(List<ItemStack> drops, ItemStack @NotNull ... contents) {
+    private void addToDrops(List<ItemStack> drops, @NotNull ItemStack... contents) {
         for (ItemStack item : contents) {
             if (item != null) drops.add(item);
         }
@@ -234,12 +233,12 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
     // Changed the priority to LOW to support VTL.
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlayerInteractEntity(@NotNull PlayerInteractEntityEvent event) {
-        if (handleInteract(event.getPlayer(), event.getHand(), event.getRightClicked())) {
+        if (handleInteract(event.getPlayer(), event.getHand(), null, event.getRightClicked())) {
             event.setCancelled(true);
         }
     }
 
-    private boolean handleInteract(@NotNull Player player, EquipmentSlot hand, Entity entity) {
+    private boolean handleInteract(@NotNull Player player, EquipmentSlot hand, @Nullable WrapperPlayClientInteractEntity.InteractAction action, Entity entity) {
         ItemStack item = player.getInventory().getItem(hand);
         boolean cancel = preventChangeSkinItemUse(null, item);
 
@@ -256,6 +255,7 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
         if (npc == null) return cancel;
 
         if (hand != EquipmentSlot.HAND) return true;
+        if (action != WrapperPlayClientInteractEntity.InteractAction.INTERACT) return true;
 
         plugin.getServer().getScheduler().runTask(plugin, (() -> {
             Messages messages = plugin.getMessages();
@@ -398,7 +398,7 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
         LivingEntity living = npc.bukkit();
 
         VillagerTracker.SkinRelatedData relatedData = tracker.getRelatedData(living, "none");
-        WrappedSignedProperty property = relatedData.property();
+        TextureProperty property = relatedData.property();
 
         if (property != null && property.getName().equals("error")) {
             messages.send(player, Messages.Message.SKIN_ERROR);
@@ -467,7 +467,8 @@ public final class VillagerListeners extends PacketAdapter implements Listener {
         if (npc.isFishing()) npc.toggleFishing();
 
         if (!(event instanceof EntityDamageByEntityEvent byEntity)) {
-            if (event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION
+            if ((ReflectionUtils.MINOR_NUMBER != 20 && ReflectionUtils.PATCH_NUMBER != 5)
+                    && event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION
                     && !villager.isAdult()
                     && !Config.DISABLE_SKINS.asBool()
                     && !Config.INCREASE_BABY_SCALE.asBool()

@@ -1,8 +1,7 @@
 package me.matsubara.realisticvillagers.npc.modifier;
 
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.utility.MinecraftVersion;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import me.matsubara.realisticvillagers.npc.NPC;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -17,8 +16,6 @@ public class NPCModifier {
     protected final NPC npc;
     protected final List<LazyPacket> packetContainers = new CopyOnWriteArrayList<>();
 
-    public static final int MINECRAFT_VERSION = MinecraftVersion.getCurrentVersion().getMinor();
-
     public NPCModifier(NPC npc) {
         this.npc = npc;
     }
@@ -28,7 +25,7 @@ public class NPCModifier {
     }
 
     protected void queueInstantly(@NotNull LazyPacket packet) {
-        PacketContainer container = packet.provide(npc, null);
+        PacketWrapper<? extends PacketWrapper<?>> container = packet.provide(npc, null);
         packetContainers.add((npc, player) -> container);
     }
 
@@ -39,7 +36,8 @@ public class NPCModifier {
     public void send(@NotNull Iterable<? extends Player> players) {
         players.forEach(player -> {
             for (LazyPacket packet : packetContainers) {
-                ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet.provide(npc, player));
+                Object channel = PacketEvents.getAPI().getPlayerManager().getChannel(player);
+                PacketEvents.getAPI().getProtocolManager().sendPacket(channel, packet.provide(npc, player));
             }
         });
         packetContainers.clear();
@@ -51,6 +49,6 @@ public class NPCModifier {
 
     public interface LazyPacket {
 
-        PacketContainer provide(NPC npc, Player player);
+        PacketWrapper<? extends PacketWrapper<?>> provide(NPC npc, Player player);
     }
 }

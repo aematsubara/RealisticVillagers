@@ -1,68 +1,103 @@
 package me.matsubara.realisticvillagers.handler.protocol;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.ListenerPriority;
-import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.cryptomorin.xseries.ReflectionUtils;
+import com.cryptomorin.xseries.particles.XParticle;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
+import com.github.retrooper.packetevents.event.simple.PacketPlaySendEvent;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
+import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
+import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.play.server.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
 import me.matsubara.realisticvillagers.npc.NPC;
-import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.Location;
-import org.bukkit.Particle;
 import org.bukkit.Raid;
 import org.bukkit.World;
 import org.bukkit.entity.*;
 import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 
-import static com.comphenix.protocol.PacketType.Play.Server.*;
-
-@SuppressWarnings({"OptionalGetWithoutIsPresent", "deprecation"})
-public class VillagerHandler extends PacketAdapter {
+public class VillagerHandler extends SimplePacketListenerAbstract {
 
     private final RealisticVillagers plugin;
     private final @Getter Set<UUID> allowSpawn = ConcurrentHashMap.newKeySet();
+    private final List<PacketType.Play.Server> listenTo;
 
-    private static final Set<PacketType> MOVEMENT_PACKETS = Sets.newHashSet(
-            ENTITY_HEAD_ROTATION,
-            ENTITY_LOOK,
-            ENTITY_TELEPORT,
-            ENTITY_VELOCITY,
-            REL_ENTITY_MOVE,
-            REL_ENTITY_MOVE_LOOK);
+    /* VILLAGER METADATA
+    ID = 15 | ACCESSOR ID = 15 | VALUE TYPE = Byte | CLAZZ = BYTE (MOB) | NoAI/Is left handed/Is aggresive
+    ID = 16 | ACCESSOR ID = 16 | VALUE TYPE = Boolean | CLAZZ = BOOLEAN (AGEABLE MOB) Is baby
+    ID = 17 | ACCESSOR ID = 17 | VALUE TYPE = Integer | CLAZZ = INT (ABSTRACT VILLAGER) | Head shake timer
+    ID = 18 | ACCESSOR ID = 18 | VALUE TYPE = VillagerData | CLAZZ = VILLAGER_DATA (VILLAGER) | Villager Data
+    PLAYER METADATA
+    ID = 15 | ACCESSOR ID = 15 | VALUE TYPE = Float | CLAZZ = FLOAT | Additional Hearts
+    ID = 16 | ACCESSOR ID = 16 | VALUE TYPE = Integer | CLAZZ = INT | Score
+    ID = 17 | ACCESSOR ID = 17 | VALUE TYPE = Byte | CLAZZ = BYTE | The Displayed Skin Parts bit mask that is sent in Client Settings
+    ID = 18 | ACCESSOR ID = 18 | VALUE TYPE = Byte | CLAZZ = BYTE | Main hand (0 : Left, 1 : Right)
+    ID = 19 | ACCESSOR ID = 19 | VALUE TYPE = TagCompound | CLAZZ = COMPOUND_TAG | Left shoulder entity data (for occupying parrot)
+    ID = 20 | ACCESSOR ID = 20 | VALUE TYPE = TagCompound | CLAZZ = COMPOUND_TAG | Right shoulder entity data (for occupying parrot)
+    */
+    private static final Predicate<EntityData> REMOVE_METADATA = data -> {
+        // Data between 0-14 is the same for players and villagers.
+        int index = data.getIndex();
+        if (index <= 14) return false;
 
-    public VillagerHandler(RealisticVillagers plugin, Collection<PacketType> packets) {
-        super(plugin, ListenerPriority.HIGHEST, ImmutableList.builder()
+        // 15 & 16 is unnecessary.
+        if (index == 15 || index == 16) return true;
+
+        // 17: Keep skin state (over head shake timer).
+        if (index == 17 && data.getType() != EntityDataTypes.BYTE) return true;
+
+        // 19 & 20 only exists for players, they shouldn't collide with anything.
+        return data.getType() == EntityDataTypes.VILLAGER_DATA;
+    };
+
+    private static final Set<PacketType.Play.Server> MOVEMENT_PACKETS = Sets.newHashSet(
+            PacketType.Play.Server.ENTITY_ROTATION,
+            PacketType.Play.Server.ENTITY_HEAD_LOOK,
+            PacketType.Play.Server.ENTITY_TELEPORT,
+            PacketType.Play.Server.ENTITY_VELOCITY,
+            PacketType.Play.Server.ENTITY_RELATIVE_MOVE,
+            PacketType.Play.Server.ENTITY_RELATIVE_MOVE_AND_ROTATION);
+
+    public VillagerHandler(RealisticVillagers plugin) {
+        super(PacketListenerPriority.HIGHEST);
+        this.plugin = plugin;
+        this.listenTo = ImmutableList.builder()
                 .addAll(MOVEMENT_PACKETS)
-                .addAll(packets)
+                .add(
+                        PacketType.Play.Server.SPAWN_ENTITY,
+                        PacketType.Play.Server.SPAWN_LIVING_ENTITY,
+                        PacketType.Play.Server.ENTITY_STATUS,
+                        PacketType.Play.Server.ENTITY_METADATA)
                 .build()
                 .stream()
-                .map(object -> (PacketType) object)
-                .filter(PacketType::isSupported)
-                .toArray(PacketType[]::new));
-        this.plugin = plugin;
+                .map(object -> (PacketType.Play.Server) object)
+                .toList();
     }
 
     @Override
-    public void onPacketSending(@NotNull PacketEvent event) {
-        if (event.isCancelled()) return;
-
-        Player player = event.getPlayer();
+    public void onPacketPlaySend(@NotNull PacketPlaySendEvent event) {
+        if (event.isCancelled()
+                || !listenTo.contains(event.getPacketType())
+                || !(event.getPlayer() instanceof Player player)) return;
 
         World world;
         try {
@@ -72,16 +107,8 @@ public class VillagerHandler extends PacketAdapter {
             return;
         }
 
-        PacketContainer packet = event.getPacket();
-
-        Entity entity;
-        try {
-            entity = packet.getEntityModifier(world).readSafely(0);
-        } catch (Exception exception) {
-            // Should "fix" -> FieldAccessException/RuntimeException: Cannot find entity from ID (X?).
-            return;
-        }
-
+        int id = getEntityIdFromPacket(event);
+        @SuppressWarnings("deprecation") Entity entity = id != -1 ? SpigotReflectionUtil.getEntityById(world, id) : null;
         if (!(entity instanceof AbstractVillager villager) || plugin.getTracker().isInvalid(villager)) return;
 
         UUID uuid = entity.getUniqueId();
@@ -97,21 +124,33 @@ public class VillagerHandler extends PacketAdapter {
             return;
         }
 
-        StructureModifier<Byte> bytes = packet.getBytes();
-
-        PacketType type = event.getPacketType();
-        if (type == ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
-            handleStatus(plugin.getConverter().getNPC(villager).get(), bytes.readSafely(0));
+        PacketType.Play.Server type = event.getPacketType();
+        if (type == PacketType.Play.Server.ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
+            WrapperPlayServerEntityStatus status = new WrapperPlayServerEntityStatus(event);
+            handleStatus(plugin.getConverter().getNPC(villager).get(), (byte) status.getStatus());
         }
 
-        // Cancel metadata packet for players using 1.7 (or lower).
-        if (type == ENTITY_METADATA && plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
-            event.setCancelled(true);
+        if (type == PacketType.Play.Server.ENTITY_METADATA) {
+            // Cancel metadata packets for players using 1.7 (or lower).
+            if (plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
+                event.setCancelled(true);
+            } else if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_5)) {
+                WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
+
+                List<EntityData> metadata = wrapper.getEntityMetadata();
+                metadata.removeIf(REMOVE_METADATA);
+
+                wrapper.setEntityMetadata(metadata);
+
+                if (npc.isPresent() && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
+                    handler.adaptScale(player, npc.get());
+                }
+            }
         }
 
         if (npc.isEmpty()) return;
 
-        // Dont modify location while reviving.
+        // Don't modify location while reviving.
         if (plugin.getConverter().getNPC(villager)
                 .map(IVillagerNPC::isReviving)
                 .orElse(false)) return;
@@ -119,39 +158,78 @@ public class VillagerHandler extends PacketAdapter {
         if (MOVEMENT_PACKETS.contains(type)) rotateBody(event, villager);
     }
 
-    private void rotateBody(@NotNull PacketEvent event, @NotNull AbstractVillager villager) {
-        PacketContainer packet = event.getPacket();
+    private int getEntityIdFromPacket(@NotNull PacketPlaySendEvent event) {
+        PacketType.Play.Server type = event.getPacketType();
+        if (type == PacketType.Play.Server.SPAWN_ENTITY) {
+            WrapperPlayServerSpawnEntity wrapper = new WrapperPlayServerSpawnEntity(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.SPAWN_LIVING_ENTITY) {
+            WrapperPlayServerSpawnLivingEntity wrapper = new WrapperPlayServerSpawnLivingEntity(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_STATUS) {
+            WrapperPlayServerEntityStatus wrapper = new WrapperPlayServerEntityStatus(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_METADATA) {
+            WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_ROTATION) {
+            WrapperPlayServerEntityRotation wrapper = new WrapperPlayServerEntityRotation(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_HEAD_LOOK) {
+            WrapperPlayServerEntityHeadLook wrapper = new WrapperPlayServerEntityHeadLook(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_TELEPORT) {
+            WrapperPlayServerEntityTeleport wrapper = new WrapperPlayServerEntityTeleport(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_VELOCITY) {
+            WrapperPlayServerEntityVelocity wrapper = new WrapperPlayServerEntityVelocity(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_RELATIVE_MOVE) {
+            WrapperPlayServerEntityRelativeMove wrapper = new WrapperPlayServerEntityRelativeMove(event);
+            return wrapper.getEntityId();
+        } else if (type == PacketType.Play.Server.ENTITY_RELATIVE_MOVE_AND_ROTATION) {
+            WrapperPlayServerEntityRelativeMoveAndRotation wrapper = new WrapperPlayServerEntityRelativeMoveAndRotation(event);
+            return wrapper.getEntityId();
+        }
+        return -1;
+    }
 
-        PacketType type = packet.getType();
-        if (type != ENTITY_HEAD_ROTATION) return;
+    private void rotateBody(@NotNull PacketPlaySendEvent event, @NotNull AbstractVillager villager) {
+        PacketType.Play.Server type = event.getPacketType();
+        if (type != PacketType.Play.Server.ENTITY_HEAD_LOOK) return;
 
-        StructureModifier<Byte> bytes = packet.getBytes();
+        WrapperPlayServerEntityHeadLook headLook = new WrapperPlayServerEntityHeadLook(event);
+
         Location location = villager.getLocation();
 
         float pitch = location.getPitch();
 
-        // Rotate body with the head.
+        // Rotate the body with the head.
         if (plugin.getConverter().getNPC(villager).get().isShakingHead()) return;
 
-        PacketContainer moveLook = new PacketContainer(REL_ENTITY_MOVE_LOOK);
-        moveLook.getIntegers().write(0, villager.getEntityId());
-        moveLook.getBytes().write(0, bytes.read(0));
-        moveLook.getBytes().write(1, (byte) (pitch * 256f / 360f));
+        WrapperPlayServerEntityRelativeMoveAndRotation rotation = new WrapperPlayServerEntityRelativeMoveAndRotation(
+                villager.getEntityId(),
+                0.0d,
+                0.0d,
+                0.0d,
+                headLook.getHeadYaw(),
+                pitch,
+                false);
 
-        ProtocolLibrary.getProtocolManager().sendServerPacket(event.getPlayer(), moveLook);
+        PacketEvents.getAPI().getProtocolManager().sendPacket(event.getChannel(), rotation);
     }
 
     private void handleStatus(@NotNull IVillagerNPC npc, byte status) {
         LivingEntity bukkit = npc.bukkit();
 
-        Particle particle;
+        XParticle particle;
         switch (status) {
-            case 12 -> particle = Particle.HEART;
-            case 13 -> particle = Particle.VILLAGER_ANGRY;
-            case 14 -> particle = Particle.VILLAGER_HAPPY;
+            case 12 -> particle = XParticle.HEART;
+            case 13 -> particle = XParticle.ANGRY_VILLAGER;
+            case 14 -> particle = XParticle.HAPPY_VILLAGER;
             case 42 -> {
                 Raid raid = plugin.getConverter().getRaidAt(bukkit.getLocation());
-                particle = raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : Particle.WATER_SPLASH;
+                particle = raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : XParticle.SPLASH;
             }
             default -> particle = null;
         }
@@ -166,7 +244,7 @@ public class VillagerHandler extends PacketAdapter {
         double z = location.getZ() + box.getWidthZ() * ((2.0d * random.nextDouble() - 1.0d) * 1.05d);
 
         bukkit.getWorld().spawnParticle(
-                particle,
+                particle.get(),
                 x,
                 y,
                 z,
@@ -176,13 +254,17 @@ public class VillagerHandler extends PacketAdapter {
                 random.nextGaussian() * 0.02d);
     }
 
-    private boolean isCancellableSpawnPacket(@NotNull PacketEvent event) {
-        PacketType type = event.getPacketType();
-        if (type == SPAWN_ENTITY_LIVING) return true;
+    private boolean isCancellableSpawnPacket(@NotNull PacketPlaySendEvent event) {
+        PacketType.Play.Server type = event.getPacketType();
+        if (type == PacketType.Play.Server.SPAWN_LIVING_ENTITY) return true;
 
-        if (!ReflectionUtils.supports(19) || type != SPAWN_ENTITY) return false;
+        if (!ReflectionUtils.supports(19) || type != PacketType.Play.Server.SPAWN_ENTITY) return false;
 
-        EntityType entityType = event.getPacket().getEntityTypeModifier().read(0);
-        return !PluginUtils.IS_1_20_2_OR_NEW || entityType == EntityType.VILLAGER || entityType == EntityType.WANDERING_TRADER;
+        WrapperPlayServerSpawnEntity wrapper = new WrapperPlayServerSpawnEntity(event);
+        EntityType entityType = SpigotConversionUtil.toBukkitEntityType(wrapper.getEntityType());
+
+        return PacketEvents.getAPI().getServerManager().getVersion().isOlderThan(ServerVersion.V_1_20_2)
+                || entityType == EntityType.VILLAGER
+                || entityType == EntityType.WANDERING_TRADER;
     }
 }
