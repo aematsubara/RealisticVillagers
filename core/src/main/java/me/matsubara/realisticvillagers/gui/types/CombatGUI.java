@@ -37,11 +37,7 @@ public final class CombatGUI extends InteractGUI {
     private static final int[] STATUS_SLOTS = {19, 20, 21, 22, 23, 24, 25};
     private static final int[] HOTBAR = {28, 29, 30, 31, 32, 33, 34};
 
-    private final ItemStack previous;
-    private final ItemStack search;
-    private final ItemStack clearSearch;
-    private final ItemStack close;
-    private final ItemStack next;
+    // We'll keep these here, so we can swap them when clicking on them.
     private final ItemStack enabled;
     private final ItemStack disabled;
 
@@ -66,11 +62,6 @@ public final class CombatGUI extends InteractGUI {
         this.player = player;
         this.isAnimal = isAnimal;
 
-        previous = getGUIItem("previous");
-        search = getGUIItem("search");
-        clearSearch = keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : null;
-        close = getGUIItem("close");
-        next = getGUIItem("next");
         enabled = getGUIItem("enabled");
         disabled = getGUIItem("disabled");
 
@@ -102,10 +93,10 @@ public final class CombatGUI extends InteractGUI {
 
         pages = (int) (Math.ceil((double) heads.size() / SLOTS.length));
 
-        if (current > 0) inventory.setItem(28, previous);
-        inventory.setItem(31, keyword != null ? clearSearch : pages > 1 ? search : null);
-        inventory.setItem(44, close);
-        if (current < pages - 1) inventory.setItem(34, next);
+        if (current > 0) inventory.setItem(28, getGUIItem("previous"));
+        inventory.setItem(31, getSearchItem(keyword, pages));
+        inventory.setItem(44, getGUIItem("close"));
+        if (current < pages - 1) inventory.setItem(34, getGUIItem("next"));
 
         InventoryUpdate.updateInventory(player, getTitle());
 
@@ -155,13 +146,13 @@ public final class CombatGUI extends InteractGUI {
     }
 
     public void previousPage(boolean isShiftClick) {
-        // If shift click, go to the first page; otherwise, go to the previous page.
+        // If shift clicking, go to the first page; otherwise, go to the previous page.
         current = isShiftClick ? 0 : current - 1;
         updateInventory();
     }
 
     public void nextPage(boolean isShiftClick) {
-        // If shift click, go to the last page; otherwise, go to the next page.
+        // If shift clicking, go to the last page; otherwise, go to the next page.
         current = isShiftClick ? pages - 1 : current + 1;
         updateInventory();
     }

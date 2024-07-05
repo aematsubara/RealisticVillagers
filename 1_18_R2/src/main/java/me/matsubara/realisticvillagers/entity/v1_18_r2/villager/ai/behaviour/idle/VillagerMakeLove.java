@@ -161,8 +161,11 @@ public class VillagerMakeLove extends Behavior<Villager> {
         level.addFreshEntityWithPassengers(baby, SpawnReason.BREEDING);
         level.broadcastEntityEvent(baby, (byte) 12);
 
-        npc.setPartner(breedWith.getUUID(), true);
-        breed.setPartner(villager.getUUID(), true);
+        // Only marry the villagers if they don't have a partner.
+        if (!npc.hasPartner() && !breed.hasPartner()) {
+            npc.setPartner(breedWith.getUUID(), true);
+            breed.setPartner(villager.getUUID(), true);
+        }
 
         return Optional.of(baby);
     }

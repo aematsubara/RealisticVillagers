@@ -17,8 +17,6 @@ import org.jetbrains.annotations.NotNull;
 public final class EquipmentGUI extends InteractGUI {
 
     private final Player player;
-    private final ItemStack close;
-    private final ItemStack head;
 
     private static final ItemStack EMPTY = new ItemStack(Material.AIR);
     public static final EquipmentSlot[] ARMOR_SLOTS_ORDER = {
@@ -33,8 +31,6 @@ public final class EquipmentGUI extends InteractGUI {
         super(plugin, npc, "equipment", ((InventoryHolder) npc.bukkit()).getInventory().getSize() + 18, null, true);
 
         this.player = player;
-        this.close = getGUIItem("close");
-        this.head = getGUIItem("villager", string -> string.replace("%villager-name%", npc.getVillagerName()));
 
         fillInventory();
         player.openInventory(inventory);
@@ -46,7 +42,7 @@ public final class EquipmentGUI extends InteractGUI {
         int size = ((InventoryHolder) npc.bukkit()).getInventory().getSize();
         int borderEnd = size + 9;
 
-        inventory.setItem(borderEnd, head);
+        inventory.setItem(borderEnd, getGUIItem("villager", string -> string.replace("%villager-name%", npc.getVillagerName())));
 
         int armorStart = borderEnd + 1;
         int armorEnd = armorStart + 6;
@@ -59,6 +55,6 @@ public final class EquipmentGUI extends InteractGUI {
             inventory.setItem(i, equipment.getItem(slot));
         }
 
-        inventory.setItem(size + 17, close);
+        inventory.setItem(size + 17, getGUIItem("close"));
     }
 }

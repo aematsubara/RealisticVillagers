@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.listener;
 
-import com.cryptomorin.xseries.ReflectionUtils;
+
+import com.cryptomorin.xseries.reflection.XReflection;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
@@ -51,6 +52,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -126,7 +128,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         VillagerTracker tracker = plugin.getTracker();
         if (tracker.isInvalid(villager)) return;
 
-        // Update villager skin when changing job after 1 tick since this event is called before changing job.
+        // Update villager skin when changing a job after 1 tick since this event is called before changing a job.
         // Respawn NPC with the new profession texture.
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             plugin.getConverter().getNPC(villager).ifPresent(npc -> {
@@ -177,18 +179,12 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         List<ItemStack> drops = event.getDrops();
         drops.clear();
 
-        addToDrops(drops, villager.getInventory().getContents());
+        Collections.addAll(drops, villager.getInventory().getContents());
 
         EntityEquipment equipment = villager.getEquipment();
         if (equipment != null) {
-            addToDrops(drops, equipment.getItemInMainHand(), equipment.getItemInOffHand());
-            addToDrops(drops, equipment.getArmorContents());
-        }
-    }
-
-    private void addToDrops(List<ItemStack> drops, @NotNull ItemStack... contents) {
-        for (ItemStack item : contents) {
-            if (item != null) drops.add(item);
+            Collections.addAll(drops, equipment.getItemInMainHand(), equipment.getItemInOffHand());
+            Collections.addAll(drops, equipment.getArmorContents());
         }
     }
 
@@ -467,7 +463,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         if (npc.isFishing()) npc.toggleFishing();
 
         if (!(event instanceof EntityDamageByEntityEvent byEntity)) {
-            if ((ReflectionUtils.MINOR_NUMBER != 20 && ReflectionUtils.PATCH_NUMBER != 5)
+            if ((XReflection.MINOR_NUMBER != 20 && XReflection.PATCH_NUMBER != 5)
                     && event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION
                     && !villager.isAdult()
                     && !Config.DISABLE_SKINS.asBool()

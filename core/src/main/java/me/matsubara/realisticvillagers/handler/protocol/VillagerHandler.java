@@ -1,7 +1,7 @@
 package me.matsubara.realisticvillagers.handler.protocol;
 
-import com.cryptomorin.xseries.ReflectionUtils;
 import com.cryptomorin.xseries.particles.XParticle;
+import com.cryptomorin.xseries.reflection.XReflection;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
@@ -93,6 +93,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
                 .toList();
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public void onPacketPlaySend(@NotNull PacketPlaySendEvent event) {
         if (event.isCancelled()
@@ -108,7 +109,14 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         }
 
         int id = getEntityIdFromPacket(event);
-        @SuppressWarnings("deprecation") Entity entity = id != -1 ? SpigotReflectionUtil.getEntityById(world, id) : null;
+
+        Entity entity;
+        try {
+            entity = id != -1 ? SpigotReflectionUtil.getEntityById(world, id) : null;
+        } catch (Exception exception) {
+            // Should "fix" -> java.lang.NullPointerException: null
+            return;
+        }
         if (!(entity instanceof AbstractVillager villager) || plugin.getTracker().isInvalid(villager)) return;
 
         UUID uuid = entity.getUniqueId();
@@ -127,7 +135,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         PacketType.Play.Server type = event.getPacketType();
         if (type == PacketType.Play.Server.ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
             WrapperPlayServerEntityStatus status = new WrapperPlayServerEntityStatus(event);
-            handleStatus(plugin.getConverter().getNPC(villager).get(), (byte) status.getStatus());
+            plugin.getConverter().getNPC(villager).ifPresent(temp -> handleStatus(temp, (byte) status.getStatus()));
         }
 
         if (type == PacketType.Play.Server.ENTITY_METADATA) {
@@ -205,7 +213,9 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         float pitch = location.getPitch();
 
         // Rotate the body with the head.
-        if (plugin.getConverter().getNPC(villager).get().isShakingHead()) return;
+        if (plugin.getConverter().getNPC(villager)
+                .map(IVillagerNPC::isShakingHead)
+                .orElse(false)) return;
 
         WrapperPlayServerEntityRelativeMoveAndRotation rotation = new WrapperPlayServerEntityRelativeMoveAndRotation(
                 villager.getEntityId(),
@@ -258,7 +268,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         PacketType.Play.Server type = event.getPacketType();
         if (type == PacketType.Play.Server.SPAWN_LIVING_ENTITY) return true;
 
-        if (!ReflectionUtils.supports(19) || type != PacketType.Play.Server.SPAWN_ENTITY) return false;
+        if (!XReflection.supports(19) || type != PacketType.Play.Server.SPAWN_ENTITY) return false;
 
         WrapperPlayServerSpawnEntity wrapper = new WrapperPlayServerSpawnEntity(event);
         EntityType entityType = SpigotConversionUtil.toBukkitEntityType(wrapper.getEntityType());

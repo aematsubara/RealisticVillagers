@@ -1,6 +1,6 @@
 package me.matsubara.realisticvillagers.listener;
 
-import com.cryptomorin.xseries.ReflectionUtils;
+import com.cryptomorin.xseries.reflection.XReflection;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -12,7 +12,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
 import me.matsubara.realisticvillagers.util.PluginUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -40,7 +39,7 @@ import java.util.*;
 public final class PlayerListeners implements Listener {
 
     private final RealisticVillagers plugin;
-    private final Multimap<UUID, Pair<Long, Integer>> babyGrowCount = ArrayListMultimap.create();
+    private final Multimap<UUID, Map.Entry<Long, Integer>> babyGrowCount = ArrayListMultimap.create();
     private final List<String> ignoredActivities = ImmutableList.of("hide", "panic", "fight");
 
     private static final String EMPTY = "";
@@ -62,7 +61,7 @@ public final class PlayerListeners implements Listener {
 
     private void discoverRecipes(Player player, @NotNull NamespacedKey... keys) {
         for (NamespacedKey key : keys) {
-            if (key != null) player.discoverRecipe(key);
+            player.discoverRecipe(key);
         }
     }
 
@@ -133,7 +132,7 @@ public final class PlayerListeners implements Listener {
 
         if (plugin.isDisabledIn(event.getPlayer().getWorld())) return;
 
-        if (!ReflectionUtils.supports(19)) return;
+        if (!XReflection.supports(19)) return;
         if (!Config.ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK.asBool()) return;
 
         ItemStack item = event.getItem();
@@ -221,32 +220,32 @@ public final class PlayerListeners implements Listener {
 
         // If player isn't in map, add new entry with this baby.
         if (!babyGrowCount.containsKey(playerUUID)) {
-            babyGrowCount.put(playerUUID, Pair.of(procreation, 3));
+            babyGrowCount.put(playerUUID, new AbstractMap.SimpleEntry<>(procreation, 3));
         }
 
-        Collection<Pair<Long, Integer>> pairs = babyGrowCount.get(playerUUID);
+        Collection<Map.Entry<Long, Integer>> entries = babyGrowCount.get(playerUUID);
 
         // If player is already in map, but this baby isn't in, add it.
-        boolean existsInList = pairs.stream().anyMatch(longIntegerPair -> longIntegerPair.getKey() == procreation);
-        if (!existsInList) babyGrowCount.put(playerUUID, Pair.of(procreation, 3));
+        boolean existsInList = entries.stream().anyMatch(entry -> entry.getKey() == procreation);
+        if (!existsInList) babyGrowCount.put(playerUUID, new AbstractMap.SimpleEntry<>(procreation, 3));
 
         // Check for counts and send messages.
-        Pair<Long, Integer> pairToRemove = null;
-        for (Pair<Long, Integer> pair : pairs) {
-            if (pair.getKey() != procreation) continue;
+        Map.Entry<Long, Integer> toRemove = null;
+        for (Map.Entry<Long, Integer> entry : entries) {
+            if (entry.getKey() != procreation) continue;
 
-            int count = pair.getValue();
+            int count = entry.getValue();
             if (count > 0) {
                 messages.send(player, Messages.Message.BABY_COUNTDOWN, string -> string.replace("%countdown%", String.valueOf(count)));
-                pair.setValue(count - 1);
+                entry.setValue(count - 1);
                 return;
             }
 
-            pairToRemove = pair;
+            toRemove = entry;
             break;
         }
-        if (pairToRemove != null) {
-            babyGrowCount.remove(playerUUID, pairToRemove);
+        if (toRemove != null) {
+            babyGrowCount.remove(playerUUID, toRemove);
         }
 
         messages.send(player, Messages.Message.BABY_SPAWNED, string -> string.replace("%baby-name%", Objects.requireNonNullElse(childName, "???")));

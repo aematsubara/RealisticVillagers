@@ -193,6 +193,25 @@ reputation-required-to-marry: 75
 # Reputation required to procreate with a villager.
 reputation-required-to-procreate: 110
 
+# Here you can allow procreation between villagers of the same sex, procreation between family members and also allow "cheating" of villagers,
+# i.e. allow villagers to procreate with other villagers even if they are married.
+#
+# By default, all these options are disabled, so it can break the functioning of villager farms.
+villager-farm:
+  # If true, male villagers will be able to procreate with other male villagers, the same with female villagers.
+  # If false, both villagers must have a different sex.
+  ignore-sex-when-procreating: false
+  # If true, a villager will be able to procreate with another villager even if it is not their partner (ONLY FOR RELATIONSHIPS BETWEEN 2 VILLAGERS).
+  # If false, a villager will only be able to procreate with his partner (if he has one).
+  allow-partner-cheating: false
+  # This option requires the one above (@allow-partner-cheating) to be true.
+  # If true, a villager will be able to procreate with another villager even if they are married to a player.
+  # If false, a villager will only be able to procreate with his partner (if he has one) and is a player.
+  allow-partner-cheating-for-all: false
+  # If true, 2 villagers from the same family can procreate with each other (WEIRD!).
+  # If false, 2 villagers will not be able to procreate with each other if they are from the same family (unless they are partners).
+  allow-procreation-between-family-members: false
+
 # The reputation that will be lost after divorce.  Minimum value: 2; use 1 or less to disable.
 divorce-reputation-loss: 150
 

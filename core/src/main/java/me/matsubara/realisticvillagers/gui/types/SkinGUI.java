@@ -33,16 +33,6 @@ public class SkinGUI extends PaginatedGUI {
     private final boolean isMale;
     private final boolean isAdult;
     private final String keyword;
-    private final ItemStack close;
-    private final ItemStack previous;
-    private final ItemStack next;
-    private final ItemStack search;
-    private final ItemStack clearSearch;
-    private final ItemStack male;
-    private final ItemStack female;
-    private final ItemStack adult;
-    private final ItemStack kid;
-    private final ItemStack newSkin;
     private final Map<String, ItemStack> professionItems = new LinkedHashMap<>();
     private @Setter String currentProfession;
 
@@ -85,17 +75,6 @@ public class SkinGUI extends PaginatedGUI {
         this.isAdult = isAdult;
         this.current = page != null ? page : 0;
         this.keyword = keyword;
-
-        close = getGUIItem("close");
-        previous = getGUIItem("previous");
-        next = getGUIItem("next");
-        search = getGUIItem("search");
-        clearSearch = keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : null;
-        male = getGUIItem("male");
-        female = getGUIItem("female");
-        adult = getGUIItem("adult");
-        kid = getGUIItem("kid");
-        newSkin = getGUIItem("add-new-skin");
 
         for (String profession : PROFESSION_ICON.keySet()) {
             professionItems.put(profession, new ItemBuilder(getGUIItem("profession"))
@@ -210,7 +189,7 @@ public class SkinGUI extends PaginatedGUI {
 
         inventory.setItem(AGE_STAGE_SLOT, keyword != null ?
                 (!animation.isGuiAnim() ? animation.getDefaultItem() : null) :
-                (isAdult ? adult : kid));
+                (isAdult ? getGUIItem("adult") : getGUIItem("kid")));
 
         ItemStack professionItem;
         if (professionItems != null) {
@@ -219,11 +198,11 @@ public class SkinGUI extends PaginatedGUI {
         } else professionItem = null;
         inventory.setItem(PROFESSION_SLOT + extra, professionItem);
 
-        inventory.setItem(CLOSE_SLOT + extra, close);
-        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, previous);
-        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, next);
-        inventory.setItem(TOGGLE_SEX + extra, keyword != null ? null : isMale ? male : female);
-        inventory.setItem(SEARCH_SLOT + extra, keyword != null ? clearSearch : pages > 1 ? search : null);
-        inventory.setItem(NEW_SKIN + extra, keyword != null ? null : newSkin);
+        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("close"));
+        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
+        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
+        inventory.setItem(TOGGLE_SEX + extra, keyword != null ? null : isMale ? getGUIItem("male") : getGUIItem("female"));
+        inventory.setItem(SEARCH_SLOT + extra, getSearchItem(keyword, pages));
+        inventory.setItem(NEW_SKIN + extra, keyword != null ? null : getGUIItem("add-new-skin"));
     }
 }

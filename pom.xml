@@ -6,7 +6,7 @@
 
     <groupId>me.matsubara</groupId>
     <artifactId>realisticvillagers-parent</artifactId>
-    <version>3.3</version>
+    <version>3.3.1</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -24,6 +24,7 @@
         <module>1_20_R2</module>
         <module>1_20_R3</module>
         <module>1_20_R4</module>
+        <module>1_21_R1</module>
         <module>core</module>
         <module>dist</module>
     </modules>

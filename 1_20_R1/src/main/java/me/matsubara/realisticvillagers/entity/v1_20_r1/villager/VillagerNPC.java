@@ -1718,12 +1718,24 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean canBreedWith(@NotNull VillagerNPC other) {
-        return other.getSex() != null
-                && !other.getSex().equalsIgnoreCase(sex)
+        return (Config.IGNORE_SEX_WHEN_PROCREATING.asBool() || (other.getSex() != null && !other.getSex().equalsIgnoreCase(sex)))
                 && canBreed()
                 && other.canBreed()
-                && (!hasPartner() ? !other.hasPartner() : isPartner(other.getUUID()))
-                && !isFamily(other.getUUID());
+                && canCheatWith(other)
+                && other.canCheatWith(this)
+                && (Config.ALLOW_PROCREATION_BETWEEN_FAMILY_MEMBERS.asBool() || (!isFamily(other.getUUID()) && !other.isFamily(getUUID())));
+    }
+
+    public boolean canCheatWith(VillagerNPC other) {
+        // If this villager is not married, then this villager can "cheat".
+        if (!hasPartner()) return true;
+
+        // If this villager is married but the other villager is its partner, then this villager can "cheat".
+        if (isPartner(other.getUUID())) {
+            return true;
+        }
+
+        return Config.ALLOW_PARTNER_CHEATING.asBool() && (isPartnerVillager || Config.ALLOW_PARTNER_CHEATING_FOR_ALL.asBool());
     }
 
     @Override

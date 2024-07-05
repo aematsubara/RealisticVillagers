@@ -217,6 +217,10 @@ public final class VillagerTracker implements Listener {
 
         if (entity.getType() == EntityType.VILLAGER && reason == EntityTransformEvent.TransformReason.LIGHTNING) {
             removeNPC(event.getEntity().getEntityId());
+
+            NametagManager nametagManager = plugin.getNametagManager();
+            if (nametagManager != null) plugin.getConverter().getNPC((Villager) entity)
+                    .ifPresent(nametagManager::remove);
             return;
         }
 
@@ -228,7 +232,7 @@ public final class VillagerTracker implements Listener {
         boolean isInfection = reason == EntityTransformEvent.TransformReason.INFECTION;
         if (!isInfection && reason != EntityTransformEvent.TransformReason.CURED) return;
 
-        // If villager isn't custom, the tag will be null.
+        // If a villager isn't custom, the tag will be null.
         transformations.put(transformed.getUniqueId(), plugin.getConverter().getNPCTag((LivingEntity) entity, isInfection));
     }
 
@@ -630,7 +634,7 @@ public final class VillagerTracker implements Listener {
 
             Graphics2D graphics = combined.createGraphics();
 
-            // First we draw the default skin (removing the skin hat if necessary).
+            // First, we draw the default skin (removing the skin hat if necessary).
             graphics.drawImage(!WITHOUT_HAT.contains(profession) ? PluginUtils.removeHat(image) : image, 0, 0, null);
 
             // Then, we draw the profession custome.

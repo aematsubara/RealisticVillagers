@@ -4,10 +4,10 @@ import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.*;
-import me.matsubara.realisticvillagers.listener.InventoryListeners;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -91,7 +91,7 @@ public class RainbowAnimation extends BukkitRunnable {
             next = RandomUtils.nextInt(0, PANES.length);
         } while (previous == next);
 
-        // No rainbow? default item. Type 1 ? random pane. Type 2 ? null (selected in createFrame()).
+        // No rainbow? Default item. Type 1? Random pane. Type 2? Null (selected in createFrame()).
         ItemStack background = !guiAnim ? defaultItem : guiAnimType == 1 ? getCachedFrame(PANES[next]) : null;
 
         int size = gui.getSize();
@@ -124,13 +124,13 @@ public class RainbowAnimation extends BukkitRunnable {
             if (gui instanceof WhistleGUI whistle) {
                 // Buttons are added once AFTHER this frame is created.
                 whistle.addButtons();
-                ignoreIndexes.add(gui.getInventory().first(whistle.getClose()));
+                ignoreIndexes.add(getCloseItemIndex(whistle.getInventory()));
             } else if (gui instanceof SkinGUI skin) {
                 skin.addButtons();
-                ignoreIndexes.add(gui.getInventory().first(skin.getClose()));
+                ignoreIndexes.add(getCloseItemIndex(skin.getInventory()));
                 handleSkinGUI(skin.getProfessionItems(), ignoreIndexes);
             } else if (gui instanceof CombatGUI combat) {
-                ignoreIndexes.add(gui.getInventory().first(combat.getClose()));
+                ignoreIndexes.add(getCloseItemIndex(combat.getInventory()));
             } else if (gui instanceof PlayersGUI players) {
                 players.addButtons();
             }
@@ -138,6 +138,23 @@ public class RainbowAnimation extends BukkitRunnable {
 
             gui.getInventory().setItem(i, item != null ? item : getCachedFrame(PANES[RandomUtils.nextInt(0, PANES.length)]));
         }
+    }
+
+    private int getCloseItemIndex(@NotNull Inventory inventory) {
+        ItemStack[] contents = inventory.getStorageContents();
+        int i = 0;
+
+        while (true) {
+            if (i >= contents.length) return -1;
+
+            if (contents[i] != null && gui.getPlugin().getInventoryListeners().isCustomItem(contents[i], "close")) {
+                break;
+            }
+
+            i++;
+        }
+
+        return i;
     }
 
     private void handleSkinGUI(Map<?, ItemStack> skin, List<Integer> ignoreIndexes) {
@@ -154,6 +171,6 @@ public class RainbowAnimation extends BukkitRunnable {
     }
 
     public static boolean isCachedBackground(RainbowAnimation animation, @Nullable ItemStack item) {
-        return item != null && (InventoryListeners.sameItems(item, getCachedFrame(item.getType())) || InventoryListeners.sameItems(item, animation.getDefaultItem()));
+        return item != null && (item.isSimilar(getCachedFrame(item.getType())) || item.isSimilar(animation.getDefaultItem()));
     }
 }

@@ -18,12 +18,6 @@ import java.util.Set;
 public class PlayersGUI extends PaginatedGUI {
 
     private final String keyword;
-    private final ItemStack close;
-    private final ItemStack previous;
-    private final ItemStack next;
-    private final ItemStack search;
-    private final ItemStack clearSearch;
-    private final ItemStack addNewPlayer;
 
     private static final int CLOSE_SLOT = 35;
     private static final int PREVIOUS_SLOT = 19;
@@ -46,23 +40,19 @@ public class PlayersGUI extends PaginatedGUI {
                 .toList());
 
         this.keyword = keyword;
-        close = getGUIItem("close");
-        previous = getGUIItem("previous");
-        next = getGUIItem("next");
-        search = getGUIItem("search");
-        clearSearch = keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : null;
-        addNewPlayer = getGUIItem("add-new-player");
     }
 
     @Override
     public void addButtons() {
         int extra = 9 * (size == 36 ? 0 : size == 45 ? 1 : 2);
-        inventory.setItem(CLOSE_SLOT + extra, close);
-        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, previous);
-        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, next);
+        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("close"));
+        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
+        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
 
         boolean centerSearch = pages > 1;
-        inventory.setItem(SEARCH_SLOT + extra, centerSearch ? (keyword != null ? clearSearch : search) : addNewPlayer);
+
+        ItemStack addNewPlayer = getGUIItem("add-new-player");
+        inventory.setItem(SEARCH_SLOT + extra, centerSearch ? getSearchItem(keyword, pages) : addNewPlayer);
 
         if (centerSearch) inventory.setItem(ADD_NEW_PLAYER_SLOT + extra, addNewPlayer);
     }

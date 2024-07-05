@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3</version>
+        <version>3.3.1</version>
     </parent>
 
     <build>
@@ -98,6 +98,12 @@
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-1_20_R4</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <!-- 1_21_R1 -->
+        <dependency>
+            <groupId>me.matsubara</groupId>
+            <artifactId>realisticvillagers-1_21_R1</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>

@@ -1,6 +1,6 @@
 package me.matsubara.realisticvillagers;
 
-import com.cryptomorin.xseries.ReflectionUtils;
+import com.cryptomorin.xseries.reflection.XReflection;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.google.common.base.Strings;
@@ -13,6 +13,7 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
 import me.matsubara.realisticvillagers.compatibility.CompatibilityManager;
 import me.matsubara.realisticvillagers.compatibility.EMCompatibility;
+import me.matsubara.realisticvillagers.data.ItemLoot;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
@@ -64,7 +65,6 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -97,6 +97,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey skinDataKey = key("SkinDataID");
     private final NamespacedKey ignoreItemKey = key("IgnoreItem");
     private final NamespacedKey playerUUIDKey = new NamespacedKey(this, "PlayerUUID");
+    private final NamespacedKey itemIdKey = new NamespacedKey(this, "ItemID");
 
     private InventoryListeners inventoryListeners;
     private OtherListeners otherListeners;
@@ -163,7 +164,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         compatibilityManager = new CompatibilityManager(this);
 
-        // Shopkeeper, Citizens & (probably) RainbowsPro; for VillagerMarket, the villager shouldn't have AI in order to work properly.
+        // Shopkeeper, Citizens & (probably) RainbowsPro; for VillagerMarket, the villager shouldn't have AI to work properly.
         compatibilityManager.addCompatibility(villager -> villager.hasAI() && !villager.hasMetadata("shopkeeper") && !villager.hasMetadata("NPC"));
 
         // EliteMobs.
@@ -176,7 +177,8 @@ public final class RealisticVillagers extends JavaPlugin {
         logger.info("Registering custom entities...");
 
         String[] packageVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.");
-        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase() : "v1_20_r4";
+
+        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase() : XReflection.MINOR_NUMBER == 21 ? "v1_21_r1" : "v1_20_r4";
         try {
             Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
@@ -236,7 +238,7 @@ public final class RealisticVillagers extends JavaPlugin {
         chestManager = new ChestManager(this);
         expectingManager = new ExpectingManager(this);
         cooldownManager = new InteractCooldownManager(this);
-        nametagManager = ReflectionUtils.supports(20, 2) ? new NametagManager(this) : null;
+        nametagManager = XReflection.supports(20, 2) ? new NametagManager(this) : null;
         CustomBlockData.registerListener(this);
 
         logger.info("Managers created!");
@@ -271,7 +273,7 @@ public final class RealisticVillagers extends JavaPlugin {
                 (playerListeners = new PlayerListeners(this)),
                 (villagerListeners = new VillagerListeners(this)));
 
-        // Used in previous versions, not needed anymore.
+        // Used in previous versions, not needed any more.
         FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
 
         PluginCommand command = getCommand("realisticvillagers");
@@ -642,7 +644,10 @@ public final class RealisticVillagers extends JavaPlugin {
         String materialName = config.getString(materialPath, "STONE");
         Material material = PluginUtils.getOrNull(Material.class, materialName);
 
-        ItemBuilder builder = new ItemBuilder(material).setLore(lore);
+        ItemBuilder builder = new ItemBuilder(material)
+                .setData(itemIdKey, PersistentDataType.STRING, path.contains(".") ? path.substring(path.lastIndexOf(".") + 1) : path)
+                .setLore(lore);
+
         if (name != null) builder.setDisplayName(name);
 
         String amountString = config.getString(path + ".amount");
@@ -1028,23 +1033,6 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private @NotNull String slotName(@NotNull EquipmentSlot slot) {
         return slot.name().toLowerCase().replace("_", "-");
-    }
-
-    private record ItemLoot(
-            Supplier<ItemStack> item,
-            double chance,
-            boolean bow,
-            boolean crossbow,
-            boolean randomVanillaEnchantments,
-            boolean offHandIfPossible) {
-
-        public boolean forRange() {
-            return bow && crossbow;
-        }
-
-        public ItemStack getItem() {
-            return item.get();
-        }
     }
 
     @Contract("_ -> new")

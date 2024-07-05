@@ -1,6 +1,6 @@
 package me.matsubara.realisticvillagers.util;
 
-import com.cryptomorin.xseries.ReflectionUtils;
+import com.cryptomorin.xseries.reflection.XReflection;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -105,7 +105,7 @@ public final class Reflection {
     public static @Nullable MethodHandle getMethod(Class<?> refc, String name, MethodType type, boolean isStatic, boolean printStackTrace, String... extraNames) {
         try {
             if (isStatic) return LOOKUP.findStatic(refc, name, type);
-            if (ReflectionUtils.MINOR_NUMBER > 17) {
+            if (XReflection.MINOR_NUMBER > 17) {
                 Method method = refc.getMethod(name, type.parameterArray());
                 if (!method.getReturnType().isAssignableFrom(type.returnType())) {
                     throw new NoSuchMethodException();

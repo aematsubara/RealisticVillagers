@@ -98,6 +98,11 @@ public enum Config {
     REPUTATION_REQUIRED_TO_MARRY("reputation-required-to-marry"),
     REPUTATION_REQUIRED_TO_PROCREATE("reputation-required-to-procreate"),
 
+    IGNORE_SEX_WHEN_PROCREATING("villager-farm.ignore-sex-when-procreating"),
+    ALLOW_PARTNER_CHEATING("villager-farm.allow-partner-cheating"),
+    ALLOW_PARTNER_CHEATING_FOR_ALL("villager-farm.allow-partner-cheating-for-all"),
+    ALLOW_PROCREATION_BETWEEN_FAMILY_MEMBERS("villager-farm.allow-procreation-between-family-members"),
+
     DIVORCE_REPUTATION_LOSS("divorce-reputation-loss"),
     DIVORCE_REPUTATION_LOSS_PAPERS("divorce-reputation-loss-papers"),
 

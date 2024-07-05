@@ -24,7 +24,6 @@ import org.bukkit.inventory.MerchantRecipe;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -39,27 +38,8 @@ import java.util.function.Function;
 public final class MainGUI extends InteractGUI {
 
     private final Player player;
-    private final ItemStack chat;
-    private final ItemStack greet;
-    private final ItemStack story;
-    private final ItemStack joke;
-    private final ItemStack insult;
-    private final ItemStack flirt;
-    private final ItemStack proud;
-    private final ItemStack follow;
-    private final ItemStack stay;
-    private final ItemStack inspect;
-    private final ItemStack gift;
-    private final ItemStack procreate;
-    private final ItemStack home;
-    private final ItemStack combat;
 
     private int currentTrade = 0;
-    private ItemStack divorce;
-    private ItemStack papers;
-    private ItemStack info;
-    private ItemStack trade;
-    private ItemStack noTrades;
 
     private static final BiFunction<MainGUI, String, ItemStack> TRADE_ITEM = (gui, itemName) -> {
         if (!(gui.getNPC().bukkit() instanceof Villager villager)) return null;
@@ -91,70 +71,68 @@ public final class MainGUI extends InteractGUI {
 
         this.player = player;
 
-        chat = setChatItemInSlot("chat");
-        greet = setChatItemInSlot("greet");
-        story = setChatItemInSlot("story");
-        joke = setChatItemInSlot("joke");
-        insult = setChatItemInSlot("insult");
-        flirt = setChatItemInSlot("flirt");
-        proud = setChatItemInSlot("proud-of");
+        setChatItemInSlot("chat");
+        setChatItemInSlot("greet");
+        setChatItemInSlot("story");
+        setChatItemInSlot("joke");
+        setChatItemInSlot("insult");
+        setChatItemInSlot("flirt");
+        setChatItemInSlot("proud-of");
 
-        follow = setGUIItemInSlot("follow-me");
-        stay = setGUIItemInSlot("stay-here");
+        setGUIItemInSlot("follow-me");
+        setGUIItemInSlot("stay-here");
 
         // Info, trade & no trade.
         updateRequiredItems();
 
-        inspect = setGUIItemInSlot("inspect-inventory");
-        gift = setGUIItemInSlot("gift");
-        procreate = setGUIItemInSlot("procreate");
+        setGUIItemInSlot("inspect-inventory");
+        setGUIItemInSlot("gift");
+        setGUIItemInSlot("procreate");
 
         // Only show divorce papers if villager isn't a cleric partner.
         boolean isPartner = npc.isPartner(player.getUniqueId());
         if (!isPartner && npc.is(Villager.Profession.CLERIC)) {
             int slot = getItemSlot("divorce-papers");
-            inventory.setItem(slot, papers = getGUIItem("divorce-papers"));
+            inventory.setItem(slot, getGUIItem("divorce-papers"));
         } else {
             // May or not be shown depending on {@divorce -> @only-if-married}.
-            divorce = setGUIItemInSlot("divorce");
+            setGUIItemInSlot("divorce");
         }
 
-        combat = setGUIItemInSlot("combat");
-        home = setGUIItemInSlot("set-home");
+        setGUIItemInSlot("combat");
+        setGUIItemInSlot("set-home");
 
         player.openInventory(inventory);
     }
 
     public void updateRequiredItems() {
         // In this case, info item needs to be updated.
-        info = setItemInSlot("information", name -> createInfoItem(getGUIItem(name)));
+        setItemInSlot("information", name -> createInfoItem(getGUIItem(name)));
 
         // Iterate through all trades (if possible).
         if (outOfFullStock(((Villager) npc.bukkit()).getRecipes())) {
-            noTrades = setGUIItemInSlot("no-trades");
+            setGUIItemInSlot("no-trades");
             return;
         }
 
-        trade = setItemInSlot("trade", string -> TRADE_ITEM.apply(this, string));
+        setItemInSlot("trade", string -> TRADE_ITEM.apply(this, string));
     }
 
-    private ItemStack setChatItemInSlot(String itemName) {
-        return setItemInSlot(itemName, this::createChatItem);
+    private void setChatItemInSlot(String itemName) {
+        setItemInSlot(itemName, this::createChatItem);
     }
 
-    private ItemStack setGUIItemInSlot(String itemName) {
-        return setItemInSlot(itemName, this::getGUIItem);
+    private void setGUIItemInSlot(String itemName) {
+        setItemInSlot(itemName, this::getGUIItem);
     }
 
-    private @Nullable ItemStack setItemInSlot(String itemName, Function<String, ItemStack> callable) {
-        if (!checkSettings(itemName)) return null;
+    private void setItemInSlot(String itemName, Function<String, ItemStack> callable) {
+        if (!checkSettings(itemName)) return;
         int slot = getItemSlot(itemName);
-        if (slot == -1) return null;
+        if (slot == -1) return;
 
         ItemStack item = callable.apply(itemName);
         inventory.setItem(slot, item);
-
-        return item;
     }
 
     private boolean checkSettings(String itemName) {

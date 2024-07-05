@@ -163,7 +163,6 @@ public class NametagManager implements Listener {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private void handleNametag(IVillagerNPC npc, TextDisplay display, boolean transform) {
         if (display == null) return;
 
@@ -382,7 +381,7 @@ public class NametagManager implements Listener {
         Set<Integer> rawSlots = event.getRawSlots();
         if (rawSlots.size() != 1) return;
 
-        // We only care about the bottles slots.
+        // We only care about the bottle slots.
         int slot = rawSlots.iterator().next();
         if (slot < 0 || slot > 2) return;
 
@@ -449,7 +448,7 @@ public class NametagManager implements Listener {
         if (click == ClickType.DOUBLE_CLICK) return;
         if (action == InventoryAction.SWAP_WITH_CURSOR) return;
 
-        // We only care about the bottles slots.
+        // We only care about the bottle slots.
         int slot = event.getRawSlot();
         if (slot < 0 || slot > 2) return;
 

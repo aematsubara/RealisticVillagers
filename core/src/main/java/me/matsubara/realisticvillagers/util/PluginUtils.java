@@ -1,6 +1,6 @@
 package me.matsubara.realisticvillagers.util;
 
-import com.cryptomorin.xseries.ReflectionUtils;
+import com.cryptomorin.xseries.reflection.XReflection;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
@@ -84,11 +84,11 @@ public final class PluginUtils {
     private static final MethodHandle SET_PROFILE;
     private static final MethodHandle PROFILE;
 
-    private static final Class<?> CRAFT_ENTITY = ReflectionUtils.getCraftClass("entity.CraftEntity");
+    private static final Class<?> CRAFT_ENTITY = XReflection.getCraftClass("entity.CraftEntity");
 
     private static final MethodHandle getHandle = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
     private static final MethodHandle absMoveTo = Reflection.getMethod(
-            ReflectionUtils.getNMSClass("world.entity", "Entity"),
+            XReflection.getNMSClass("world.entity", "Entity"),
             "a",
             MethodType.methodType(void.class, double.class, double.class, double.class, float.class, float.class),
             false,
@@ -122,7 +122,7 @@ public final class PluginUtils {
 
         COLORS = COLORS_BY_NAME.values().toArray(new Color[0]);
 
-        Class<?> craftMetaSkull = ReflectionUtils.getCraftClass("inventory.CraftMetaSkull");
+        Class<?> craftMetaSkull = XReflection.getCraftClass("inventory.CraftMetaSkull");
         Preconditions.checkNotNull(craftMetaSkull);
 
         SET_PROFILE = Reflection.getMethod(craftMetaSkull, "setProfile", GameProfile.class);

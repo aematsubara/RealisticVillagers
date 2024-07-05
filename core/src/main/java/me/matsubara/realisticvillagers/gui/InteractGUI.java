@@ -27,7 +27,7 @@ public abstract class InteractGUI implements InventoryHolder {
     protected @Setter int taskId;
     protected final UnaryOperator<String> titleOperator;
     protected RainbowAnimation animation;
-    private boolean shouldStopInteracting;
+    private @Setter boolean shouldStopInteracting;
 
     private static final UnaryOperator<String> EMPTY = string -> string;
     public static final Material[] PANES = {
@@ -98,10 +98,6 @@ public abstract class InteractGUI implements InventoryHolder {
         return shouldStopInteracting;
     }
 
-    public void setShouldStopInteracting(boolean shouldStopInteracting) {
-        this.shouldStopInteracting = shouldStopInteracting;
-    }
-
     public static int getValidSize(@NotNull RealisticVillagers plugin, String sizePath, int min) {
         int size = plugin.getConfig().getInt("gui." + sizePath + ".size");
         return getValidSize(size, min);
@@ -109,5 +105,10 @@ public abstract class InteractGUI implements InventoryHolder {
 
     private static int getValidSize(int size, int min) {
         return size < min ? min : Math.min(size, 54);
+    }
+
+    // For CombatGUI, PlayersGUI, SkinGUI & WhistleGUI.
+    protected @Nullable ItemStack getSearchItem(String keyword, int pages) {
+        return keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : pages > 1 ? getGUIItem("search") : null;
     }
 }
