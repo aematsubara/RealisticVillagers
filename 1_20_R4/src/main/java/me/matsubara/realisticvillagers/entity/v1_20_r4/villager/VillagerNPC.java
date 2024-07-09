@@ -307,9 +307,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     private static final MethodHandle BEHAVIORS_FIELD = Reflection.getField(GateBehavior.class, ShufflingList.class, "e", true, "behaviors");
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
-            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bJ", true, "DATA_EFFECT_AMBIENCE_ID"));
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bM", true, "DATA_EFFECT_AMBIENCE_ID"));
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
-            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bL", true, "DATA_STINGER_COUNT_ID"));
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "bO", true, "DATA_STINGER_COUNT_ID"));
 
     public VillagerNPC(EntityType<? extends Villager> type, Level level) {
         this(type, level, VillagerType.PLAINS);
