@@ -133,7 +133,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             plugin.getConverter().getNPC(villager).ifPresent(npc -> {
                 NametagManager nametagManager = plugin.getNametagManager();
-                if (nametagManager != null) nametagManager.resetNametag(npc, null, true);
+                if (nametagManager != null) nametagManager.resetNametag(npc);
             });
             tracker.refreshNPCSkin(villager, true);
         });
@@ -148,7 +148,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
         plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getConverter().getNPC(villager).ifPresent(npc -> {
             NametagManager nametagManager = plugin.getNametagManager();
-            if (nametagManager != null) nametagManager.resetNametag(npc, null, true);
+            if (nametagManager != null) nametagManager.resetNametag(npc);
         }));
     }
 
@@ -268,7 +268,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 }
 
                 if (item.getType() == Material.NAME_TAG && meta.hasDisplayName()) {
-                    handleRename(player, villager, item);
+                    handleRename(player, npc, item);
                     return;
                 }
 
@@ -328,20 +328,23 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
     }
 
     // All this is checked in the invoker method.
-    @SuppressWarnings({"DataFlowIssue", "OptionalGetWithoutIsPresent"})
-    private void handleRename(Player player, Villager villager, ItemStack item) {
-        IVillagerNPC npc = plugin.getConverter().getNPC(villager).get();
-
+    private void handleRename(Player player, IVillagerNPC npc, ItemStack item) {
         if (plugin.getInventoryListeners().notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_NAME, "realisticvillagers.bypass.rename")) {
             plugin.getMessages().send(player, Messages.Message.INTERACT_FAIL_RENAME_NOT_ALLOWED);
             return;
         }
 
-        String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
+        @SuppressWarnings("DataFlowIssue") String name = ChatColor.stripColor(item.getItemMeta().getDisplayName());
         if (name.length() < 3) return;
 
         npc.setVillagerName(name);
-        plugin.getTracker().refreshNPCSkin(villager, false);
+
+        // Refresh nametag.
+        NametagManager nametagManager = plugin.getNametagManager();
+        if (nametagManager != null) nametagManager.resetNametag(npc);
+
+        // Refresh skin.
+        plugin.getTracker().refreshNPCSkin(npc.bukkit(), false);
 
         player.getInventory().removeItem(new ItemBuilder(item.clone())
                 .setAmount(1)

@@ -47,6 +47,8 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.*;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.Metadatable;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -62,6 +64,7 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -133,6 +136,9 @@ public final class RealisticVillagers extends JavaPlugin {
     private static final String VILLAGER_HEAD_TEXTURE = "4ca8ef2458a2b10260b8756558f7679bcb7ef691d41f534efea2ba75107315cc";
     private static final String UNKNOWN_HEAD_TEXTURE = "badc048a7ce78f7dad72a07da27d85c0916881e5522eeed1e3daf217a38c1a";
 
+    // We want ListenMode to ignore our entities.
+    public static final BiConsumer<JavaPlugin, Metadatable> LISTEN_MODE_IGNORE = (plugin, living) -> living.setMetadata("RemoveGlow", new FixedMetadataValue(plugin, true));
+
     public static final List<AnvilGUI.ResponseAction> CLOSE_RESPONSE = Collections.singletonList(AnvilGUI.ResponseAction.close());
     private static final List<String> FILTER_TYPES = List.of("WHITELIST", "BLACKLIST");
     private static final Set<String> SPECIAL_SECTIONS = Sets.newHashSet(
@@ -151,9 +157,9 @@ public final class RealisticVillagers extends JavaPlugin {
     @Override
     public void onLoad() {
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-        PacketEvents.getAPI().getSettings().reEncodeByDefault(true)
-                .checkForUpdates(false)
-                .bStats(false);
+        PacketEvents.getAPI().getSettings()
+                .reEncodeByDefault(true)
+                .checkForUpdates(false);
         PacketEvents.getAPI().load();
 
         long now = System.nanoTime();
@@ -662,11 +668,6 @@ public final class RealisticVillagers extends JavaPlugin {
             builder.setHead(itemUUID, url.equals("SELF") ? getNPCTextureURL(npc) : url, true);
         }
 
-        for (String flag : config.getStringList(path + ".flags")) {
-            ItemFlag flagValue = PluginUtils.getOrNull(ItemFlag.class, flag.toUpperCase());
-            if (flagValue != null) builder.addItemFlags(flagValue);
-        }
-
         int modelData = config.getInt(path + ".model-data", Integer.MIN_VALUE);
         if (modelData != Integer.MIN_VALUE) builder.setCustomModelData(modelData);
 
@@ -684,6 +685,11 @@ public final class RealisticVillagers extends JavaPlugin {
             }
 
             if (enchantment != null) builder.addEnchantment(enchantment, level);
+        }
+
+        for (String flag : config.getStringList(path + ".flags")) {
+            ItemFlag flagValue = PluginUtils.getOrNull(ItemFlag.class, flag.toUpperCase());
+            if (flagValue != null) builder.addItemFlags(flagValue);
         }
 
         String tippedArrow = config.getString(path + ".tipped");

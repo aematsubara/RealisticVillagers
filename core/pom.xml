@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.3</version>
+        <version>3.3.3.1</version>
     </parent>
 
     <pluginRepositories>
@@ -153,6 +153,7 @@
 
     <dependencies>
         <!-- SpigotAPI -->
+        <!-- Unfortunately, we need to stick with 1.20.4 to prevent backward compatibility issues. -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
@@ -163,7 +164,7 @@
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.9.6-SNAPSHOT</version>
+            <version>1.10.1-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>
@@ -216,13 +217,13 @@
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>11.2.0</version>
+            <version>11.2.0.1</version>
         </dependency>
         <!-- PacketEvents -->
         <dependency>
-            <groupId>com.github.retrooper.packetevents</groupId>
-            <artifactId>spigot</artifactId>
-            <version>2.3.0</version>
+            <groupId>com.github.retrooper</groupId>
+            <artifactId>packetevents-spigot</artifactId>
+            <version>2.4.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

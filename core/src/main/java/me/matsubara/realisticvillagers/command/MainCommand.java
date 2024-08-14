@@ -287,7 +287,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
             handleChangedOption(false, true, (npc, state) -> {
                 if (nametagManager == null) return;
-                nametagManager.resetNametag(npc, null, true);
+                nametagManager.resetNametag(npc);
             });
 
             // Register or unregister listeners depending on the status.
@@ -365,7 +365,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                 if (bukkit == null) continue;
             }
 
-            // In this case we don't need to ignore invalid villagers.
+            // In this case, we don't need to ignore invalid villagers.
             IVillagerNPC npc = converter.getNPC(bukkit).orElse(null);
             if (npc == null) continue;
 

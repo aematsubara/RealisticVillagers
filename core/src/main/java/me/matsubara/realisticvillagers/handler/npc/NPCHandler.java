@@ -156,8 +156,9 @@ public record NPCHandler(RealisticVillagers plugin) implements SpawnCustomizer {
         return PluginUtils.getOrNull(EntityPose.class, pose.name());
     }
 
+    @SuppressWarnings("UnnecessaryDefault")
     @Contract(pure = true)
-    private com.github.retrooper.packetevents.protocol.player.EquipmentSlot slotToWrapper(@NotNull EquipmentSlot slot) {
+    private @Nullable com.github.retrooper.packetevents.protocol.player.EquipmentSlot slotToWrapper(@NotNull EquipmentSlot slot) {
         return switch (slot) {
             case HEAD -> com.github.retrooper.packetevents.protocol.player.EquipmentSlot.HELMET;
             case CHEST -> com.github.retrooper.packetevents.protocol.player.EquipmentSlot.CHEST_PLATE;
@@ -165,7 +166,7 @@ public record NPCHandler(RealisticVillagers plugin) implements SpawnCustomizer {
             case FEET -> com.github.retrooper.packetevents.protocol.player.EquipmentSlot.BOOTS;
             case HAND -> com.github.retrooper.packetevents.protocol.player.EquipmentSlot.MAIN_HAND;
             case OFF_HAND -> com.github.retrooper.packetevents.protocol.player.EquipmentSlot.OFF_HAND;
-            default -> null;
+            default -> null; // We need to keep this for EquipmentSlot#BODY.
         };
     }
 }

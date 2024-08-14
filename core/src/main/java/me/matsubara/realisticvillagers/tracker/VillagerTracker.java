@@ -307,7 +307,7 @@ public final class VillagerTracker implements Listener {
         plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getConverter().getNPC(living).ifPresent(npc -> {
             EntityPotionEffectEvent.Action action = event.getAction();
             if (action == EntityPotionEffectEvent.Action.CLEARED || action == EntityPotionEffectEvent.Action.REMOVED) {
-                nametagManager.resetNametag(npc, null, true);
+                nametagManager.resetNametag(npc);
             } else {
                 nametagManager.remove(npc);
             }
@@ -694,7 +694,7 @@ public final class VillagerTracker implements Listener {
         Logger logger = plugin.getLogger();
 
         // Only log if error is severe.
-        if (textures.getSignature().equalsIgnoreCase("true")) {
+        if ("true".equalsIgnoreCase(textures.getSignature())) {
             logger.severe(textures.getValue());
             return null;
         }

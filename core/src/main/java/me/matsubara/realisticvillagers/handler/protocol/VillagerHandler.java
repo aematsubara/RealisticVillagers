@@ -104,7 +104,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         try {
             world = player.getWorld();
         } catch (UnsupportedOperationException exception) {
-            // Should "fix" -> UnsupportedOperationException: The method getWorld is not supported for temporary players.
+            // Should "fix" → UnsupportedOperationException: The method getWorld is not supported for temporary players.
             return;
         }
 
@@ -142,7 +142,11 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             // Cancel metadata packets for players using 1.7 (or lower).
             if (plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
                 event.setCancelled(true);
-            } else if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_5)) {
+            }
+
+            ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
+            if (version.isNewerThanOrEquals(ServerVersion.V_1_20_4)) {
+                // Fix issues with ViaVersion.
                 WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
 
                 List<EntityData> metadata = wrapper.getEntityMetadata();
@@ -150,7 +154,11 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
 
                 wrapper.setEntityMetadata(metadata);
 
-                if (npc.isPresent() && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
+                // Adapt villager scale using the new scale attribute.
+                // This was added to 1.20.5, but that version was quickly replaced by 1.20.6.
+                if (version.isNewerThanOrEquals(ServerVersion.V_1_20_5)
+                        && npc.isPresent()
+                        && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
                     handler.adaptScale(player, npc.get());
                 }
             }

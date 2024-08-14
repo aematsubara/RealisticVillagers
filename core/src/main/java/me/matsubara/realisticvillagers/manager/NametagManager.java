@@ -45,6 +45,7 @@ public class NametagManager implements Listener {
 
     private static final org.bukkit.Color NAMETAG_BACKGROUND_COLOR = org.bukkit.Color.fromARGB((int) (0.35 * 255), 0, 0, 0);
     private static final Set<Material> POTIONS = Set.of(Material.POTION, Material.LINGERING_POTION, Material.SPLASH_POTION);
+    private static final Set<Villager.Profession> UNEMPLOYED = Set.of(Villager.Profession.NONE, Villager.Profession.NITWIT);
 
     public NametagManager(@NotNull RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -129,6 +130,10 @@ public class NametagManager implements Listener {
         if (nametagItemEntity != null && player.canSee(nametagItemEntity)) player.hideEntity(plugin, nametagItemEntity);
     }
 
+    public void resetNametag(IVillagerNPC npc) {
+        resetNametag(npc, null, true);
+    }
+
     public void resetNametag(IVillagerNPC npc, @Nullable Consumer<BlockData> dataFunction, boolean reset) {
         if (!(npc instanceof Nameable nameable)) return;
         spawnIfNeeded(npc, npc.bukkit().getWorld());
@@ -198,6 +203,7 @@ public class NametagManager implements Listener {
         }
 
         display.setPersistent(false);
+        RealisticVillagers.LISTEN_MODE_IGNORE.accept(plugin, display);
     }
 
     private void handleNametagItem(IVillagerNPC npc, BlockDisplay display, boolean transform, boolean reset, @Nullable Consumer<BlockData> dataFunction) {
@@ -246,6 +252,7 @@ public class NametagManager implements Listener {
         }
 
         display.setPersistent(false);
+        RealisticVillagers.LISTEN_MODE_IGNORE.accept(plugin, display);
     }
 
     private @NotNull BlockData createBlockData(LivingEntity living, Material material) {
@@ -254,9 +261,10 @@ public class NametagManager implements Listener {
     }
 
     private @Nullable BlockData getJobBlockData(@NotNull LivingEntity living) {
-        if (!(living instanceof Villager)) return null;
+        if (!(living instanceof Villager villager)) return null;
+        if (UNEMPLOYED.contains(villager.getProfession())) return null;
 
-        Location pos = living.getMemory(MemoryKey.JOB_SITE);
+        Location pos = getJobSiteLocation(villager);
         if (pos == null) return null;
 
         World world = pos.getWorld();
@@ -509,11 +517,19 @@ public class NametagManager implements Listener {
     private void resetVillagerNametags(Block block, @Nullable Consumer<BlockData> dataFunction, boolean reset) {
         for (World world : plugin.getServer().getWorlds()) {
             for (Villager villager : world.getEntitiesByClass(Villager.class)) {
-                Location jobSite = villager.getMemory(MemoryKey.JOB_SITE);
-                if (jobSite == null || !jobSite.equals(block.getLocation())) continue;
+                Location pos = getJobSiteLocation(villager);
+                if (pos == null || !pos.equals(block.getLocation())) continue;
 
                 plugin.getConverter().getNPC(villager).ifPresent(npc -> resetNametag(npc, dataFunction, reset));
             }
+        }
+    }
+
+    private @Nullable Location getJobSiteLocation(LivingEntity living) {
+        try {
+            return living.getMemory(MemoryKey.JOB_SITE);
+        } catch (Exception exception) {
+            return null;
         }
     }
 }

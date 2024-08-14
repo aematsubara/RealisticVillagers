@@ -127,6 +127,7 @@ public class MonumentAnimation extends BukkitRunnable {
                     FixedMetadataValue value = new FixedMetadataValue(plugin, true);
                     lightning.setMetadata("FromMonument", value);
                     if (stage > HEAD_STAGE) lightning.setMetadata("LastStages", value);
+                    RealisticVillagers.LISTEN_MODE_IGNORE.accept(plugin, lightning);
                 });
 
         // Spawn angry particles above the lightning flame.
