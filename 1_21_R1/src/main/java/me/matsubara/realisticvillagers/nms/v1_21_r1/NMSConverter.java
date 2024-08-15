@@ -149,7 +149,7 @@ public class NMSConverter implements INMSConverter {
     @Override
     public void registerEntities() {
         // "factory" field.
-        Field field = Reflection.getFieldRaw(EntityType.class, EntityType.EntityFactory.class, "bA", "factory");
+        Field field = Reflection.getFieldRaw(EntityType.class, EntityType.EntityFactory.class, "bF", "factory");
         if (field == null) return;
 
         Reflection.setFieldUsingUnsafe(

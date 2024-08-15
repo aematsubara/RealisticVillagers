@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.3.1</version>
+        <version>3.3.3.2</version>
     </parent>
 
     <properties>
@@ -84,6 +84,7 @@
 
     <dependencies>
         <!-- SpigotAPI (for Javadocs) -->
+        <!--suppress VulnerableLibrariesLocal -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
