@@ -108,7 +108,7 @@ public abstract class InteractGUI implements InventoryHolder {
     }
 
     // For CombatGUI, PlayersGUI, SkinGUI & WhistleGUI.
-    protected @Nullable ItemStack getSearchItem(String keyword, int pages) {
-        return keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : pages > 1 ? getGUIItem("search") : null;
+    protected @Nullable ItemStack getSearchItem(String keyword) {
+        return keyword != null ? getGUIItem("clear-search", string -> string.replace("%keyword%", keyword)) : getGUIItem("search");
     }
 }

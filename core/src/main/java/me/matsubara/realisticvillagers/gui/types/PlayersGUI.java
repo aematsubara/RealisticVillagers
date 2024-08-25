@@ -25,7 +25,12 @@ public class PlayersGUI extends PaginatedGUI {
     private static final int ADD_NEW_PLAYER_SLOT = 23;
     private static final int NEXT_SLOT = 25;
 
-    public PlayersGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @NotNull Set<OfflinePlayer> players, @Nullable String keyword) {
+    public PlayersGUI(RealisticVillagers plugin,
+                      IVillagerNPC npc,
+                      Player player,
+                      @NotNull Set<OfflinePlayer> players,
+                      @Nullable Integer page,
+                      @Nullable String keyword) {
         super(plugin, npc, "players", getValidSize(plugin, "players", 36), player, players
                 .stream()
                 .filter(offline -> keyword == null || (offline.getName() != null && offline.getName().contains(keyword.toLowerCase())))
@@ -37,7 +42,7 @@ public class PlayersGUI extends PaginatedGUI {
                             .replace("%name%", name != null ? name : "???")
                             .build();
                 })
-                .toList());
+                .toList(), page);
 
         this.keyword = keyword;
     }
@@ -45,14 +50,14 @@ public class PlayersGUI extends PaginatedGUI {
     @Override
     public void addButtons() {
         int extra = 9 * (size == 36 ? 0 : size == 45 ? 1 : 2);
-        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("close"));
-        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
-        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
+        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("back"));
+        if (currentPage > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
+        if (currentPage < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
 
         boolean centerSearch = pages > 1;
 
         ItemStack addNewPlayer = getGUIItem("add-new-player");
-        inventory.setItem(SEARCH_SLOT + extra, centerSearch ? getSearchItem(keyword, pages) : addNewPlayer);
+        inventory.setItem(SEARCH_SLOT + extra, centerSearch ? getSearchItem(keyword) : addNewPlayer);
 
         if (centerSearch) inventory.setItem(ADD_NEW_PLAYER_SLOT + extra, addNewPlayer);
     }

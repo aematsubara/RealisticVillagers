@@ -84,7 +84,8 @@ public enum Config {
 
     DIVORCE_IF_REPUTATION_IS_LESS_THAN("divorce-if-reputation-is-less-than"),
 
-    VILLAGER_TITLE_ARTICLE("villager-title-article"),
+    VILLAGER_TITLE_ARTICLE_MALE("villager-title-article.male"),
+    VILLAGER_TITLE_ARTICLE_FEMALE("villager-title-article.female"),
     SHOW_TITLE_IN_VILLAGER_CHAT_MESSAGE("show-title-in-villager-chat-message"),
 
     VILLAGER_ATTACK_PLAYER_DURING_RAID("villager-attack-player-during-raid"),

@@ -67,7 +67,7 @@
 # Effects: https://www.digminecraft.com/lists/effect_list_pc.php
 
 # Don't touch this!
-config-version: 5
+config-version: 6
 
 # The rendering distance of the villagers.
 render-distance: 56
@@ -342,11 +342,14 @@ interact-cooldown:
   bed: 5
 
 # Whether to display the title in the villager's chat messages.
-# For example: James the Armorer / Juliet the Weaponsmith / etc.
+# For example, James the Armorer / Juliet the Weaponsmith / etc.
 show-title-in-villager-chat-message: true
 
 # The article in the title name of the villager.
-villager-title-article: "the"
+# For other languages, you can specify a different article per sex.
+villager-title-article:
+  male: "the"
+  female: "the"
 
 # The format of the chat when a villager speaks.
 villager-message-format: "%name%: %message%"
@@ -384,23 +387,42 @@ variable-text:
     snow: "Snow"
     swamp: "Swamp"
     taiga: "Taiga"
+  # For other languages, you can specify a different profession name per sex.
   profession:
-    none: "Unemployed"
-    armorer: "Armorer"
-    butcher: "Butcher"
-    cartographer: "Cartographer"
-    cleric: "Cleric"
-    farmer: "Farmer"
-    fisherman: "Fisherman"
-    fletcher: "Fletcher"
-    leatherworker: "Leatherworker"
-    librarian: "Librarian"
-    mason: "Mason"
-    nitwit: "Nitwit"
-    shepherd: "Shepherd"
-    toolsmith: "Toolsmith"
-    weaponsmith: "Weaponsmith"
-    wandering-trader: "Wandering Trader"
+    male:
+      none: "Unemployed"
+      armorer: "Armorer"
+      butcher: "Butcher"
+      cartographer: "Cartographer"
+      cleric: "Cleric"
+      farmer: "Farmer"
+      fisherman: "Fisherman"
+      fletcher: "Fletcher"
+      leatherworker: "Leatherworker"
+      librarian: "Librarian"
+      mason: "Mason"
+      nitwit: "Nitwit"
+      shepherd: "Shepherd"
+      toolsmith: "Toolsmith"
+      weaponsmith: "Weaponsmith"
+      wandering-trader: "Wandering Trader"
+    female:
+      none: "Unemployed"
+      armorer: "Armorer"
+      butcher: "Butcher"
+      cartographer: "Cartographer"
+      cleric: "Cleric"
+      farmer: "Farmer"
+      fisherman: "Fisherman"
+      fletcher: "Fletcher"
+      leatherworker: "Leatherworker"
+      librarian: "Librarian"
+      mason: "Mason"
+      nitwit: "Nitwit"
+      shepherd: "Shepherd"
+      toolsmith: "Toolsmith"
+      weaponsmith: "Weaponsmith"
+      wandering-trader: "Wandering Trader"
   activity:
     play: "Play"
     work: "Work"
@@ -724,11 +746,11 @@ gui:
         url: SELF
         material: PLAYER_HEAD
         display-name: "&a%villager-name%"
-      close:
+      back:
         material: BARRIER
-        display-name: "&cClose"
+        display-name: "&cBack"
         lore:
-          - "&7Click to close this inventory."
+          - "&7Click to go to the previous menu."
   combat:
     title: "Targets (%page%/%max-page%)"
     items:
@@ -760,11 +782,11 @@ gui:
         display-name: "&cClear search: &8&o%keyword%"
         lore:
           - "&7Click to clear the browser!"
-      close:
+      back:
         material: BARRIER
-        display-name: "&cClose"
+        display-name: "&cBack"
         lore:
-          - "&7Click to close this inventory."
+          - "&7Click to go to the previous menu."
       next:
         url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
         material: PLAYER_HEAD
@@ -790,16 +812,21 @@ gui:
         display-name: "&cMonsters"
         lore:
           - "&7Choose the monsters you want to be attacked."
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
   players:
     # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
     size: 36
     title: "Players (%page%/%max-page%)"
     items:
-      close:
+      back:
         material: BARRIER
-        display-name: "&cClose"
+        display-name: "&cBack"
         lore:
-          - "&7Click to close this inventory."
+          - "&7Click to go to the previous menu."
       previous:
         url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
         material: PLAYER_HEAD
@@ -841,11 +868,6 @@ gui:
     size: 36
     title: "Family (%page%/%max-page%)"
     items:
-      close:
-        material: BARRIER
-        display-name: "&cClose"
-        lore:
-          - "&7Click to close this inventory."
       previous:
         url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
         material: PLAYER_HEAD
@@ -880,11 +902,6 @@ gui:
     size: 54
     title: "Skins: %sex%/%age-stage% (%page%/%max-page%)"
     items:
-      close:
-        material: BARRIER
-        display-name: "&cClose"
-        lore:
-          - "&7Click to close this inventory."
       previous:
         url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
         material: PLAYER_HEAD
@@ -976,7 +993,11 @@ gui:
           - "&7Add a new skin using texture values!"
           - "&7To do this, you need to use the next command"
           - "&7in console: &b/rv add-skin <sex> <texture> <signature>"
-
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
 
 # Here you can modify the items of the babies.
 #

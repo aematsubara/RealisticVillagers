@@ -57,10 +57,11 @@ public final class CombatGUI extends InteractGUI {
             .map(string -> PluginUtils.getOrNull(EntityType.class, string))
             .collect(Collectors.toSet());
 
-    public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable String keyword, boolean isAnimal) {
+    public CombatGUI(RealisticVillagers plugin, IVillagerNPC npc, Player player, @Nullable Integer page, @Nullable String keyword, boolean isAnimal) {
         super(plugin, npc, "combat", 45, null, false);
         this.player = player;
         this.isAnimal = isAnimal;
+        this.current = page != null ? page : 0;
 
         enabled = getGUIItem("enabled");
         disabled = getGUIItem("disabled");
@@ -94,8 +95,8 @@ public final class CombatGUI extends InteractGUI {
         pages = (int) (Math.ceil((double) heads.size() / SLOTS.length));
 
         if (current > 0) inventory.setItem(28, getGUIItem("previous"));
-        inventory.setItem(31, getSearchItem(keyword, pages));
-        inventory.setItem(44, getGUIItem("close"));
+        inventory.setItem(31, getSearchItem(keyword));
+        inventory.setItem(44, getGUIItem("back"));
         if (current < pages - 1) inventory.setItem(34, getGUIItem("next"));
 
         InventoryUpdate.updateInventory(player, getTitle());

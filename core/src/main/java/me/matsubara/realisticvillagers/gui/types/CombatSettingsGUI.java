@@ -16,6 +16,7 @@ public class CombatSettingsGUI extends InteractGUI {
         inventory.setItem(10, getGUIItem("players"));
         inventory.setItem(13, getGUIItem("animals"));
         inventory.setItem(16, getGUIItem("monsters"));
+        inventory.setItem(26, getGUIItem("back"));
 
         player.openInventory(inventory);
     }

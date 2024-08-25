@@ -17,12 +17,11 @@ public class WhistleGUI extends PaginatedGUI {
 
     private final String keyword;
 
-    private static final int CLOSE_SLOT = 35;
     private static final int PREVIOUS_SLOT = 19;
     private static final int NEXT_SLOT = 25;
     private static final int SEARCH_SLOT = 22;
 
-    public WhistleGUI(RealisticVillagers plugin, Player player, @NotNull Stream<IVillagerNPC> family, @Nullable String keyword) {
+    public WhistleGUI(RealisticVillagers plugin, Player player, @NotNull Stream<IVillagerNPC> family, @Nullable Integer page, @Nullable String keyword) {
         super(plugin, null, "whistle", getValidSize(plugin, "whistle", 36), player, family
                 .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase().contains(keyword.toLowerCase()))
                 .map(npc -> {
@@ -33,16 +32,15 @@ public class WhistleGUI extends PaginatedGUI {
                             .replace("%villager-name%", name)
                             .build();
                 })
-                .toList());
+                .toList(), page);
         this.keyword = keyword;
     }
 
     @Override
     public void addButtons() {
         int extra = 9 * (size == 36 ? 0 : size == 45 ? 1 : 2);
-        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("close"));
-        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
-        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
-        inventory.setItem(SEARCH_SLOT + extra, getSearchItem(keyword, pages));
+        if (currentPage > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
+        if (currentPage < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
+        inventory.setItem(SEARCH_SLOT + extra, getSearchItem(keyword));
     }
 }

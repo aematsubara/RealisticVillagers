@@ -59,13 +59,16 @@ public final class GiftManager {
                     continue;
                 }
 
-                Villager.Profession profession = PluginUtils.getOrNull(Villager.Profession.class, data[0].toUpperCase());
-                if (profession != null) {
-                    predicate = npc -> !(npc.bukkit() instanceof Villager villager) || villager.getProfession() == profession;
-                } else {
+                Villager.Profession profession;
+                try {
+                    // Villager.Profession was changed to an interface, we need to use this method instead.
+                    profession = Villager.Profession.valueOf(data[0].toUpperCase());
+                } catch (Exception exception) {
                     log(path, materialOrTag);
                     continue;
                 }
+
+                predicate = npc -> !(npc.bukkit() instanceof Villager villager) || villager.getProfession() == profession;
             } else {
                 predicate = null;
             }

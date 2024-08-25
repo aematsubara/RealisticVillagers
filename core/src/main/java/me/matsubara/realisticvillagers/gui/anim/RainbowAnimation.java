@@ -124,15 +124,18 @@ public class RainbowAnimation extends BukkitRunnable {
             if (gui instanceof WhistleGUI whistle) {
                 // Buttons are added once AFTHER this frame is created.
                 whistle.addButtons();
-                ignoreIndexes.add(getCloseItemIndex(whistle.getInventory()));
             } else if (gui instanceof SkinGUI skin) {
                 skin.addButtons();
-                ignoreIndexes.add(getCloseItemIndex(skin.getInventory()));
                 handleSkinGUI(skin.getProfessionItems(), ignoreIndexes);
             } else if (gui instanceof CombatGUI combat) {
-                ignoreIndexes.add(getCloseItemIndex(combat.getInventory()));
+                ignoreIndexes.add(getBackItemIndex(combat.getInventory()));
             } else if (gui instanceof PlayersGUI players) {
                 players.addButtons();
+                ignoreIndexes.add(getBackItemIndex(players.getInventory()));
+            } else if (gui instanceof CombatSettingsGUI combat) {
+                ignoreIndexes.add(getBackItemIndex(combat.getInventory()));
+            } else if (gui instanceof NewSkinGUI skin) {
+                ignoreIndexes.add(getBackItemIndex(skin.getInventory()));
             }
             if (ignoreIndexes.contains(i)) continue;
 
@@ -140,14 +143,14 @@ public class RainbowAnimation extends BukkitRunnable {
         }
     }
 
-    private int getCloseItemIndex(@NotNull Inventory inventory) {
+    private int getBackItemIndex(@NotNull Inventory inventory) {
         ItemStack[] contents = inventory.getStorageContents();
         int i = 0;
 
         while (true) {
             if (i >= contents.length) return -1;
 
-            if (contents[i] != null && gui.getPlugin().getInventoryListeners().isCustomItem(contents[i], "close")) {
+            if (contents[i] != null && gui.getPlugin().getInventoryListeners().isCustomItem(contents[i], "back")) {
                 break;
             }
 

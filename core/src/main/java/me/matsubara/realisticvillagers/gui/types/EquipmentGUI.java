@@ -55,6 +55,6 @@ public final class EquipmentGUI extends InteractGUI {
             inventory.setItem(i, equipment.getItem(slot));
         }
 
-        inventory.setItem(size + 17, getGUIItem("close"));
+        inventory.setItem(size + 17, getGUIItem("back"));
     }
 }

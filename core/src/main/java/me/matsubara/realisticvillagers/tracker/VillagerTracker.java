@@ -566,10 +566,12 @@ public final class VillagerTracker implements Listener {
         try {
             int finalKey = key;
             config.save(pair.getKey());
+
+            boolean isMale = sex.equals("male");
             plugin.getMessages().send(sender, Messages.Message.SKIN_ADDED, string -> string
                     .replace("%id%", String.valueOf(finalKey))
-                    .replace("%profession%", plugin.getProfessionFormatted(profession))
-                    .replace("%sex%", (sex.equals("male") ? Config.MALE : Config.FEMALE).asString())
+                    .replace("%profession%", plugin.getProfessionFormatted(profession, isMale))
+                    .replace("%sex%", (isMale ? Config.MALE : Config.FEMALE).asString())
                     .replace("%age-stage%", (isAdult ? Config.ADULT : Config.KID).asString()));
         } catch (IOException exception) {
             exception.printStackTrace();

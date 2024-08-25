@@ -38,7 +38,6 @@ public class SkinGUI extends PaginatedGUI {
 
     private static final int AGE_STAGE_SLOT = 0;
     private static final int PROFESSION_SLOT = 27;
-    private static final int CLOSE_SLOT = 35;
     private static final int PREVIOUS_SLOT = 19;
     private static final int NEXT_SLOT = 25;
     private static final int TOGGLE_SEX = 21;
@@ -68,18 +67,23 @@ public class SkinGUI extends PaginatedGUI {
         PROFESSION_ICON.put("WANDERING_TRADER", Material.EMERALD);
     }
 
-    private SkinGUI(RealisticVillagers plugin, Player player, List<ItemStack> heads, boolean isMale, boolean isAdult, @Nullable Integer page, @Nullable String keyword) {
-        super(plugin, null, "skin", getValidSize(plugin, "skin", 36), player, heads);
+    private SkinGUI(RealisticVillagers plugin,
+                    Player player,
+                    List<ItemStack> heads,
+                    boolean isMale,
+                    boolean isAdult,
+                    @Nullable Integer page,
+                    @Nullable String keyword) {
+        super(plugin, null, "skin", getValidSize(plugin, "skin", 36), player, heads, page);
 
         this.isMale = isMale;
         this.isAdult = isAdult;
-        this.current = page != null ? page : 0;
         this.keyword = keyword;
 
         for (String profession : PROFESSION_ICON.keySet()) {
             professionItems.put(profession, new ItemBuilder(getGUIItem("profession"))
                     .setType(PROFESSION_ICON.get(profession))
-                    .replace("%profession%", plugin.getProfessionFormatted(profession.toLowerCase().replace("_", "-")))
+                    .replace("%profession%", plugin.getProfessionFormatted(profession.toLowerCase().replace("_", "-"), isMale))
                     .build());
         }
 
@@ -143,7 +147,8 @@ public class SkinGUI extends PaginatedGUI {
             } else if (!("#" + id).contains(lowerKeyword)) return null;
         }
 
-        Map<Integer, ItemStack> cache = sex.equals("male") ? CACHE_MALE_HEADS : CACHE_FEMALE_HEADS;
+        boolean isMale = sex.equals("male");
+        Map<Integer, ItemStack> cache = isMale ? CACHE_MALE_HEADS : CACHE_FEMALE_HEADS;
         if (cache.containsKey(id)) {
             return cache.get(id);
         }
@@ -157,10 +162,10 @@ public class SkinGUI extends PaginatedGUI {
         for (String key : PROFESSION_ICON.keySet()) {
             String profession = key.toLowerCase().replace("_", "-");
             if (config.contains(profession + "." + id)) {
-                professions.add("&a" + plugin.getProfessionFormatted(profession));
+                professions.add("&a" + plugin.getProfessionFormatted(profession, isMale));
                 generated++;
             } else {
-                professions.add("&c" + plugin.getProfessionFormatted(profession));
+                professions.add("&c" + plugin.getProfessionFormatted(profession, isMale));
             }
         }
 
@@ -198,11 +203,10 @@ public class SkinGUI extends PaginatedGUI {
         } else professionItem = null;
         inventory.setItem(PROFESSION_SLOT + extra, professionItem);
 
-        inventory.setItem(CLOSE_SLOT + extra, getGUIItem("close"));
-        if (current > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
-        if (current < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
+        if (currentPage > 0) inventory.setItem(PREVIOUS_SLOT + extra, getGUIItem("previous"));
+        if (currentPage < pages - 1) inventory.setItem(NEXT_SLOT + extra, getGUIItem("next"));
         inventory.setItem(TOGGLE_SEX + extra, keyword != null ? null : isMale ? getGUIItem("male") : getGUIItem("female"));
-        inventory.setItem(SEARCH_SLOT + extra, getSearchItem(keyword, pages));
+        inventory.setItem(SEARCH_SLOT + extra, getSearchItem(keyword));
         inventory.setItem(NEW_SKIN + extra, keyword != null ? null : getGUIItem("add-new-skin"));
     }
 }

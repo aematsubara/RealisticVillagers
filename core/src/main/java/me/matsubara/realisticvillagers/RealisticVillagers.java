@@ -435,6 +435,13 @@ public final class RealisticVillagers extends JavaPlugin {
                                     temp.set("custom-nametags.lines.villager", lines);
                                 },
                                 5)
+                        .addChange(
+                                aimVersion(5),
+                                temp -> {
+                                    temp.set("villager-title-article", null);
+                                    temp.set("variable-text.profession", null);
+                                },
+                                6)
                         .build());
 
         Function<FileConfiguration, List<String>> emptyIgnore = config -> Collections.emptyList();
@@ -887,7 +894,7 @@ public final class RealisticVillagers extends JavaPlugin {
         return inChunk instanceof Villager villager ? villager : null;
     }
 
-    public void openWhistleGUI(Player player, @Nullable String keyword) {
+    public void openWhistleGUI(Player player, @Nullable Integer page, @Nullable String keyword) {
         List<IVillagerNPC> family = tracker.getOfflineVillagers()
                 .stream()
                 .filter(offline -> {
@@ -906,7 +913,7 @@ public final class RealisticVillagers extends JavaPlugin {
             return;
         }
 
-        new WhistleGUI(this, player, family.stream(), keyword);
+        new WhistleGUI(this, player, family.stream(), page, keyword);
     }
 
     public void equipVillager(LivingEntity living, boolean force) {
@@ -1051,11 +1058,14 @@ public final class RealisticVillagers extends JavaPlugin {
         return getDataFolder() + File.separator + "skins";
     }
 
-    public String getProfessionFormatted(@NotNull Villager.Profession profession) {
-        return getProfessionFormatted(profession.name().toLowerCase());
+    public String getProfessionFormatted(@NotNull Villager.Profession profession, boolean isMale) {
+        return getProfessionFormatted(profession.name().toLowerCase(), isMale);
     }
 
-    public String getProfessionFormatted(String profession) {
-        return getConfig().getString("variable-text.profession." + profession, PluginUtils.capitalizeFully(profession));
+    public String getProfessionFormatted(String profession, boolean isMale) {
+        String sex = isMale ? "male" : "female";
+        return getConfig().getString(
+                String.format("variable-text.profession.%s.%s", sex, profession),
+                PluginUtils.capitalizeFully(profession));
     }
 }

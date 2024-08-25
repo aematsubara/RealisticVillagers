@@ -167,7 +167,7 @@ public final class PlayerListeners implements Listener {
         PersistentDataContainer container = meta.getPersistentDataContainer();
         if (!container.has(plugin.getIsWhistleKey(), PersistentDataType.INTEGER)) return;
 
-        plugin.openWhistleGUI(player, null);
+        plugin.openWhistleGUI(player, null, null);
     }
 
     private void handleBabySpawn(@NotNull PlayerInteractEvent event) {

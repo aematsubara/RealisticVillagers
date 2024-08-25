@@ -11,21 +11,19 @@ import org.jetbrains.annotations.NotNull;
 public class NewSkinGUI extends InteractGUI {
 
     private final Player player;
-    private final boolean isMale;
-    private final boolean isAdult;
+    private final SkinGUI previousSource;
 
-    public NewSkinGUI(RealisticVillagers plugin, @NotNull Player player, boolean isMale, boolean isAdult) {
+    public NewSkinGUI(RealisticVillagers plugin, @NotNull Player player, SkinGUI previousSource) {
         super(plugin, null, "new-skin", 27, title -> title
-                        .replace("%sex%", isMale ? Config.MALE.asString() : Config.FEMALE.asString())
-                        .replace("%age-stage%", isAdult ? Config.ADULT.asString() : Config.KID.asString()),
+                        .replace("%sex%", previousSource.isMale() ? Config.MALE.asString() : Config.FEMALE.asString())
+                        .replace("%age-stage%", previousSource.isAdult() ? Config.ADULT.asString() : Config.KID.asString()),
                 false);
-
         this.player = player;
-        this.isMale = isMale;
-        this.isAdult = isAdult;
+        this.previousSource = previousSource;
 
         inventory.setItem(10, getGUIItem("from-player"));
         inventory.setItem(16, getGUIItem("from-console"));
+        inventory.setItem(26, getGUIItem("back"));
 
         player.openInventory(inventory);
     }

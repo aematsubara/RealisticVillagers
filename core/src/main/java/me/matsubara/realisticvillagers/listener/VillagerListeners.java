@@ -412,8 +412,11 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         if (data.length != 2) return;
 
         String sex = data[0];
+        boolean isMale = sex.equals("male");
+        String sexFormatted = (isMale ? Config.MALE : Config.FEMALE).asString();
+
         if (!sex.equalsIgnoreCase(npc.getSex())) {
-            messages.send(player, Messages.Message.SKIN_DIFFERENT_SEX, string -> string.replace("%sex%", (sex.equals("male") ? Config.MALE : Config.FEMALE).asString()));
+            messages.send(player, Messages.Message.SKIN_DIFFERENT_SEX, string -> string.replace("%sex%", sexFormatted));
             return;
         }
 
@@ -440,8 +443,8 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
         messages.send(player, Messages.Message.SKIN_DISGUISED, string -> string
                 .replace("%id%", String.valueOf(skinId))
-                .replace("%sex%", sex.equals("male") ? Config.MALE.asString() : Config.FEMALE.asString())
-                .replace("%profession%", plugin.getProfessionFormatted(PluginUtils.getProfessionOrType(living)))
+                .replace("%sex%", sexFormatted)
+                .replace("%profession%", plugin.getProfessionFormatted(PluginUtils.getProfessionOrType(living), isMale))
                 .replace("%age-stage%", isAdult ? Config.ADULT.asString() : Config.KID.asString()));
 
         tracker.refreshNPCSkin(living, false);

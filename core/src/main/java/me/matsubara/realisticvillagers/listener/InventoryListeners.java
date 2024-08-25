@@ -176,20 +176,31 @@ public final class InventoryListeners implements Listener {
                 whistle.nextPage(isShiftClick);
                 return;
             } else if (isCustomItem(current, "search")) {
+                AtomicBoolean success = new AtomicBoolean();
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
                             if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-                            openWhistleGUI(snapshot.getPlayer(), snapshot.getText());
+
+                            String text = snapshot.getText();
+                            if (text.isBlank()) return RealisticVillagers.CLOSE_RESPONSE;
+
+                            openWhistleGUI(snapshot.getPlayer(), null, text);
+                            success.set(true);
+
                             return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.WHISTLE_SEARCH_TITLE.asStringTranslated())
                         .text(Config.WHISTLE_SEARCH_TEXT.asStringTranslated())
                         .itemLeft(new ItemStack(Material.PAPER))
                         .plugin(plugin)
+                        .onClose(snapshot -> {
+                            if (success.get()) return;
+                            openWhistleGUI(snapshot.getPlayer(), whistle.getCurrentPage(), null);
+                        })
                         .open((Player) event.getWhoClicked());
                 return;
             } else if (isCustomItem(current, "clear-search")) {
-                openWhistleGUI(player, null);
+                openWhistleGUI(player, whistle.getCurrentPage(), null);
                 return;
             }
 
@@ -232,12 +243,14 @@ public final class InventoryListeners implements Listener {
 
             if (current != null) {
                 if (RainbowAnimation.isCachedBackground(equipment.getAnimation(), current)
-                        || isCustomItem(current, "villager")
-                        || isCustomItem(current, "close")) {
+                        || isCustomItem(current, "back")
+                        || isCustomItem(current, "villager")) {
                     event.setCancelled(true);
                 }
 
-                if (isCustomItem(current, "close")) closeInventory(player);
+                if (isCustomItem(current, "back")) {
+                    runTask(() -> new MainGUI(plugin, npc, player));
+                }
             }
             return;
         }
@@ -247,8 +260,8 @@ public final class InventoryListeners implements Listener {
         if (current == null) return;
 
         if (interact instanceof PlayersGUI players) {
-            if (isCustomItem(current, "close")) {
-                closeInventory(player);
+            if (isCustomItem(current, "back")) {
+                runTask(() -> new CombatSettingsGUI(plugin, npc, player));
                 return;
             } else if (isCustomItem(current, "previous")) {
                 players.previousPage(isShiftClick);
@@ -258,21 +271,32 @@ public final class InventoryListeners implements Listener {
                 return;
             } else if (isCustomItem(current, "search")) {
                 players.setShouldStopInteracting(false);
+                AtomicBoolean success = new AtomicBoolean();
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
                             if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-                            openPlayersGUI(npc, snapshot.getPlayer(), snapshot.getText());
+
+                            String text = snapshot.getText();
+                            if (text.isBlank()) return RealisticVillagers.CLOSE_RESPONSE;
+
+                            openPlayersGUI(npc, snapshot.getPlayer(), null, text);
+                            success.set(true);
+
                             return RealisticVillagers.CLOSE_RESPONSE;
                         })
                         .title(Config.PLAYERS_TITLE.asStringTranslated())
                         .text(Config.PLAYERS_TEXT.asStringTranslated())
                         .itemLeft(new ItemStack(Material.PAPER))
                         .plugin(plugin)
+                        .onClose(snapshot -> {
+                            if (success.get()) return;
+                            openPlayersGUI(npc, snapshot.getPlayer(), players.getCurrentPage(), null);
+                        })
                         .open(player);
                 return;
             } else if (isCustomItem(current, "clear-search")) {
                 players.setShouldStopInteracting(false);
-                openPlayersGUI(npc, player, null);
+                openPlayersGUI(npc, player, null, null);
                 return;
             } else if (isCustomItem(current, "add-new-player")) {
                 players.setShouldStopInteracting(false);
@@ -299,25 +323,30 @@ public final class InventoryListeners implements Listener {
         }
 
         if (interact instanceof CombatGUI combat) {
-            if (isCustomItem(current, "close")) {
-                closeInventory(player);
+            if (isCustomItem(current, "back")) {
+                runTask(() -> new CombatSettingsGUI(plugin, npc, player));
             } else if (isCustomItem(current, "previous")) {
                 combat.previousPage(isShiftClick);
             } else if (isCustomItem(current, "next")) {
                 combat.nextPage(isShiftClick);
             } else if (isCustomItem(current, "search")) {
                 combat.setShouldStopInteracting(false);
-
                 AtomicBoolean success = new AtomicBoolean(false);
                 new AnvilGUI.Builder()
                         .onClick((slot, snapshot) -> {
                             if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-                            openCombatGUI(npc, snapshot.getPlayer(), snapshot.getText(), combat.isAnimal());
+
+                            String text = snapshot.getText();
+                            if (text.isBlank()) return RealisticVillagers.CLOSE_RESPONSE;
+
+                            openCombatGUI(npc, snapshot.getPlayer(), null, text, combat.isAnimal());
                             success.set(true);
+
                             return RealisticVillagers.CLOSE_RESPONSE;
                         })
-                        .onClose(opener -> {
-                            if (!success.get()) npc.stopInteracting();
+                        .onClose(snapshot -> {
+                            if (success.get()) return;
+                            openCombatGUI(npc, snapshot.getPlayer(), combat.getCurrent(), null, combat.isAnimal());
                         })
                         .title(Config.COMBAT_SEARCH_TITLE.asStringTranslated())
                         .text(Config.COMBAT_SEARCH_TEXT.asStringTranslated())
@@ -326,7 +355,7 @@ public final class InventoryListeners implements Listener {
                         .open((Player) event.getWhoClicked());
             } else if (isCustomItem(current, "clear-search")) {
                 combat.setShouldStopInteracting(false);
-                openCombatGUI(npc, player, null, combat.isAnimal());
+                openCombatGUI(npc, player, null, null, combat.isAnimal());
             } else if (current.getItemMeta() != null) {
                 ItemMeta meta = current.getItemMeta();
                 PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -361,14 +390,16 @@ public final class InventoryListeners implements Listener {
                 if (npc.getPlayers().isEmpty()) {
                     openAddNewPlayerGUI(player, npc);
                 } else {
-                    openPlayersGUI(npc, player, null);
+                    openPlayersGUI(npc, player, null, null);
                 }
             } else if (isCustomItem(current, "animals")) {
                 settings.setShouldStopInteracting(false);
-                openCombatGUI(npc, player, null, true);
+                openCombatGUI(npc, player, null, null, true);
             } else if (isCustomItem(current, "monsters")) {
                 settings.setShouldStopInteracting(false);
-                openCombatGUI(npc, player, null, false);
+                openCombatGUI(npc, player, null, null, false);
+            } else if (isCustomItem(current, "back")) {
+                runTask(() -> new MainGUI(plugin, npc, player));
             }
             return;
         }
@@ -535,11 +566,6 @@ public final class InventoryListeners implements Listener {
         closeInventory(player);
     }
 
-    public boolean isCustomItem(@NotNull ItemStack item, String id) {
-        ItemMeta meta = item.getItemMeta();
-        return meta != null && Objects.equals(meta.getPersistentDataContainer().get(plugin.getItemIdKey(), PersistentDataType.STRING), id);
-    }
-
     private void openAddNewPlayerGUI(Player player, IVillagerNPC npc) {
         AtomicBoolean success = new AtomicBoolean(false);
         new AnvilGUI.Builder()
@@ -571,7 +597,7 @@ public final class InventoryListeners implements Listener {
                             success.set(true);
                             messages.send(opener, Messages.Message.PLAYERS_ADDED, string -> string.replace("%player-name%", targetName));
                             npc.getPlayers().add(targetUUID);
-                            openPlayersGUI(npc, snapshot.getPlayer(), null);
+                            openPlayersGUI(npc, snapshot.getPlayer(), null, null);
                         }
                     } else {
                         messages.send(opener, Messages.Message.UNKNOWN_PLAYER);
@@ -579,8 +605,9 @@ public final class InventoryListeners implements Listener {
 
                     return RealisticVillagers.CLOSE_RESPONSE;
                 })
-                .onClose(opener -> {
-                    if (!success.get()) npc.stopInteracting();
+                .onClose(snapshot -> {
+                    if (success.get()) return;
+                    openPlayersGUI(npc, snapshot.getPlayer(), null, null);
                 })
                 .title(Config.PLAYERS_TITLE.asStringTranslated())
                 .text(Config.PLAYERS_TEXT.asStringTranslated())
@@ -589,10 +616,15 @@ public final class InventoryListeners implements Listener {
                 .open(player);
     }
 
-    private void openPlayersGUI(IVillagerNPC npc, Player player, @Nullable String keyword) {
+    public boolean isCustomItem(@NotNull ItemStack item, String id) {
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && Objects.equals(meta.getPersistentDataContainer().get(plugin.getItemIdKey(), PersistentDataType.STRING), id);
+    }
+
+    private void openPlayersGUI(IVillagerNPC npc, Player player, @Nullable Integer page, @Nullable String keyword) {
         runTask(() -> new PlayersGUI(plugin, npc, player, npc.getPlayers().stream()
                 .map(Bukkit::getOfflinePlayer)
-                .collect(Collectors.toSet()), keyword));
+                .collect(Collectors.toSet()), page, keyword));
     }
 
     private boolean notAllowedToModify(@NotNull Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage, String permission) {
@@ -758,26 +790,37 @@ public final class InventoryListeners implements Listener {
             skin.nextPage(isShiftClick);
             return;
         } else if (isCustomItem(current, "search")) {
+            AtomicBoolean success = new AtomicBoolean();
             new AnvilGUI.Builder()
                     .onClick((slot, snapshot) -> {
                         if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-                        openSkinGUI(snapshot.getPlayer(), currentSex, isAdult, snapshot.getText());
+
+                        String text = snapshot.getText();
+                        if (text.isBlank()) return RealisticVillagers.CLOSE_RESPONSE;
+
+                        runTask(() -> SkinGUI.openMenu(plugin, snapshot.getPlayer(), currentSex, isAdult, null, text));
+                        success.set(true);
+
                         return RealisticVillagers.CLOSE_RESPONSE;
                     })
                     .title(Config.SKIN_SEARCH_TITLE.asStringTranslated())
                     .text(Config.SKIN_SEARCH_TEXT.asStringTranslated())
                     .itemLeft(new ItemStack(Material.PAPER))
                     .plugin(plugin)
+                    .onClose(snapshot -> {
+                        if (success.get()) return;
+                        runTask(() -> SkinGUI.openMenu(plugin, snapshot.getPlayer(), currentSex, isAdult, skin.getCurrentPage(), null));
+                    })
                     .open((Player) event.getWhoClicked());
             return;
         } else if (isCustomItem(current, "clear-search")) {
-            openSkinGUI(player, currentSex, isAdult, null);
+            openSkinGUI(player, currentSex, isAdult);
             return;
         } else if (isCustomItem(current, "male") || isCustomItem(current, "female")) {
-            openSkinGUI(player, skin.isMale() ? "female" : "male", isAdult, null);
+            openSkinGUI(player, skin.isMale() ? "female" : "male", isAdult);
             return;
         } else if (isCustomItem(current, "adult") || isCustomItem(current, "kid")) {
-            openSkinGUI(player, currentSex, !isAdult, null);
+            openSkinGUI(player, currentSex, !isAdult);
             return;
         } else if (isCustomItem(current, "add-new-skin")) {
             if (Config.MINESKIN_API_KEY.asString().isEmpty()) {
@@ -785,7 +828,7 @@ public final class InventoryListeners implements Listener {
                 closeInventory(player);
                 return;
             }
-            plugin.getServer().getScheduler().runTask(plugin, () -> new NewSkinGUI(plugin, player, skin.isMale(), isAdult));
+            plugin.getServer().getScheduler().runTask(plugin, () -> new NewSkinGUI(plugin, player, skin));
             return;
         }
 
@@ -873,10 +916,10 @@ public final class InventoryListeners implements Listener {
                 // Refresh inventory.
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (online.getOpenInventory().getTopInventory() instanceof SkinGUI) {
-                        openSkinGUI(online, sex, isAdult, null);
+                        openSkinGUI(online, sex, isAdult);
                     }
                 }
-                openSkinGUI(player, sex, isAdult, null);
+                openSkinGUI(player, sex, isAdult);
 
                 // Remove skin from villagers if necessary.
                 for (World world : plugin.getServer().getWorlds()) {
@@ -984,6 +1027,16 @@ public final class InventoryListeners implements Listener {
         if (meta == null) return;
 
         Messages messages = plugin.getMessages();
+        SkinGUI source = skin.getPreviousSource();
+
+        if (isCustomItem(current, "back")) {
+            runTask(() -> SkinGUI.openMenu(plugin,
+                    player,
+                    source.isMale() ? "male" : "female",
+                    source.isAdult(),
+                    source.getCurrentPage(),
+                    source.getKeyword()));
+        }
 
         if (isCustomItem(current, "from-console")) {
             messages.send(player, Messages.Message.ONLY_FROM_CONSOLE);
@@ -994,21 +1047,28 @@ public final class InventoryListeners implements Listener {
         if (!isCustomItem(current, "from-player")) return;
 
         // Add new skin from a player.
+        AtomicBoolean success = new AtomicBoolean();
         new AnvilGUI.Builder()
                 .onClick((slot, snapshot) -> {
                     if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
                     Player opener = snapshot.getPlayer();
+
                     String result = snapshot.getText();
+                    if (plugin.getTracker().isInvalidNametag(result)) {
+                        return RealisticVillagers.CLOSE_RESPONSE;
+                    }
+
+                    success.set(true);
 
                     Player target = Bukkit.getPlayer(result);
                     GameProfile profile;
 
-                    String sex = skin.isMale() ? "male" : "female";
+                    String sex = source.isMale() ? "male" : "female";
 
                     // Player is online, get texture data from the profile.
                     if (target != null && (profile = plugin.getConverter().getPlayerProfile(target)) != null) {
                         Property property = profile.getProperties().get("textures").iterator().next();
-                        tracker.addNewSkin(opener, null, "none", sex, skin.isAdult(), property.getValue(), property.getSignature());
+                        tracker.addNewSkin(opener, null, "none", sex, source.isAdult(), property.getValue(), property.getSignature());
                         return RealisticVillagers.CLOSE_RESPONSE;
                     }
 
@@ -1031,7 +1091,7 @@ public final class InventoryListeners implements Listener {
                                 return;
                             }
 
-                            tracker.addNewSkin(opener, null, "none", sex, skin.isAdult(), texture, signature);
+                            tracker.addNewSkin(opener, null, "none", sex, source.isAdult(), texture, signature);
                         } catch (IOException exception) {
                             if (exception instanceof FileNotFoundException) {
                                 messages.send(opener, Messages.Message.SKIN_NOT_FOUND);
@@ -1049,19 +1109,23 @@ public final class InventoryListeners implements Listener {
                 .text(Config.NEW_SKIN_TEXT.asStringTranslated())
                 .itemLeft(new ItemStack(Material.PAPER))
                 .plugin(plugin)
+                .onClose(snapshot -> {
+                    if (success.get()) return;
+                    runTask(() -> new NewSkinGUI(plugin, snapshot.getPlayer(), skin.getPreviousSource()));
+                })
                 .open((Player) event.getWhoClicked());
     }
 
-    private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable String keyword, boolean isAnimal) {
-        runTask(() -> new CombatGUI(plugin, npc, player, keyword, isAnimal));
+    private void openCombatGUI(IVillagerNPC npc, Player player, @Nullable Integer page, @Nullable String keyword, boolean isAnimal) {
+        runTask(() -> new CombatGUI(plugin, npc, player, page, keyword, isAnimal));
     }
 
-    private void openWhistleGUI(Player player, @Nullable String keyword) {
-        runTask(() -> plugin.openWhistleGUI(player, keyword));
+    private void openWhistleGUI(Player player, @Nullable Integer page, @Nullable String keyword) {
+        runTask(() -> plugin.openWhistleGUI(player, page, keyword));
     }
 
-    private void openSkinGUI(Player player, String sex, boolean isAdult, @Nullable String keyword) {
-        runTask(() -> SkinGUI.openMenu(plugin, player, sex, isAdult, null, keyword));
+    private void openSkinGUI(Player player, String sex, boolean isAdult) {
+        runTask(() -> SkinGUI.openMenu(plugin, player, sex, isAdult, null, null));
     }
 
     private void closeInventory(@NotNull Player player) {

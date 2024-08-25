@@ -136,9 +136,13 @@ public final class MainGUI extends InteractGUI {
     }
 
     private boolean checkSettings(String itemName) {
-        return !ITEM_SETTINGS.containsKey(itemName)
-                || !getBool(itemName, ITEM_SETTINGS.get(itemName).getName())
-                || ITEM_SETTINGS.get(itemName).getCondition().apply(npc, player, itemName);
+        // Check if "require-permission" is true and the player doesn't have the required permission.
+        if (!testSetting(itemName, Settings.ONLY_IF_HAS_PERMISSION)) return false;
+        return !ITEM_SETTINGS.containsKey(itemName) || testSetting(itemName, ITEM_SETTINGS.get(itemName));
+    }
+
+    private boolean testSetting(String itemName, @NotNull Settings setting) {
+        return !getBool(itemName, setting.getName()) || setting.getCondition().apply(npc, player, itemName);
     }
 
     private boolean getBool(String itemName, String setting) {
@@ -330,7 +334,7 @@ public final class MainGUI extends InteractGUI {
                 .replace("%food-level%", npc.getFoodLevel())
                 .replace("%max-food-level%", 20)
                 .replace("%type%", type)
-                .replace("%profession%", plugin.getProfessionFormatted(bukkit.getProfession()))
+                .replace("%profession%", plugin.getProfessionFormatted(bukkit.getProfession(), npc.isMale()))
                 .replace("%level%", level)
                 .replace("%experience%", bukkit.getVillagerExperience())
                 .replace("%max-experience%", getMaxXpPerLevel(level))
@@ -390,6 +394,7 @@ public final class MainGUI extends InteractGUI {
 
     @Getter
     private enum Settings {
+        ONLY_IF_HAS_PERMISSION("require-permission", (npc, player, name) -> player.hasPermission("realisticvillagers.gui." + name)),
         ONLY_IF_ALLOWED("only-if-allowed", (npc, player, name) -> {
             UUID playerUUID = player.getUniqueId();
             String finalName = (name.equals("set-home") ? "home" : name).toUpperCase();

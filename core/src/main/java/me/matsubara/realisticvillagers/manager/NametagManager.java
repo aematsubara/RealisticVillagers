@@ -36,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -176,12 +177,14 @@ public class NametagManager implements Listener {
         List<String> lines = getLines(bukkit);
 
         for (int i = 0; i < lines.size(); i++) {
-            String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", npc.getVillagerName()));
+            // For some reason, the name is null?
+            String villagerName = Objects.requireNonNullElse(npc.getVillagerName(), Config.UNKNOWN.asStringTranslated());
+            String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", villagerName));
 
             builder.append(bukkit instanceof Villager villager ? line
-                    .replace("%villager-name%", npc.getVillagerName())
+                    .replace("%villager-name%", villagerName)
                     .replace("%level%", String.valueOf(villager.getVillagerLevel()))
-                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name().toLowerCase())) : line);
+                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name().toLowerCase(), npc.isMale())) : line);
 
             if (i != lines.size() - 1) builder.append("\n");
         }

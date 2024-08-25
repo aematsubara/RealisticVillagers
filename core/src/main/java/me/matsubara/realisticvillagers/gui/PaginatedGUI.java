@@ -1,11 +1,13 @@
 package me.matsubara.realisticvillagers.gui;
 
+import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.util.InventoryUpdate;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -17,16 +19,17 @@ public abstract class PaginatedGUI extends InteractGUI {
     protected final Player player;
     protected final List<ItemStack> items;
 
-    protected int current;
+    protected @Getter int currentPage;
     protected int pages;
 
     private final int[] slots;
     private final int[] hotbar;
 
-    public PaginatedGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, Player player, List<ItemStack> items) {
+    public PaginatedGUI(RealisticVillagers plugin, IVillagerNPC npc, String name, int size, Player player, List<ItemStack> items, @Nullable Integer page) {
         super(plugin, npc, name, size, null, false);
         this.player = player;
         this.items = items;
+        this.currentPage = page != null ? page : 0;
 
         int requiredSlotRows = size / 9 - 3;
 
@@ -64,8 +67,8 @@ public abstract class PaginatedGUI extends InteractGUI {
             slotIndex.put(ArrayUtils.indexOf(slots, i), i);
         }
 
-        int startFrom = current * slots.length;
-        boolean isLastPage = current == pages - 1;
+        int startFrom = currentPage * slots.length;
+        boolean isLastPage = currentPage == pages - 1;
 
         for (int index = 0, aux = startFrom; isLastPage ? (index < items.size() - startFrom) : (index < slots.length); index++, aux++) {
             // Set item in the respective slot.
@@ -78,17 +81,17 @@ public abstract class PaginatedGUI extends InteractGUI {
     @Override
     protected String getTitle() {
         return super.getTitle()
-                .replace("%page%", String.valueOf(current + 1))
+                .replace("%page%", String.valueOf(currentPage + 1))
                 .replace("%max-page%", String.valueOf(pages == 0 ? 1 : pages));
     }
 
     public void previousPage(boolean isShiftClick) {
-        current = isShiftClick ? 0 : current - 1;
+        currentPage = isShiftClick ? 0 : currentPage - 1;
         updateInventory();
     }
 
     public void nextPage(boolean isShiftClick) {
-        current = isShiftClick ? pages - 1 : current + 1;
+        currentPage = isShiftClick ? pages - 1 : currentPage + 1;
         updateInventory();
     }
 }

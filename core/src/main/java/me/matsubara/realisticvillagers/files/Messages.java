@@ -127,11 +127,12 @@ public final class Messages {
             return villagerName;
         }
 
-        return villagerName + " " + getVillagerTitle(villager.getProfession());
+        return villagerName + " " + getVillagerTitle(villager.getProfession(), npc.isMale());
     }
 
-    private @NotNull String getVillagerTitle(Villager.Profession profession) {
-        return Config.VILLAGER_TITLE_ARTICLE.asString() + " " + plugin.getProfessionFormatted(profession);
+    private @NotNull String getVillagerTitle(Villager.Profession profession, boolean isMale) {
+        String article = (isMale ? Config.VILLAGER_TITLE_ARTICLE_MALE : Config.VILLAGER_TITLE_ARTICLE_FEMALE).asString();
+        return article + " " + plugin.getProfessionFormatted(profession, isMale);
     }
 
     private String getRandomMessage(String path) {
@@ -172,6 +173,7 @@ public final class Messages {
         }
     }
 
+    @Getter
     public enum Message {
         ON_HIT("reaction.on-hit"),
         MARRRY_SUCCESS("marry.success"),
@@ -265,7 +267,7 @@ public final class Messages {
         ONLY_FROM_CONSOLE,
         INVALID_NUMBER;
 
-        private final @Getter String path;
+        private final String path;
 
         Message() {
             this.path = name().toLowerCase().replace("_", "-");
