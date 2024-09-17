@@ -12,7 +12,6 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.*;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.DummyFishingHook;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_20_r1.villager.ai.VillagerNPCGoalPackages;
@@ -121,9 +120,7 @@ import org.bukkit.craftbukkit.v1_20_R1.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_20_R1.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_20_R1.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.FishHook;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -146,7 +143,7 @@ import java.util.function.Supplier;
 @SuppressWarnings({"Guava", "deprecation"})
 @Getter
 @Setter
-public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob, Nameable {
+public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
@@ -199,10 +196,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private long timeEntitySatOnShoulder;
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
-
-    private TextDisplay nametagEntity;
-    private BlockDisplay nametagItemEntity;
-    private int currentAmountOfLines;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();

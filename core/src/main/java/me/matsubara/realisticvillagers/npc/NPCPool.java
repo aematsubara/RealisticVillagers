@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.npc;
 
+import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
 import org.bukkit.Bukkit;
@@ -20,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class NPCPool implements Listener {
 
-    private final RealisticVillagers plugin;
+    private final @Getter RealisticVillagers plugin;
     private final Map<Integer, NPC> npcMap = new ConcurrentHashMap<>();
 
     private static final double BUKKIT_VIEW_DISTANCE = Math.pow(Bukkit.getViewDistance() << 4, 2);
@@ -35,7 +36,7 @@ public class NPCPool implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 for (NPC npc : npcMap.values()) {
-                    LivingEntity bukkit = npc.getVillager().bukkit();
+                    LivingEntity bukkit = npc.getNpc().bukkit();
                     if (bukkit == null) continue;
 
                     Location npcLocation = bukkit.getLocation();
@@ -47,7 +48,7 @@ public class NPCPool implements Listener {
                     if (!npcWorld.equals(playerLocation.getWorld())
                             || !npcWorld.isChunkLoaded(npcLocation.getBlockX() >> 4, npcLocation.getBlockZ() >> 4)) {
                         // Hide NPC if the NPC isn't in the same world of the player or the NPC isn't on a loaded chunk.
-                        if (npc.isShownFor(player)) npc.hide(player, plugin);
+                        if (npc.isShownFor(player)) npc.hide(player);
                         continue;
                     }
 
@@ -55,9 +56,9 @@ public class NPCPool implements Listener {
                     boolean inRange = npcLocation.distanceSquared(playerLocation) <= Math.min(renderDistance * renderDistance, BUKKIT_VIEW_DISTANCE);
 
                     if (!inRange && npc.isShownFor(player)) {
-                        npc.hide(player, plugin);
+                        npc.hide(player);
                     } else if (inRange && !npc.isShownFor(player)) {
-                        npc.show(player, plugin);
+                        npc.show(player);
                     }
                 }
             }
@@ -79,7 +80,7 @@ public class NPCPool implements Listener {
     public void removeNPC(int entityId) {
         getNPC(entityId).ifPresent(npc -> {
             npcMap.remove(entityId);
-            npc.getSeeingPlayers().forEach(player -> npc.hide(player, plugin));
+            npc.getSeeingPlayers().forEach(npc::hide);
         });
     }
 
@@ -89,7 +90,7 @@ public class NPCPool implements Listener {
 
         npcMap.values().stream()
                 .filter(npc -> npc.isShownFor(player))
-                .forEach(npc -> npc.hide(player, plugin));
+                .forEach(npc -> npc.hide(player));
     }
 
     @EventHandler

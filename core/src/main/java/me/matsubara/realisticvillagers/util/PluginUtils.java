@@ -13,9 +13,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Color;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -29,12 +27,13 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionType;
+import org.bukkit.profile.PlayerProfile;
+import org.bukkit.profile.PlayerTextures;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.yaml.snakeyaml.parser.ParserException;
-import org.yaml.snakeyaml.scanner.ScannerException;
+import org.yaml.snakeyaml.error.MarkedYAMLException;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -43,6 +42,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -81,13 +81,14 @@ public final class PluginUtils {
             BlockFace.NORTH_NORTH_WEST};
     private static final Color[] COLORS;
 
-    private static final MethodHandle SET_PROFILE;
-    private static final MethodHandle PROFILE;
-
     private static final Class<?> CRAFT_ENTITY = XReflection.getCraftClass("entity.CraftEntity");
+    private static final Class<?> CRAFT_META_SKULL = XReflection.getCraftClass("inventory.CraftMetaSkull");
 
-    private static final MethodHandle getHandle = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
-    private static final MethodHandle absMoveTo = Reflection.getMethod(
+    private static final MethodHandle SET_PROFILE = Reflection.getMethod(CRAFT_META_SKULL, "setProfile", false, GameProfile.class);
+    private static final MethodHandle SET_OWNER_PROFILE = SET_PROFILE != null ? null : Reflection.getMethod(SkullMeta.class, "setOwnerProfile", false, PlayerProfile.class);
+
+    private static final MethodHandle GET_HANDLE = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
+    private static final MethodHandle ABS_MOVE_TO = Reflection.getMethod(
             XReflection.getNMSClass("world.entity", "Entity"),
             "a",
             MethodType.methodType(void.class, double.class, double.class, double.class, float.class, float.class),
@@ -121,12 +122,6 @@ public final class PluginUtils {
         }
 
         COLORS = COLORS_BY_NAME.values().toArray(new Color[0]);
-
-        Class<?> craftMetaSkull = XReflection.getCraftClass("inventory.CraftMetaSkull");
-        Preconditions.checkNotNull(craftMetaSkull);
-
-        SET_PROFILE = Reflection.getMethod(craftMetaSkull, "setProfile", GameProfile.class);
-        PROFILE = Reflection.getFieldSetter(craftMetaSkull, "profile");
     }
 
     public static @NotNull Vector getDirection(@NotNull BlockFace face) {
@@ -193,23 +188,45 @@ public final class PluginUtils {
     }
 
     public static void applySkin(SkullMeta meta, UUID uuid, String texture, boolean isUrl) {
-        GameProfile profile = new GameProfile(uuid, "");
-
-        String textureValue = texture;
-        if (isUrl) {
-            textureValue = "http://textures.minecraft.net/texture/" + textureValue;
-            byte[] encodedData = Base64.getEncoder().encode(String.format("{textures:{SKIN:{url:\"%s\"}}}", textureValue).getBytes());
-            textureValue = new String(encodedData);
-        }
-
-        profile.getProperties().put("textures", new Property("textures", textureValue));
-
         try {
             // If the serialized profile field isn't set, ItemStack#isSimilar() and ItemStack#equals() throw an error.
-            (SET_PROFILE == null ? PROFILE : SET_PROFILE).invoke(meta, profile);
+            if (SET_PROFILE != null) {
+                GameProfile profile = new GameProfile(uuid, "");
+
+                String value = isUrl ? new String(Base64.getEncoder().encode(String
+                        .format("{textures:{SKIN:{url:\"%s\"}}}", "http://textures.minecraft.net/texture/" + texture)
+                        .getBytes())) : texture;
+
+                profile.getProperties().put("textures", new Property("textures", value));
+                SET_PROFILE.invoke(meta, profile);
+            } else if (SET_OWNER_PROFILE != null) {
+                PlayerProfile profile = Bukkit.createPlayerProfile(uuid, "");
+
+                PlayerTextures textures = profile.getTextures();
+                String url = isUrl ? "http://textures.minecraft.net/texture/" + texture : getURLFromTexture(texture);
+                textures.setSkin(new URL(url));
+
+                profile.setTextures(textures);
+                SET_OWNER_PROFILE.invoke(meta, profile);
+            }
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    public static String getURLFromTexture(String texture) {
+        // String decoded = new String(Base64.getDecoder().decode(texture));
+        // return new URL(decoded.substring("{\"textures\":{\"SKIN\":{\"url\":\"".length(), decoded.length() - "\"}}}".length()));
+
+        // Decode B64.
+        String decoded = new String(Base64.getDecoder().decode(texture));
+
+        // Get url from json.
+        return JsonParser.parseString(decoded).getAsJsonObject()
+                .getAsJsonObject("textures")
+                .getAsJsonObject("SKIN")
+                .get("url")
+                .getAsString();
     }
 
     @Contract("_, _, _ -> new")
@@ -391,7 +408,7 @@ public final class PluginUtils {
         // Draw default skin.
         graphics.drawImage(image, 0, 0, null);
 
-        // Copy and draw needed parts to make it 64x64.
+        // Copy and draw the necessary parts to make it 64x64.
         graphics.drawImage(to64x64.getSubimage(0, 16, 16, 16), 16, 48, null);
         graphics.drawImage(to64x64.getSubimage(40, 16, 16, 16), 32, 48, null);
 
@@ -448,10 +465,8 @@ public final class PluginUtils {
                 errorLogged = true;
 
                 Throwable cause = invalid.getCause();
-                if (cause instanceof ScannerException scanner) {
-                    handleError(backup, scanner.getProblemMark().getLine());
-                } else if (cause instanceof ParserException parser) {
-                    handleError(backup, parser.getProblemMark().getLine());
+                if (cause instanceof MarkedYAMLException marked) {
+                    handleError(backup, marked.getProblemMark().getLine());
                 } else {
                     errorLogged = false;
                 }
@@ -468,7 +483,7 @@ public final class PluginUtils {
                 return null;
             }
 
-            // Only replace file if an exception ocurrs.
+            // Only replace the file if an exception ocurrs.
             FileUtils.deleteQuietly(file);
             error.accept(file);
 
@@ -487,18 +502,6 @@ public final class PluginUtils {
         } catch (IOException exception) {
             exception.printStackTrace();
         }
-    }
-
-    public static String getURLFromTexture(String texture) {
-        // Decode B64.
-        String base64 = new String(Base64.getDecoder().decode(texture));
-
-        // Get url from json.
-        return JsonParser.parseString(base64).getAsJsonObject()
-                .getAsJsonObject("textures")
-                .getAsJsonObject("SKIN")
-                .get("url")
-                .getAsString();
     }
 
     public static boolean hasAnyOf(@NotNull InventoryHolder holder, NamespacedKey key) {
@@ -526,12 +529,12 @@ public final class PluginUtils {
 
     public static void teleportWithPassengers(@NotNull LivingEntity living, Location targetLocation) {
         if (living.teleport(targetLocation)) return;
-        if (getHandle == null || CRAFT_ENTITY == null || absMoveTo == null) return;
+        if (GET_HANDLE == null || ABS_MOVE_TO == null) return;
 
         // We can't teleport entities with passengers with the API.
         try {
-            Object nmsEntity = getHandle.invoke(CRAFT_ENTITY.cast(living));
-            absMoveTo.invoke(
+            Object nmsEntity = GET_HANDLE.invoke(CRAFT_ENTITY.cast(living));
+            ABS_MOVE_TO.invoke(
                     nmsEntity,
                     targetLocation.getX(),
                     targetLocation.getY(),

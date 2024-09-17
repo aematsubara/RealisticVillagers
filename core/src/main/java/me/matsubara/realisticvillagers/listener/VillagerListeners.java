@@ -18,7 +18,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
-import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -88,7 +87,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         // PlayerInteractEntityEvent won't be called if this one is cancelled.
         // With this change, we fix the client freezing for some seconds when right-clicking a villager.
         EquipmentSlot slot = wrapper.getHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        if (handleInteract((Player) event.getPlayer(), slot, action, npc.get().getVillager().bukkit())) {
+        if (handleInteract((Player) event.getPlayer(), slot, action, npc.get().getNpc().bukkit())) {
             event.setCancelled(true);
         }
     }
@@ -130,26 +129,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
         // Update villager skin when changing a job after 1 tick since this event is called before changing a job.
         // Respawn NPC with the new profession texture.
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            plugin.getConverter().getNPC(villager).ifPresent(npc -> {
-                NametagManager nametagManager = plugin.getNametagManager();
-                if (nametagManager != null) nametagManager.resetNametag(npc);
-            });
-            tracker.refreshNPCSkin(villager, true);
-        });
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onVillagerAcquireTrade(@NotNull VillagerAcquireTradeEvent event) {
-        if (!(event.getEntity() instanceof Villager villager)) return;
-
-        VillagerTracker tracker = plugin.getTracker();
-        if (tracker.isInvalid(villager)) return;
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> plugin.getConverter().getNPC(villager).ifPresent(npc -> {
-            NametagManager nametagManager = plugin.getNametagManager();
-            if (nametagManager != null) nametagManager.resetNametag(npc);
-        }));
+        plugin.getServer().getScheduler().runTask(plugin, () -> tracker.refreshNPCSkin(villager, true));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -251,7 +231,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         if (npc == null) return cancel;
 
         if (hand != EquipmentSlot.HAND) return true;
-        if (action != WrapperPlayClientInteractEntity.InteractAction.INTERACT) return true;
+        if (action != null && action != WrapperPlayClientInteractEntity.InteractAction.INTERACT) return true;
 
         plugin.getServer().getScheduler().runTask(plugin, (() -> {
             Messages messages = plugin.getMessages();
@@ -338,10 +318,6 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         if (name.length() < 3) return;
 
         npc.setVillagerName(name);
-
-        // Refresh nametag.
-        NametagManager nametagManager = plugin.getNametagManager();
-        if (nametagManager != null) nametagManager.resetNametag(npc);
 
         // Refresh skin.
         plugin.getTracker().refreshNPCSkin(npc.bukkit(), false);
@@ -495,11 +471,6 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
             plugin.getMessages().send(player, npc, Messages.Message.ON_HIT);
         }
 
-        NametagManager nametagManager = plugin.getNametagManager();
-        if (nametagManager != null && !hasTotem(villager) && !alive) {
-            nametagManager.remove(npc);
-        }
-
         if (!npc.isDamageSourceBlocked()) return;
 
         try {
@@ -547,16 +518,5 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 npc.attack(damager);
             }
         }
-    }
-
-    private boolean hasTotem(@NotNull AbstractVillager villager) {
-        EntityEquipment equipment = villager.getEquipment();
-        if (equipment == null) return false;
-
-        ItemStack mainHand = equipment.getItemInMainHand();
-        if (mainHand.getType() == Material.TOTEM_OF_UNDYING) return true;
-
-        ItemStack offHand = equipment.getItemInOffHand();
-        return offHand.getType() == Material.TOTEM_OF_UNDYING;
     }
 }

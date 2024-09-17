@@ -121,9 +121,7 @@ import org.bukkit.craftbukkit.v1_20_R3.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_20_R3.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.FishHook;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -201,9 +199,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
 
-    private TextDisplay nametagEntity;
-    private BlockDisplay nametagItemEntity;
-    private int currentAmountOfLines;
+    private int nametagEntity = -1;
+    private int nametagItemEntity = -1;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();

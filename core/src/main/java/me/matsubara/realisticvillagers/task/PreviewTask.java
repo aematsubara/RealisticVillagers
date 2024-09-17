@@ -56,7 +56,9 @@ public class PreviewTask extends BukkitRunnable {
         UserProfile profile = new UserProfile(UUID.randomUUID(), VillagerTracker.HIDE_NAMETAG_NAME);
         profile.setTextureProperties(List.of(textures));
 
-        this.npc = new NPC(profile,
+        this.npc = new NPC(
+                plugin,
+                profile,
                 (npc, seeing) -> {
                     npc.rotation().queueHeadRotation(targetLocation.getYaw()).send(seeing);
 
@@ -68,7 +70,7 @@ public class PreviewTask extends BukkitRunnable {
 
         this.yaw = targetLocation.getYaw();
 
-        npc.show(player, plugin, targetLocation);
+        npc.show(player, targetLocation);
 
         plugin.getTracker().getPreviews().put(player.getUniqueId(), this);
     }
@@ -76,7 +78,7 @@ public class PreviewTask extends BukkitRunnable {
     @Override
     public void run() {
         if (tick == seconds * 20 || !player.isValid()) {
-            npc.hide(player, plugin);
+            npc.hide(player);
             cancel();
             return;
         }
@@ -121,7 +123,7 @@ public class PreviewTask extends BukkitRunnable {
     @Override
     public synchronized void cancel() throws IllegalStateException {
         super.cancel();
-        npc.hide(player, plugin);
+        npc.hide(player);
         plugin.getTracker().getPreviews().remove(player.getUniqueId());
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR); // Clear message.
     }

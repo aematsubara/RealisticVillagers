@@ -100,23 +100,24 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
                 || !listenTo.contains(event.getPacketType())
                 || !(event.getPlayer() instanceof Player player)) return;
 
+        PacketType.Play.Server type = event.getPacketType();
+        boolean isMetadata = type == PacketType.Play.Server.ENTITY_METADATA;
+
         World world;
-        try {
-            world = player.getWorld();
-        } catch (UnsupportedOperationException exception) {
-            // Should "fix" → UnsupportedOperationException: The method getWorld is not supported for temporary players.
-            return;
-        }
-
-        int id = getEntityIdFromPacket(event);
-
+        int id;
         Entity entity;
         try {
+            world = player.getWorld();
+            id = getEntityIdFromPacket(event);
             entity = id != -1 ? SpigotReflectionUtil.getEntityById(world, id) : null;
-        } catch (Exception exception) {
-            // Should "fix" -> java.lang.NullPointerException: null
+        } catch (Exception ignored) {
+            // Should "fix" → UnsupportedOperationException: The method getWorld is not supported for temporary players.
+            // Should "fix" → IOException: Unknown nbt type id X.
+            // Should "fix" → NullPointerException: null (entity)
+            if (isMetadata) event.setCancelled(true);
             return;
         }
+
         if (!(entity instanceof AbstractVillager villager) || plugin.getTracker().isInvalid(villager)) return;
 
         UUID uuid = entity.getUniqueId();
@@ -132,13 +133,12 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             return;
         }
 
-        PacketType.Play.Server type = event.getPacketType();
         if (type == PacketType.Play.Server.ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
             WrapperPlayServerEntityStatus status = new WrapperPlayServerEntityStatus(event);
             plugin.getConverter().getNPC(villager).ifPresent(temp -> handleStatus(temp, (byte) status.getStatus()));
         }
 
-        if (type == PacketType.Play.Server.ENTITY_METADATA) {
+        if (isMetadata) {
             // Cancel metadata packets for players using 1.7 (or lower).
             if (plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
                 event.setCancelled(true);
@@ -146,20 +146,25 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
 
             ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
             if (version.isNewerThanOrEquals(ServerVersion.V_1_20_4)) {
-                // Fix issues with ViaVersion.
-                WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
+                try {
+                    // Fix issues with ViaVersion.
+                    WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
 
-                List<EntityData> metadata = wrapper.getEntityMetadata();
-                metadata.removeIf(REMOVE_METADATA);
+                    List<EntityData> metadata = wrapper.getEntityMetadata();
+                    metadata.removeIf(REMOVE_METADATA);
 
-                wrapper.setEntityMetadata(metadata);
+                    wrapper.setEntityMetadata(metadata);
 
-                // Adapt villager scale using the new scale attribute.
-                // This was added to 1.20.5, but that version was quickly replaced by 1.20.6.
-                if (version.isNewerThanOrEquals(ServerVersion.V_1_20_5)
-                        && npc.isPresent()
-                        && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
-                    handler.adaptScale(player, npc.get());
+                    // Adapt villager scale using the new scale attribute.
+                    // This was added to 1.20.5, but that version was quickly replaced by 1.20.6.
+                    if (version.isNewerThanOrEquals(ServerVersion.V_1_20_5)
+                            && npc.isPresent()
+                            && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
+                        handler.adaptScale(player, npc.get());
+                    }
+                } catch (Exception ignored) {
+                    event.setCancelled(true);
+                    return;
                 }
             }
         }

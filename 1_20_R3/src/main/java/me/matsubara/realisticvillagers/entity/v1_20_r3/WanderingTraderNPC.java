@@ -38,7 +38,10 @@ import net.minecraft.world.level.Level;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R3.entity.CraftWanderingTrader;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Boat;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -58,9 +61,8 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
     private String sex;
     private int skinTextureId = -1;
 
-    private TextDisplay nametagEntity;
-    private BlockDisplay nametagItemEntity;
-    private int currentAmountOfLines;
+    private int nametagEntity = -1;
+    private int nametagItemEntity = -1;
 
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_EFFECT_COLOR_ID =
             (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bI"));

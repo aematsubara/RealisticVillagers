@@ -1,19 +1,12 @@
 package me.matsubara.realisticvillagers.entity;
 
-import org.bukkit.entity.BlockDisplay;
-import org.bukkit.entity.TextDisplay;
-
 public interface Nameable {
 
-    TextDisplay getNametagEntity();
+    int getNametagEntity();
 
-    void setNametagEntity(TextDisplay display);
+    void setNametagEntity(int display);
 
-    BlockDisplay getNametagItemEntity();
+    int getNametagItemEntity();
 
-    void setNametagItemEntity(BlockDisplay display);
-
-    int getCurrentAmountOfLines();
-
-    void setCurrentAmountOfLines(int currentAmountOfLines);
+    void setNametagItemEntity(int display);
 }

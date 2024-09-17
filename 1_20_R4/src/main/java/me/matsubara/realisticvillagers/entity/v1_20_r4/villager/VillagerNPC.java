@@ -121,9 +121,7 @@ import org.bukkit.craftbukkit.v1_20_R4.event.CraftEventFactory;
 import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftItemStack;
 import org.bukkit.craftbukkit.v1_20_R4.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.AbstractArrow.PickupStatus;
-import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.FishHook;
-import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -202,9 +200,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
     private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
 
-    private TextDisplay nametagEntity;
-    private BlockDisplay nametagItemEntity;
-    private int currentAmountOfLines;
+    private int nametagEntity = -1;
+    private int nametagItemEntity = -1;
 
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
@@ -726,28 +723,29 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         shootCrossbowProjectile(this, target, projectile, force, Config.RANGE_WEAPON_POWER.asFloat());
     }
 
-    private void shootCrossbowProjectile(@NotNull LivingEntity var0, @NotNull LivingEntity var1, @NotNull Projectile var2, float var3, float var4) {
-        double var5 = var1.getX() - var0.getX();
-        double var7 = var1.getZ() - var0.getZ();
-        double var9 = Math.sqrt(var5 * var5 + var7 * var7);
-        double var11 = var1.getY(0.3333333333333333) - var2.getY() + var9 * 0.20000000298023224;
-        Vector3f var13 = this.getProjectileShotVector(var0, new Vec3(var5, var11, var7), var3);
-        var2.shoot(var13.x(), var13.y(), var13.z(), var4, (float) (14 - var0.level().getDifficulty().getId() * 4));
-        var0.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F / (var0.getRandom().nextFloat() * 0.4F + 0.8F));
+    private void shootCrossbowProjectile(@NotNull LivingEntity shooter, @NotNull LivingEntity target, @NotNull Projectile projectile, float accuracy, float velocity) {
+        double deltaX = target.getX() - shooter.getX();
+        double deltaZ = target.getZ() - shooter.getZ();
+        double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        double deltaY = target.getY(0.3333333333333333d) - projectile.getY() + horizontalDistance * 0.20000000298023224d;
+
+        Vector3f shotVector = this.getProjectileShotVector(shooter, new Vec3(deltaX, deltaY, deltaZ), accuracy);
+        projectile.shoot(shotVector.x(), shotVector.y(), shotVector.z(), velocity, (float) (14 - shooter.level().getDifficulty().getId() * 4));
+
+        shooter.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0f, 1.0f / (shooter.getRandom().nextFloat() * 0.4f + 0.8f));
     }
 
-    private Vector3f getProjectileShotVector(LivingEntity var0, @NotNull Vec3 var1, float var2) {
-        Vector3f var3 = var1.toVector3f().normalize();
-        Vector3f var4 = (new Vector3f(var3)).cross(new Vector3f(0.0F, 1.0F, 0.0F));
-        if ((double) var4.lengthSquared() <= 1.0E-7) {
-            Vec3 var5 = var0.getUpVector(1.0F);
-            var4 = (new Vector3f(var3)).cross(var5.toVector3f());
+    private Vector3f getProjectileShotVector(LivingEntity shooter, @NotNull Vec3 direction, float accuracy) {
+        Vector3f normalizedDirection = direction.toVector3f().normalize();
+        Vector3f perpendicularVector = (new Vector3f(normalizedDirection)).cross(new Vector3f(0.0f, 1.0f, 0.0f));
+
+        if ((double) perpendicularVector.lengthSquared() <= 1.0E-7) {
+            Vec3 upVector = shooter.getUpVector(1.0f);
+            perpendicularVector = (new Vector3f(normalizedDirection)).cross(upVector.toVector3f());
         }
 
-        //TODO: RENAME VARIABLES!
-
-        Vector3f var5 = (new Vector3f(var3)).rotateAxis(1.5707964F, var4.x, var4.y, var4.z);
-        return (new Vector3f(var3)).rotateAxis(var2 * 0.017453292F, var5.x, var5.y, var5.z);
+        Vector3f adjustedVector = (new Vector3f(normalizedDirection)).rotateAxis(1.5707964f, perpendicularVector.x, perpendicularVector.y, perpendicularVector.z);
+        return new Vector3f(normalizedDirection).rotateAxis(accuracy * 0.017453292f, adjustedVector.x, adjustedVector.y, adjustedVector.z);
     }
 
     @Override

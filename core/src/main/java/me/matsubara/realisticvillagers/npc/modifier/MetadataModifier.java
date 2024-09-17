@@ -39,7 +39,7 @@ public class MetadataModifier extends NPCModifier {
     }
 
     public void updateShoulderEntities() {
-        IVillagerNPC npc = this.npc.getVillager();
+        IVillagerNPC npc = this.npc.getNpc();
         queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, npc.getShoulderEntityLeft()).send();
         queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, npc.getShoulderEntityRight()).send();
     }

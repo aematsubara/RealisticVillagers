@@ -8,7 +8,6 @@ import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_19_r3.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.event.RealisticRemoveEvent;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
@@ -39,7 +38,9 @@ import net.minecraft.world.level.Level;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_19_R3.entity.CraftWanderingTrader;
-import org.bukkit.entity.*;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -51,17 +52,13 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC, Nameable {
+public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     private String villagerName;
     private String sex;
     private int skinTextureId = -1;
-
-    private TextDisplay nametagEntity;
-    private BlockDisplay nametagItemEntity;
-    private int currentAmountOfLines;
 
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_EFFECT_COLOR_ID =
             (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bG"));

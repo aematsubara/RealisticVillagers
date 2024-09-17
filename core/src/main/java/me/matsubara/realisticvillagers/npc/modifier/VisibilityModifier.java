@@ -47,7 +47,9 @@ public class VisibilityModifier extends NPCModifier {
                 return new WrapperPlayServerPlayerInfoUpdate(ADD_ACTIONS, info);
             } else {
                 WrapperPlayServerPlayerInfo.PlayerData info = new WrapperPlayServerPlayerInfo.PlayerData(null, profile, GameMode.CREATIVE, 20);
-                return new WrapperPlayServerPlayerInfo(WrapperPlayServerPlayerInfo.Action.ADD_PLAYER, info);
+                return new WrapperPlayServerPlayerInfo(remove ?
+                        WrapperPlayServerPlayerInfo.Action.REMOVE_PLAYER :
+                        WrapperPlayServerPlayerInfo.Action.ADD_PLAYER, info);
             }
         });
 
@@ -56,7 +58,7 @@ public class VisibilityModifier extends NPCModifier {
 
     public VisibilityModifier queueSpawn(@Nullable Location location) {
         queueInstantly((npc, player) -> {
-            com.github.retrooper.packetevents.protocol.world.Location at = SpigotConversionUtil.fromBukkitLocation(location != null ? location : npc.getVillager().bukkit().getLocation());
+            com.github.retrooper.packetevents.protocol.world.Location at = SpigotConversionUtil.fromBukkitLocation(location != null ? location : npc.getNpc().bukkit().getLocation());
             if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)) {
                 return new WrapperPlayServerSpawnEntity(npc.getEntityId(),
                         npc.getProfile().getUUID(),

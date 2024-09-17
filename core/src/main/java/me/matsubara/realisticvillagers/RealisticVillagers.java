@@ -11,8 +11,7 @@ import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
-import me.matsubara.realisticvillagers.compatibility.CompatibilityManager;
-import me.matsubara.realisticvillagers.compatibility.EMCompatibility;
+import me.matsubara.realisticvillagers.compatibility.*;
 import me.matsubara.realisticvillagers.data.ItemLoot;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
@@ -22,7 +21,6 @@ import me.matsubara.realisticvillagers.listener.*;
 import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
-import me.matsubara.realisticvillagers.manager.NametagManager;
 import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.manager.gift.GiftManager;
@@ -64,10 +62,7 @@ import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -118,7 +113,6 @@ public final class RealisticVillagers extends JavaPlugin {
     private ExpectingManager expectingManager;
     private InteractCooldownManager cooldownManager;
     private CompatibilityManager compatibilityManager;
-    private NametagManager nametagManager;
 
     private Messages messages;
     private INMSConverter converter;
@@ -168,15 +162,15 @@ public final class RealisticVillagers extends JavaPlugin {
         logger.info("****************************************");
         logger.info("Loading compatibilities...");
 
-        compatibilityManager = new CompatibilityManager(this);
+        compatibilityManager = new CompatibilityManager();
 
         // Shopkeeper, Citizens & (probably) RainbowsPro; for VillagerMarket, the villager shouldn't have AI to work properly.
-        compatibilityManager.addCompatibility(villager -> villager.hasAI() && !villager.hasMetadata("shopkeeper") && !villager.hasMetadata("NPC"));
+        compatibilityManager.addCompatibility(getName(), villager -> villager.hasAI() && !villager.hasMetadata("shopkeeper") && !villager.hasMetadata("NPC"));
 
-        // EliteMobs.
-        if (getServer().getPluginManager().getPlugin("EliteMobs") != null) {
-            compatibilityManager.addCompatibility(new EMCompatibility());
-        }
+        // General compatibilities.
+        addCompatibility("EliteMobs", EMCompatibility::new);
+        addCompatibility("ViaVersion", ViaCompatibility::new);
+        addCompatibility("VillagerTradeLimiter", VTLCompatibility::new);
 
         logger.info("Compatibilities loaded!");
         logger.info("");
@@ -201,6 +195,13 @@ public final class RealisticVillagers extends JavaPlugin {
         logLoadingTime(true, now);
 
         logger.info("****************************************");
+    }
+
+    private void addCompatibility(String name, Supplier<Compatibility> supplier) {
+        PluginManager manager = getServer().getPluginManager();
+        if (manager.getPlugin(name) == null) return;
+
+        compatibilityManager.addCompatibility(name, supplier.get());
     }
 
     @Override
@@ -244,7 +245,6 @@ public final class RealisticVillagers extends JavaPlugin {
         chestManager = new ChestManager(this);
         expectingManager = new ExpectingManager(this);
         cooldownManager = new InteractCooldownManager(this);
-        nametagManager = XReflection.supports(20, 2) ? new NametagManager(this) : null;
         CustomBlockData.registerListener(this);
 
         logger.info("Managers created!");

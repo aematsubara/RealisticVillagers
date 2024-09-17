@@ -65,12 +65,16 @@ public final class Reflection {
     }
 
     public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, Class<?>... parameterTypes) {
+        return getMethod(refc, name, true, parameterTypes);
+    }
+
+    public static @Nullable MethodHandle getMethod(@NotNull Class<?> refc, String name, boolean printStackTrace, Class<?>... parameterTypes) {
         try {
             Method method = refc.getDeclaredMethod(name, parameterTypes);
             method.setAccessible(true);
             return LOOKUP.unreflect(method);
         } catch (ReflectiveOperationException exception) {
-            exception.printStackTrace();
+            if (printStackTrace) exception.printStackTrace();
             return null;
         }
     }
