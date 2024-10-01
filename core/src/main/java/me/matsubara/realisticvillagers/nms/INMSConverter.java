@@ -33,8 +33,6 @@ public interface INMSConverter {
 
     void loadData();
 
-    ItemStack randomVanillaEnchantments(Location location, ItemStack item);
-
     Raid getRaidAt(Location location);
 
     GameProfile getPlayerProfile(Player player);

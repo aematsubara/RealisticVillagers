@@ -1289,7 +1289,6 @@ initial-reputation-at-birth: 50
 
 # Here you can modify the equipment a villager will receive when spawning.
 # @chance: the chance of receiving the item (from 0.0 to 1.0). If not stated it'll be 1.0.
-# @random-vanilla-enchantments: whether to use the vanilla enchant system (the item may (or not) be enchanted).
 # @only-for-range-weapon: the item will only be added to the inventory if the villager received a ranged weapon.
 # @only-for-bow: same as above, but only for bows.
 # @only-for-crossbow: same as above, but only for crossbows.
@@ -1302,17 +1301,14 @@ spawn-loot:
       '1':
         chance: 0.5
         material: BOW
-        random-vanilla-enchantments: true
         damage: $RANDOM
       '2':
         chance: 0.625
         material: STONE_SWORD
-        random-vanilla-enchantments: true
         damage: $RANDOM
       '3':
         chance: 0.3
         material: IRON_SWORD
-        random-vanilla-enchantments: true
         damage: $RANDOM
       '4':
         chance: 0.4
@@ -1341,7 +1337,6 @@ spawn-loot:
       '1':
         chance: 0.4
         material: LEATHER_CHESTPLATE
-        random-vanilla-enchantments: true
       '2':
         chance: 0.25
         material: IRON_CHESTPLATE
@@ -1358,7 +1353,6 @@ spawn-loot:
         chance: 0.4
         material: LEATHER_LEGGINGS
         damage: 25%
-        random-vanilla-enchantments: true
     feet:
       '1':
         chance: 0.4

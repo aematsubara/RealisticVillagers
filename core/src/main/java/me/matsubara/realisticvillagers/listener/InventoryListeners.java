@@ -61,7 +61,14 @@ import java.util.stream.Collectors;
 public final class InventoryListeners implements Listener {
 
     private final RealisticVillagers plugin;
-    private final UnaryOperator<String> REPLACE_TIME = string -> string.replace("%time%", String.valueOf(Config.TIME_TO_EXPECT.asInt() / 20));
+
+    private static final UnaryOperator<String> REPLACE_TIME = string -> string.replace("%time%",
+            String.valueOf(Config.TIME_TO_EXPECT.asInt() / 20));
+
+    // We want to ignore some actions to avoid issues (like duping).
+    private static final Set<InventoryAction> IGNORE_ACTIONS = Set.of(
+            InventoryAction.MOVE_TO_OTHER_INVENTORY,
+            InventoryAction.COLLECT_TO_CURSOR);
 
     public InventoryListeners(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -137,7 +144,7 @@ public final class InventoryListeners implements Listener {
         if (inventory == null) return;
 
         if (inventory.getType() == InventoryType.PLAYER
-                && event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                && IGNORE_ACTIONS.contains(event.getAction())
                 && event.getView().getTopInventory().getHolder() instanceof InteractGUI interact
                 && cancelEquipment(player, interact)) {
             event.setCancelled(true);
@@ -630,7 +637,7 @@ public final class InventoryListeners implements Listener {
     private boolean notAllowedToModify(@NotNull Player player, boolean isPartner, boolean isFamily, @NotNull Config whoCanModify, boolean sendMessage, String permission) {
         if (player.hasPermission(permission)) return false;
 
-        return switch (whoCanModify.asString("FAMILY").toUpperCase()) {
+        return switch (whoCanModify.asString("FAMILY").toUpperCase(Locale.ROOT)) {
             case "NONE" -> conditionNotMet(player, false, sendMessage ? Messages.Message.INTERACT_FAIL_NONE : null);
             case "PARTNER" ->
                     conditionNotMet(player, isPartner, sendMessage ? Messages.Message.INTERACT_FAIL_NOT_MARRIED : null);
@@ -648,7 +655,7 @@ public final class InventoryListeners implements Listener {
         if (bypass == null || required == null) return;
 
         Messages messages = plugin.getMessages();
-        if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase().replace("_", ""))
+        if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase(Locale.ROOT).replace("_", ""))
                 || (bypass.asBool() && npc.isFamily(player.getUniqueId(), true))
                 || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
 
@@ -694,7 +701,7 @@ public final class InventoryListeners implements Listener {
         }
 
         // Player is in cooldown.
-        if (!plugin.getCooldownManager().canInteract(player, (Villager) npc.bukkit(), checkType.name().toLowerCase())) {
+        if (!plugin.getCooldownManager().canInteract(player, (Villager) npc.bukkit(), checkType.name().toLowerCase(Locale.ROOT))) {
             messages.send(player, Messages.Message.INTERACT_FAIL_IN_COOLDOWN);
             return;
         }
@@ -860,7 +867,7 @@ public final class InventoryListeners implements Listener {
             }
 
             for (Villager.Profession profession : Villager.Profession.values()) {
-                String professionLower = profession.name().toLowerCase();
+                String professionLower = profession.name().toLowerCase(Locale.ROOT);
                 config.set(professionLower + "." + id, null);
 
                 // Remove the profession section if empty.
@@ -953,7 +960,7 @@ public final class InventoryListeners implements Listener {
             return;
         }
 
-        String profession = skin.getCurrentProfession().toLowerCase().replace("_", "-");
+        String profession = skin.getCurrentProfession().toLowerCase(Locale.ROOT).replace("_", "-");
 
         TextureProperty textures = tracker.getTextures(sex, profession, id);
         if (textures.getName().equals("error")) {

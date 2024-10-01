@@ -10,6 +10,7 @@ import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
+import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
@@ -19,6 +20,7 @@ import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
+import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.npc.NPC;
 import org.bukkit.Location;
 import org.bukkit.Raid;
@@ -104,13 +106,20 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         boolean isMetadata = type == PacketType.Play.Server.ENTITY_METADATA;
 
         World world;
+        PacketWrapper<?> metadataWrapper;
         int id;
         Entity entity;
         try {
             world = player.getWorld();
-            id = getEntityIdFromPacket(event);
+            if (isMetadata) {
+                metadataWrapper = new PacketWrapper<>(event, false);
+                id = metadataWrapper.readVarInt();
+            } else {
+                metadataWrapper = null;
+                id = getEntityIdFromPacket(event);
+            }
             entity = id != -1 ? SpigotReflectionUtil.getEntityById(world, id) : null;
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
             // Should "fix" → UnsupportedOperationException: The method getWorld is not supported for temporary players.
             // Should "fix" → IOException: Unknown nbt type id X.
             // Should "fix" → NullPointerException: null (entity)
@@ -133,50 +142,59 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             return;
         }
 
+        INMSConverter converter = plugin.getConverter();
+
         if (type == PacketType.Play.Server.ENTITY_STATUS && EntityType.VILLAGER == villager.getType()) {
             WrapperPlayServerEntityStatus status = new WrapperPlayServerEntityStatus(event);
-            plugin.getConverter().getNPC(villager).ifPresent(temp -> handleStatus(temp, (byte) status.getStatus()));
+            converter.getNPC(villager).ifPresent(temp -> handleStatus(temp, (byte) status.getStatus()));
+            return;
         }
 
         if (isMetadata) {
             // Cancel metadata packets for players using 1.7 (or lower).
             if (plugin.getCompatibilityManager().shouldCancelMetadata(player)) {
                 event.setCancelled(true);
+                return;
             }
 
+            // Fix issues with ViaVersion.
             ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
-            if (version.isNewerThanOrEquals(ServerVersion.V_1_20_4)) {
-                try {
-                    // Fix issues with ViaVersion.
-                    WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
+            if (!version.isNewerThanOrEquals(ServerVersion.V_1_20_4)) return;
 
-                    List<EntityData> metadata = wrapper.getEntityMetadata();
-                    metadata.removeIf(REMOVE_METADATA);
+            try {
+                List<EntityData> metadata = metadataWrapper.readEntityMetadata();
+                if (!metadata.removeIf(REMOVE_METADATA)) return;
 
-                    wrapper.setEntityMetadata(metadata);
+                event.setCancelled(true);
 
-                    // Adapt villager scale using the new scale attribute.
-                    // This was added to 1.20.5, but that version was quickly replaced by 1.20.6.
-                    if (version.isNewerThanOrEquals(ServerVersion.V_1_20_5)
-                            && npc.isPresent()
-                            && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
-                        handler.adaptScale(player, npc.get());
-                    }
-                } catch (Exception ignored) {
-                    event.setCancelled(true);
-                    return;
+                // Cancel the packet and send a new one.
+                WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(id, metadata);
+                Object channel = SpigotReflectionUtil.getChannel(player);
+                PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);
+
+                // Adapt villager scale using the new scale attribute.
+                // This was added to 1.20.5, but that version was quickly replaced by 1.20.6.
+                if (version.isNewerThanOrEquals(ServerVersion.V_1_20_5)
+                        && npc.isPresent()
+                        && npc.get().getSpawnCustomizer() instanceof NPCHandler handler) {
+                    handler.adaptScale(player, npc.get());
                 }
+            } catch (Exception ignored) {
+                event.setCancelled(true);
+                return;
             }
+
+            return;
         }
 
-        if (npc.isEmpty()) return;
+        if (npc.isEmpty() || !MOVEMENT_PACKETS.contains(type)) return;
 
         // Don't modify location while reviving.
-        if (plugin.getConverter().getNPC(villager)
+        if (converter.getNPC(villager)
                 .map(IVillagerNPC::isReviving)
                 .orElse(false)) return;
 
-        if (MOVEMENT_PACKETS.contains(type)) rotateBody(event, villager);
+        rotateBody(event, villager);
     }
 
     private int getEntityIdFromPacket(@NotNull PacketPlaySendEvent event) {
@@ -189,9 +207,6 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             return wrapper.getEntityId();
         } else if (type == PacketType.Play.Server.ENTITY_STATUS) {
             WrapperPlayServerEntityStatus wrapper = new WrapperPlayServerEntityStatus(event);
-            return wrapper.getEntityId();
-        } else if (type == PacketType.Play.Server.ENTITY_METADATA) {
-            WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(event);
             return wrapper.getEntityId();
         } else if (type == PacketType.Play.Server.ENTITY_ROTATION) {
             WrapperPlayServerEntityRotation wrapper = new WrapperPlayServerEntityRotation(event);

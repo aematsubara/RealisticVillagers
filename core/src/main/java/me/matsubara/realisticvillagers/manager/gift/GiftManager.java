@@ -62,7 +62,7 @@ public final class GiftManager {
                 Villager.Profession profession;
                 try {
                     // Villager.Profession was changed to an interface, we need to use this method instead.
-                    profession = Villager.Profession.valueOf(data[0].toUpperCase());
+                    profession = Villager.Profession.valueOf(data[0].toUpperCase(Locale.ROOT));
                 } catch (Exception exception) {
                     log(path, materialOrTag);
                     continue;
@@ -86,7 +86,7 @@ public final class GiftManager {
             if (materialOrTag.startsWith("$") || (indexOf != -1 && materialOrTag.substring(indexOf + 1).startsWith("$"))) {
                 String tagName = (indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1)).replace("*", "");
 
-                Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase());
+                Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase(Locale.ROOT));
                 if (extra != null && !extra.isEmpty()) {
                     for (Material material : extra) {
                         addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
@@ -94,7 +94,7 @@ public final class GiftManager {
                 } else if (!addMaterialsFromRegistry(
                         tags,
                         predicate,
-                        tagName.toLowerCase(),
+                        tagName.toLowerCase(Locale.ROOT),
                         inventoryLootOnly,
                         amount,
                         Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS)) {
@@ -104,7 +104,7 @@ public final class GiftManager {
             }
 
             String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0).replace("*", "");
-            Material material = PluginUtils.getOrNull(Material.class, materialName.toUpperCase());
+            Material material = PluginUtils.getOrNull(Material.class, materialName.toUpperCase(Locale.ROOT));
             if (material != null) {
                 addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
             } else {
@@ -132,7 +132,7 @@ public final class GiftManager {
     private boolean addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, boolean inventoryLootOnly, int amount, @NotNull String... registries) {
         boolean found = false;
         for (String registry : registries) {
-            Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase()), Material.class);
+            Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase(Locale.ROOT)), Material.class);
             if (tag == null) continue;
 
             for (Material material : tag.getValues()) {

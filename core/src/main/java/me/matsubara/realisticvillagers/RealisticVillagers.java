@@ -178,7 +178,8 @@ public final class RealisticVillagers extends JavaPlugin {
 
         String[] packageVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.");
 
-        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase() : XReflection.MINOR_NUMBER == 21 ? "v1_21_r1" : "v1_20_r4";
+        // TODO: Use a proper version detector...
+        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase(Locale.ROOT) : XReflection.MINOR_NUMBER == 21 ? "v1_21_r1" : "v1_20_r4";
         try {
             Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
@@ -682,7 +683,7 @@ public final class RealisticVillagers extends JavaPlugin {
             if (Strings.isNullOrEmpty(enchantmentString)) continue;
             String[] data = PluginUtils.splitData(enchantmentString);
 
-            Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(data[0].toLowerCase()));
+            Enchantment enchantment = Registry.ENCHANTMENT.get(NamespacedKey.minecraft(data[0].toLowerCase(Locale.ROOT)));
 
             int level;
             try {
@@ -695,7 +696,7 @@ public final class RealisticVillagers extends JavaPlugin {
         }
 
         for (String flag : config.getStringList(path + ".flags")) {
-            ItemFlag flagValue = PluginUtils.getOrNull(ItemFlag.class, flag.toUpperCase());
+            ItemFlag flagValue = PluginUtils.getOrNull(ItemFlag.class, flag.toUpperCase(Locale.ROOT));
             if (flagValue != null) builder.addItemFlags(flagValue);
         }
 
@@ -835,7 +836,7 @@ public final class RealisticVillagers extends JavaPlugin {
         defaultTargets.clear();
 
         for (String entity : getConfig().getStringList("default-target-entities")) {
-            EntityType type = PluginUtils.getOrNull(EntityType.class, entity.toUpperCase());
+            EntityType type = PluginUtils.getOrNull(EntityType.class, entity.toUpperCase(Locale.ROOT));
             if (type == null) continue;
 
             Class<? extends Entity> clazz = type.getEntityClass();
@@ -868,7 +869,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public boolean isEnabledIn(String world) {
         String type = Config.WORLDS_FILTER_TYPE.asString();
-        if (type == null || !FILTER_TYPES.contains(type.toUpperCase())) return true;
+        if (type == null || !FILTER_TYPES.contains(type.toUpperCase(Locale.ROOT))) return true;
 
         boolean contains = worlds.contains(world);
         return type.equalsIgnoreCase("WHITELIST") == contains;
@@ -943,10 +944,7 @@ public final class RealisticVillagers extends JavaPlugin {
                 ItemStack item = loot.getItem();
                 if (item == null) continue;
 
-                equipment.setItem(slot, loot.randomVanillaEnchantments() ?
-                        converter.randomVanillaEnchantments(living.getLocation(), item) :
-                        item);
-
+                equipment.setItem(slot, item);
                 equipped.put(slot, loot);
                 break;
             }
@@ -965,10 +963,6 @@ public final class RealisticVillagers extends JavaPlugin {
             if ((loot.forRange() && testBothHand(equipped, ItemStackUtils::isRangeWeapon))
                     || (loot.bow() && testBothHand(equipped, inHand -> inHand.getType() == Material.BOW))
                     || (loot.crossbow() && testBothHand(equipped, inHand -> inHand.getType() == Material.CROSSBOW))) {
-
-                if (loot.randomVanillaEnchantments()) {
-                    item = converter.randomVanillaEnchantments(living.getLocation(), item);
-                }
 
                 if (loot.offHandIfPossible() && equipped.get(EquipmentSlot.OFF_HAND) == null) {
                     equipment.setItemInOffHand(item);
@@ -1028,7 +1022,6 @@ public final class RealisticVillagers extends JavaPlugin {
                 onlyForCrossbow = config.getBoolean("spawn-loot." + name + "." + path + ".only-for-crossbow");
             }
 
-            boolean randomVanillaEnchantments = config.getBoolean("spawn-loot." + name + "." + path + ".random-vanilla-enchantments");
             boolean offHandIfPossible = config.getBoolean("spawn-loot." + name + "." + path + ".off-hand-if-possible");
 
             loots.add(new ItemLoot(
@@ -1036,7 +1029,6 @@ public final class RealisticVillagers extends JavaPlugin {
                     chance,
                     onlyForBow,
                     onlyForCrossbow,
-                    randomVanillaEnchantments,
                     offHandIfPossible));
         }
 
@@ -1045,7 +1037,7 @@ public final class RealisticVillagers extends JavaPlugin {
     }
 
     private @NotNull String slotName(@NotNull EquipmentSlot slot) {
-        return slot.name().toLowerCase().replace("_", "-");
+        return slot.name().toLowerCase(Locale.ROOT).replace("_", "-");
     }
 
     @Contract("_ -> new")
@@ -1059,7 +1051,7 @@ public final class RealisticVillagers extends JavaPlugin {
     }
 
     public String getProfessionFormatted(@NotNull Villager.Profession profession, boolean isMale) {
-        return getProfessionFormatted(profession.name().toLowerCase(), isMale);
+        return getProfessionFormatted(profession.name().toLowerCase(Locale.ROOT), isMale);
     }
 
     public String getProfessionFormatted(String profession, boolean isMale) {

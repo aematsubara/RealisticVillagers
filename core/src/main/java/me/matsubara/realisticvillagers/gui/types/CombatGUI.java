@@ -81,7 +81,7 @@ public final class CombatGUI extends InteractGUI {
         this.keyword = keyword;
 
         if (keyword != null && !keyword.isEmpty()) {
-            this.heads.removeIf(head -> !head.name().toLowerCase().contains(keyword.toLowerCase()));
+            this.heads.removeIf(head -> !head.name().toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT)));
         }
 
         updateInventory();
@@ -114,9 +114,9 @@ public final class CombatGUI extends InteractGUI {
         for (int index = 0, aux = startFrom; isLastPage ? (index < heads.size() - startFrom) : (index < SLOTS.length); index++, aux++) {
             EntityHead skull = heads.get(aux);
 
-            String defaultName = skull.name().toLowerCase();
+            String defaultName = skull.name().toLowerCase(Locale.ROOT);
             @SuppressWarnings("deprecation") String name = plugin.getConfig().getString("variable-text.entity." + defaultName.replace("-", "_"),
-                    WordUtils.capitalizeFully(defaultName.toLowerCase().replace("_", " ")));
+                    WordUtils.capitalizeFully(defaultName.toLowerCase(Locale.ROOT).replace("_", " ")));
 
             ItemBuilder builder = new ItemBuilder(getGUIItem("entity"));
             if (skull.getUrl() == null) {

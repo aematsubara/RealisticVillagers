@@ -26,10 +26,7 @@ import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -177,7 +174,7 @@ public final class MainGUI extends InteractGUI {
 
     private ItemStack createChatItem(String name) {
         return new ItemBuilder(getGUIItem(name))
-                .setData(plugin.getChatInteractionTypeKey(), PersistentDataType.STRING, name.toUpperCase())
+                .setData(plugin.getChatInteractionTypeKey(), PersistentDataType.STRING, name.toUpperCase(Locale.ROOT))
                 .build();
     }
 
@@ -314,7 +311,7 @@ public final class MainGUI extends InteractGUI {
 
         String age = bukkit.isAdult() ? Config.ADULT.asString() : Config.KID.asString();
 
-        String type = bukkit.getVillagerType().name().toLowerCase();
+        String type = bukkit.getVillagerType().name().toLowerCase(Locale.ROOT);
         type = plugin.getConfig().getString("variable-text.type." + type, type);
 
         String activity = npc.getActivityName(none);
@@ -397,12 +394,12 @@ public final class MainGUI extends InteractGUI {
         ONLY_IF_HAS_PERMISSION("require-permission", (npc, player, name) -> player.hasPermission("realisticvillagers.gui." + name)),
         ONLY_IF_ALLOWED("only-if-allowed", (npc, player, name) -> {
             UUID playerUUID = player.getUniqueId();
-            String finalName = (name.equals("set-home") ? "home" : name).toUpperCase();
+            String finalName = (name.equals("set-home") ? "home" : name).toUpperCase(Locale.ROOT);
 
             Config configSetting = PluginUtils.getOrNull(Config.class, "WHO_CAN_MODIFY_VILLAGER_" + finalName);
             if (configSetting == null) return false;
 
-            return switch (configSetting.asString("FAMILY").toUpperCase()) {
+            return switch (configSetting.asString("FAMILY").toUpperCase(Locale.ROOT)) {
                 case "FAMILY" -> npc.isFamily(playerUUID, true);
                 case "PARTNER" -> npc.isPartner(playerUUID);
                 case "EVERYONE" -> true;

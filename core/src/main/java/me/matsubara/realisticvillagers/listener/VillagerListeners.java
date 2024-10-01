@@ -51,10 +51,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public final class VillagerListeners extends SimplePacketListenerAbstract implements Listener {
 
@@ -347,7 +344,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
         messages.send(player, npc, Messages.Message.valueOf((expecting.isGift() ? "GIFT_EXPECTING" : "SET_HOME") + "_FAIL"));
         npc.stopExpecting();
-        plugin.getCooldownManager().removeCooldown(player, checkType.name().toLowerCase());
+        plugin.getCooldownManager().removeCooldown(player, checkType.name().toLowerCase(Locale.ROOT));
         return true;
     }
 

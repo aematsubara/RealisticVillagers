@@ -12,6 +12,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Set;
 
 @Getter
@@ -33,7 +34,7 @@ public class PlayersGUI extends PaginatedGUI {
                       @Nullable String keyword) {
         super(plugin, npc, "players", getValidSize(plugin, "players", 36), player, players
                 .stream()
-                .filter(offline -> keyword == null || (offline.getName() != null && offline.getName().contains(keyword.toLowerCase())))
+                .filter(offline -> keyword == null || (offline.getName() != null && offline.getName().contains(keyword.toLowerCase(Locale.ROOT))))
                 .map(offline -> {
                     String name = offline.getName();
                     return new ItemBuilder(plugin.getItem("gui.players.items.player").build())

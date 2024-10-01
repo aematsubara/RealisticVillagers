@@ -9,7 +9,6 @@ public record ItemLoot(
         double chance,
         boolean bow,
         boolean crossbow,
-        boolean randomVanillaEnchantments,
         boolean offHandIfPossible) {
 
     public boolean forRange() {

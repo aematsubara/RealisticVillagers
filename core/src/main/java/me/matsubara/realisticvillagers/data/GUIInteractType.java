@@ -2,6 +2,8 @@ package me.matsubara.realisticvillagers.data;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Locale;
+
 @SuppressWarnings("unused")
 public enum GUIInteractType {
     CHAT,
@@ -48,6 +50,6 @@ public enum GUIInteractType {
 
     public @NotNull String getName() {
         if (isBeProudOf()) return "proud-of";
-        return name().toLowerCase();
+        return name().toLowerCase(Locale.ROOT);
     }
 }

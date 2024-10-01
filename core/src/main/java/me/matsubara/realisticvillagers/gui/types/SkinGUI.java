@@ -83,7 +83,9 @@ public class SkinGUI extends PaginatedGUI {
         for (String profession : PROFESSION_ICON.keySet()) {
             professionItems.put(profession, new ItemBuilder(getGUIItem("profession"))
                     .setType(PROFESSION_ICON.get(profession))
-                    .replace("%profession%", plugin.getProfessionFormatted(profession.toLowerCase().replace("_", "-"), isMale))
+                    .replace("%profession%", plugin.getProfessionFormatted(profession
+                            .toLowerCase(Locale.ROOT)
+                            .replace("_", "-"), isMale))
                     .build());
         }
 
@@ -133,14 +135,14 @@ public class SkinGUI extends PaginatedGUI {
         boolean validAdder = addedBy != null && addedBy.hasPlayedBefore() && addedBy.getName() != null;
 
         if (keyword != null) {
-            String lowerKeyword = keyword.toLowerCase();
+            String lowerKeyword = keyword.toLowerCase(Locale.ROOT);
             if (lowerKeyword.startsWith("by:")) {
                 if (lowerKeyword.contains("by:unknown")) {
                     // If looking for unknown, the adder should be invalid.
                     if (validAdder || fromConsole) return null;
                 } else if (lowerKeyword.contains("by:console")) {
                     if (validAdder || !fromConsole) return null;
-                } else if (!validAdder || !lowerKeyword.contains("by:" + addedBy.getName().toLowerCase())) {
+                } else if (!validAdder || !lowerKeyword.contains("by:" + addedBy.getName().toLowerCase(Locale.ROOT))) {
                     // If looking for someone, the adder should be valid and the keyword should match the current skin adder.
                     return null;
                 }
@@ -160,7 +162,7 @@ public class SkinGUI extends PaginatedGUI {
 
 
         for (String key : PROFESSION_ICON.keySet()) {
-            String profession = key.toLowerCase().replace("_", "-");
+            String profession = key.toLowerCase(Locale.ROOT).replace("_", "-");
             if (config.contains(profession + "." + id)) {
                 professions.add("&a" + plugin.getProfessionFormatted(profession, isMale));
                 generated++;

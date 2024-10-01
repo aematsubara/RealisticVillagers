@@ -18,7 +18,6 @@ import me.matsubara.realisticvillagers.entity.v1_21_r1.villager.OfflineVillagerN
 import me.matsubara.realisticvillagers.entity.v1_21_r1.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
-import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
@@ -32,7 +31,6 @@ import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -55,8 +53,6 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.providers.VanillaEnchantmentProviders;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -73,8 +69,6 @@ import org.bukkit.craftbukkit.v1_21_R1.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_21_R1.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_21_R1.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_21_R1.entity.CraftVillager;
-import org.bukkit.craftbukkit.v1_21_R1.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_21_R1.util.CraftLocation;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ZombieVillager;
@@ -331,36 +325,6 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public ItemStack randomVanillaEnchantments(Location location, ItemStack item) {
-        if (item == null || item.getType().isAir()) return item;
-
-        World world = location.getWorld();
-        if (world == null) return item;
-
-        ServerLevel handle = ((CraftWorld) world).getHandle();
-        DifficultyInstance difficultyInstance = handle
-                .getCurrentDifficultyAt(CraftLocation.toBlockPosition(location));
-
-        float multiplier = difficultyInstance.getSpecialMultiplier();
-        double chance = ItemStackUtils.getSlotByItem(item) != null ? 0.5d : 0.25f;
-
-        if (Math.random() > chance * multiplier) return item;
-
-        try {
-            net.minecraft.world.item.ItemStack nms = CraftItemStack.asNMSCopy(item);
-            EnchantmentHelper.enchantItemFromProvider(
-                    nms,
-                    handle.registryAccess(),
-                    VanillaEnchantmentProviders.MOB_SPAWN_EQUIPMENT,
-                    difficultyInstance,
-                    handle.random);
-            return CraftItemStack.asBukkitCopy(nms);
-        } catch (Exception exception) {
-            return item;
-        }
-    }
-
-    @Override
     public Raid getRaidAt(@NotNull Location location) {
         if (location.getWorld() == null) return null;
 
@@ -425,7 +389,7 @@ public class NMSConverter implements INMSConverter {
             if (Strings.isNullOrEmpty(effectString)) continue;
             String[] data = PluginUtils.splitData(effectString);
 
-            PotionEffectType type = org.bukkit.Registry.EFFECT.get(NamespacedKey.minecraft(data[0].toLowerCase()));
+            PotionEffectType type = org.bukkit.Registry.EFFECT.get(NamespacedKey.minecraft(data[0].toLowerCase(Locale.ROOT)));
             if (type != null) {
                 // Default = 5 seconds, level 1 (amplifier 0).
                 int duration = data.length > 1 ? PluginUtils.getRangedAmount(data[1]) : 100;
@@ -481,7 +445,7 @@ public class NMSConverter implements INMSConverter {
 
             ScheduleBuilder builder = new ScheduleBuilder(schedule);
             for (int time : section.getKeys(false).stream().filter(NumberUtils::isCreatable).map(Integer::valueOf).sorted().toList()) {
-                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase());
+                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase(Locale.ROOT));
                 if (activity != null) builder.changeActivityAt(time, activity);
             }
 

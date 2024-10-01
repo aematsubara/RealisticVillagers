@@ -24,6 +24,7 @@ import org.bukkit.craftbukkit.v1_18_R2.inventory.CraftItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Optional;
 
 public class VillagerPanicTrigger extends Behavior<Villager> {
@@ -155,7 +156,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     private static Optional<EntityType<?>> getTypeBySkullType(ItemStack item) {
         for (EntityHead skull : EntityHead.values()) {
             if (CraftItemStack.asNMSCopy(skull.getHead()).is(item.getItem())) {
-                return EntityType.byString(skull.name().toLowerCase());
+                return EntityType.byString(skull.name().toLowerCase(Locale.ROOT));
             }
         }
         return Optional.empty();

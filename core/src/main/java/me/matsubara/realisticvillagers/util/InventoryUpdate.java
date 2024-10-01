@@ -35,6 +35,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -178,7 +179,7 @@ public final class InventoryUpdate {
             Object object;
             // Dispensers and droppers use the same container, but in previous versions, use a diferrent minecraft name.
             if (!useContainers() && container == Containers.GENERIC_3X3) {
-                object = "minecraft:" + type.name().toLowerCase();
+                object = "minecraft:" + type.name().toLowerCase(Locale.ROOT);
             } else {
                 object = container.getObject();
             }

@@ -420,7 +420,7 @@ public final class PluginUtils {
 
     public static @NotNull String capitalizeFully(String string) {
         // Fighting deprecation of WordUtils...
-        string = string.toLowerCase();
+        string = string.toLowerCase(Locale.ROOT);
         if (StringUtils.isEmpty(string)) return string;
 
         char[] buffer = string.toCharArray();
@@ -512,7 +512,9 @@ public final class PluginUtils {
     }
 
     public static @NotNull String getProfessionOrType(LivingEntity living) {
-        return (living instanceof Villager villager ? villager.getProfession().name() : living.getType().name()).toLowerCase().replace("_", "-");
+        return (living instanceof Villager villager ? villager.getProfession().name() : living.getType().name())
+                .toLowerCase(Locale.ROOT)
+                .replace("_", "-");
     }
 
     public static boolean isItem(ItemStack item, NamespacedKey key) {

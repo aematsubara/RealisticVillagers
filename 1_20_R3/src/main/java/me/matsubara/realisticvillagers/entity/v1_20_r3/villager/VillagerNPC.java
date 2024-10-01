@@ -778,7 +778,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private void setupProjectile(ItemStack weapon, Projectile projectile, boolean isBow) {
         if (!(projectile instanceof AbstractArrow arrow)) return;
 
-        PickupStatus status = PluginUtils.getOrDefault(PickupStatus.class, Config.ARROW_STATUS.asString().toUpperCase(), PickupStatus.ALLOWED);
+        PickupStatus status = PluginUtils.getOrDefault(PickupStatus.class, Config.ARROW_STATUS.asString().toUpperCase(Locale.ROOT), PickupStatus.ALLOWED);
         arrow.pickup = AbstractArrow.Pickup.byOrdinal(status.ordinal());
 
         if (isBow && BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION) != 1.0f) {
@@ -998,14 +998,14 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     private void ifTargetPresent(@NotNull org.bukkit.entity.EntityType type, Consumer<EntityType<?>> consumer) {
-        EntityType.byString(type.name().toLowerCase()).ifPresent(consumer);
+        EntityType.byString(type.name().toLowerCase(Locale.ROOT)).ifPresent(consumer);
     }
 
     private @NotNull Set<EntityType<?>> getDefaultTargets() {
         Set<EntityType<?>> types = new HashSet<>();
 
         for (String entity : plugin.getDefaultTargets()) {
-            Optional<EntityType<?>> type = EntityType.byString(entity.toLowerCase());
+            Optional<EntityType<?>> type = EntityType.byString(entity.toLowerCase(Locale.ROOT));
             if (type.isEmpty()) continue;
             types.add(type.get());
         }

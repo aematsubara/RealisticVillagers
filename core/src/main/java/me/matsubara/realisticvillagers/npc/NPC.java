@@ -206,7 +206,8 @@ public class NPC {
             builder.append(bukkit instanceof Villager villager ? line
                     .replace("%villager-name%", villagerName)
                     .replace("%level%", String.valueOf(villager.getVillagerLevel()))
-                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name().toLowerCase(), npc.isMale())) : line);
+                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name()
+                            .toLowerCase(Locale.ROOT), npc.isMale())) : line);
 
             if (i != lines.size() - 1) builder.append("\n");
         }

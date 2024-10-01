@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public enum InteractionTargetType {
@@ -14,7 +15,7 @@ public enum InteractionTargetType {
     PARTNER;
 
     public @NotNull String getName() {
-        return name().toLowerCase().replace("_", "-");
+        return name().toLowerCase(Locale.ROOT).replace("_", "-");
     }
 
     public static InteractionTargetType getInteractionTarget(@NotNull IVillagerNPC npc, @NotNull Player player) {

@@ -108,7 +108,7 @@ public final class PlayerListeners implements Listener {
             Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
             if (npc.isEmpty() || npc.get().isInsideRaid()) continue;
             if (npc.get().getReputation(player.getUniqueId()) < requiredReputation) continue;
-            if (ignoredActivities.contains(npc.get().getActivityName(EMPTY).toLowerCase())) continue;
+            if (ignoredActivities.contains(npc.get().getActivityName(EMPTY).toLowerCase(Locale.ROOT))) continue;
 
             InteractionTargetType relationship = InteractionTargetType.getInteractionTarget(npc.get(), player);
             if (!cooldown.canInteract(player, villager, relationship.getName(), Config.GREET_MESSAGES_PER_TYPE_COOLDOWN.asLong())) {

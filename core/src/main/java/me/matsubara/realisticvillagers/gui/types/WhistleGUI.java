@@ -10,6 +10,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.stream.Stream;
 
 @Getter
@@ -23,7 +24,7 @@ public class WhistleGUI extends PaginatedGUI {
 
     public WhistleGUI(RealisticVillagers plugin, Player player, @NotNull Stream<IVillagerNPC> family, @Nullable Integer page, @Nullable String keyword) {
         super(plugin, null, "whistle", getValidSize(plugin, "whistle", 36), player, family
-                .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase().contains(keyword.toLowerCase()))
+                .filter(npc -> keyword == null || npc.getVillagerName().toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT)))
                 .map(npc -> {
                     String name = npc.getVillagerName();
                     return new ItemBuilder(plugin.getItem("gui.whistle.items.villager").build())

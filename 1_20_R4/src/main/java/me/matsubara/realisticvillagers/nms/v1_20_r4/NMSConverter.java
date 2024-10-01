@@ -18,7 +18,6 @@ import me.matsubara.realisticvillagers.entity.v1_20_r4.villager.OfflineVillagerN
 import me.matsubara.realisticvillagers.entity.v1_20_r4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
-import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
@@ -55,7 +54,6 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -72,8 +70,6 @@ import org.bukkit.craftbukkit.v1_20_R4.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_20_R4.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_20_R4.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_20_R4.entity.CraftVillager;
-import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R4.util.CraftLocation;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ZombieVillager;
@@ -331,30 +327,6 @@ public class NMSConverter implements INMSConverter {
     }
 
     @Override
-    public ItemStack randomVanillaEnchantments(Location location, ItemStack item) {
-        if (item == null || item.getType().isAir()) return item;
-
-        World world = location.getWorld();
-        if (world == null) return item;
-
-        ServerLevel handle = ((CraftWorld) world).getHandle();
-
-        float multiplier = handle
-                .getCurrentDifficultyAt(CraftLocation.toBlockPosition(location))
-                .getSpecialMultiplier();
-
-        double chance = ItemStackUtils.getSlotByItem(item) != null ? 0.5d : 0.25f;
-        if (Math.random() > chance * multiplier) return item;
-
-        return CraftItemStack.asBukkitCopy(EnchantmentHelper.enchantItem(
-                handle.enabledFeatures(),
-                RANDOM,
-                CraftItemStack.asNMSCopy(item),
-                (int) (5.0f + multiplier * (float) RANDOM.nextInt(18)),
-                false));
-    }
-
-    @Override
     public Raid getRaidAt(@NotNull Location location) {
         if (location.getWorld() == null) return null;
 
@@ -419,7 +391,7 @@ public class NMSConverter implements INMSConverter {
             if (Strings.isNullOrEmpty(effectString)) continue;
             String[] data = PluginUtils.splitData(effectString);
 
-            PotionEffectType type = org.bukkit.Registry.EFFECT.get(NamespacedKey.minecraft(data[0].toLowerCase()));
+            PotionEffectType type = org.bukkit.Registry.EFFECT.get(NamespacedKey.minecraft(data[0].toLowerCase(Locale.ROOT)));
             if (type != null) {
                 // Default = 5 seconds, level 1 (amplifier 0).
                 int duration = data.length > 1 ? PluginUtils.getRangedAmount(data[1]) : 100;
@@ -475,7 +447,7 @@ public class NMSConverter implements INMSConverter {
 
             ScheduleBuilder builder = new ScheduleBuilder(schedule);
             for (int time : section.getKeys(false).stream().filter(NumberUtils::isCreatable).map(Integer::valueOf).sorted().toList()) {
-                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase());
+                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase(Locale.ROOT));
                 if (activity != null) builder.changeActivityAt(time, activity);
             }
 
