@@ -18,13 +18,13 @@
     <description>Forget about those boring villagers and replace them with interactive humans!</description>
 
     <modules>
-        <module>1_18_R2</module>
-        <module>1_19_R3</module>
-        <module>1_20_R1</module>
-        <module>1_20_R2</module>
-        <module>1_20_R3</module>
-        <module>1_20_R4</module>
-        <module>1_21_R1</module>
+        <module>v1_18</module>
+        <module>v1_19</module>
+        <module>v1_20_1</module>
+        <module>v1_20_2</module>
+        <module>v1_20_4</module>
+        <module>v1_20_6</module>
+        <module>v1_21</module>
         <module>core</module>
         <module>dist</module>
     </modules>

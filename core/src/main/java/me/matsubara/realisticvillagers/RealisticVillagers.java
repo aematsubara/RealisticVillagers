@@ -1,6 +1,5 @@
 package me.matsubara.realisticvillagers;
 
-import com.cryptomorin.xseries.reflection.XReflection;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.google.common.base.Strings;
@@ -27,10 +26,7 @@ import me.matsubara.realisticvillagers.manager.gift.GiftManager;
 import me.matsubara.realisticvillagers.manager.revive.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
-import me.matsubara.realisticvillagers.util.ItemBuilder;
-import me.matsubara.realisticvillagers.util.ItemStackUtils;
-import me.matsubara.realisticvillagers.util.PluginUtils;
-import me.matsubara.realisticvillagers.util.Shape;
+import me.matsubara.realisticvillagers.util.*;
 import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
@@ -39,6 +35,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
@@ -63,7 +60,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
 import java.util.function.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Getter
@@ -116,9 +112,6 @@ public final class RealisticVillagers extends JavaPlugin {
 
     private Messages messages;
     private INMSConverter converter;
-
-    private FileConfiguration newConfig = null;
-    private final File configFile = new File(getDataFolder(), "config.yml");
 
     private final List<String> defaultTargets = new ArrayList<>();
     private final Set<Gift> wantedItems = new HashSet<>();
@@ -176,12 +169,11 @@ public final class RealisticVillagers extends JavaPlugin {
         logger.info("");
         logger.info("Registering custom entities...");
 
-        String[] packageVersion = Bukkit.getServer().getClass().getPackage().getName().split("\\.");
-
-        // TODO: Use a proper version detector...
-        String internalName = packageVersion.length == 4 ? packageVersion[3].toLowerCase(Locale.ROOT) : XReflection.MINOR_NUMBER == 21 ? "v1_21_r1" : "v1_20_r4";
-        try {
-            Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + internalName + ".NMSConverter");
+        VersionMatcher matcher = VersionMatcher.getByMinecraftVersion();
+        if (matcher == null) {
+            logger.severe("NMSConverter couldn't find a valid implementation for this server version.");
+        } else try {
+            Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + matcher.name() + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
             converter = (INMSConverter) converterConstructor.newInstance(this);
             converter.registerEntities();
@@ -617,28 +609,11 @@ public final class RealisticVillagers extends JavaPlugin {
     }
 
     @Override
-    public @NotNull FileConfiguration getConfig() {
-        if (newConfig == null) reloadConfig();
-        return newConfig;
-    }
-
-    @Override
     public void reloadConfig() {
-        newConfig = YamlConfiguration.loadConfiguration(configFile);
-    }
+        super.reloadConfig();
 
-    @Override
-    public void saveConfig() {
-        try {
-            getConfig().save(configFile);
-        } catch (IOException exception) {
-            getLogger().log(Level.SEVERE, "Could not save config to " + configFile, exception);
-        }
-    }
-
-    @Override
-    public void saveDefaultConfig() {
-        if (!configFile.exists()) saveResource("config.yml", false);
+        // We don't want to use default values.
+        getConfig().setDefaults(new MemoryConfiguration());
     }
 
     public ItemBuilder getItem(String path) {
