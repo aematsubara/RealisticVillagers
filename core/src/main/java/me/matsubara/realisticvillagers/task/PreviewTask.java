@@ -1,9 +1,7 @@
 package me.matsubara.realisticvillagers.task;
 
-import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityRelativeMoveAndRotation;
 import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;
@@ -87,19 +85,7 @@ public class PreviewTask extends BukkitRunnable {
         targetLocation.setYaw(yaw = yaw(yaw + ROTATION_SPEED));
 
         npc.teleport().queueTeleport(targetLocation, false).send(player);
-        npc.rotation().queueHeadRotation(targetLocation.getYaw()).send(player);
-
-        WrapperPlayServerEntityRelativeMoveAndRotation wrapper = new WrapperPlayServerEntityRelativeMoveAndRotation(
-                npc.getEntityId(),
-                0.0d,
-                0.0d,
-                0.0d,
-                yaw,
-                targetLocation.getPitch(),
-                false);
-
-        Object channel = PacketEvents.getAPI().getPlayerManager().getChannel(player);
-        PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);
+        npc.rotation().queueHeadRotation(yaw).send(player);
 
         boolean rainbow = Config.SKIN_PREVIEW_RAINBOW_MESSAGE.asBool();
         if (rainbow || tick % 20 == 0) {

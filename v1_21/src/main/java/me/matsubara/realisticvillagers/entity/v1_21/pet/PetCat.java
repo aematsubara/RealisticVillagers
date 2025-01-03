@@ -59,7 +59,7 @@ public class PetCat extends Cat implements Pet {
     private @Nullable CatTemptGoal temptGoal;
 
     @SuppressWarnings("unchecked")
-    private static final EntityDataAccessor<Boolean> RELAX_STATE_ONE = (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(Cat.class, EntityDataAccessor.class, "cg", true, "RELAX_STATE_ONE"));
+    private static final EntityDataAccessor<Boolean> RELAX_STATE_ONE = (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(Cat.class, EntityDataAccessor.class, "cl", true, "RELAX_STATE_ONE"));
     private static final Ingredient TEMPT_INGREDIENT = Ingredient.of(Items.COD, Items.SALMON);
 
     public PetCat(EntityType<? extends Cat> type, Level level) {

@@ -4,12 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>realisticvillagers-1_20_R3</artifactId>
+    <artifactId>realisticvillagers-v1_20_4</artifactId>
     <packaging>jar</packaging>
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.3.5</version>
+        <version>3.3.3.6</version>
     </parent>
 
     <properties>

@@ -12,8 +12,7 @@ public enum VersionMatcher {
     v1_20_4("1.20.4"),
     v1_20_6("1.20.6"),
     v1_21("1.21", "1.21.1"),
-    v1_21_2("1.21.2", "1.21.3"), // TODO: IMPLEMENT
-    v1_21_4("1.21.4"); // TODO: IMPLEMENT
+    v1_21_4("1.21.4");
 
     private final String[] versions;
 

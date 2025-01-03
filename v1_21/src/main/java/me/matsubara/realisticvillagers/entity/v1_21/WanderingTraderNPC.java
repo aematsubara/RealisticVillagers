@@ -65,9 +65,9 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
     private int nametagItemEntity = -1;
 
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
-            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(net.minecraft.world.entity.LivingEntity.class, EntityDataAccessor.class, "bJ", true, "DATA_EFFECT_AMBIENCE_ID"));
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(net.minecraft.world.entity.LivingEntity.class, EntityDataAccessor.class, "bO", true, "DATA_EFFECT_AMBIENCE_ID"));
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
-            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(net.minecraft.world.entity.LivingEntity.class, EntityDataAccessor.class, "bL", true, "DATA_STINGER_COUNT_ID"));
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(net.minecraft.world.entity.LivingEntity.class, EntityDataAccessor.class, "bQ", true, "DATA_STINGER_COUNT_ID"));
 
     public WanderingTraderNPC(EntityType<? extends WanderingTrader> type, Level level) {
         super(type, level);
