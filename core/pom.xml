@@ -149,6 +149,10 @@
             <id>viaversion-repo</id>
             <url>https://repo.viaversion.com</url>
         </repository>
+        <repository>
+            <id>pcgf-repo</id>
+            <url>https://repo.pcgamingfreaks.at/repository/maven-everything</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -225,6 +229,13 @@
             <groupId>com.github.retrooper</groupId>
             <artifactId>packetevents-spigot</artifactId>
             <version>2.7.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Marriage Master API -->
+        <dependency>
+            <groupId>at.pcgamingfreaks</groupId>
+            <artifactId>MarriageMaster-API-Bukkit</artifactId>
+            <version>2.4</version><!-- Check api-version shield for newest version -->
             <scope>provided</scope>
         </dependency>
     </dependencies>

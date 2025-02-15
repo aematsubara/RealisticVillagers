@@ -29,4 +29,7 @@ public class CompatibilityManager {
     public boolean shouldCancelMetadata(Player player) {
         return compatibilities.get("ViaVersion") instanceof ViaCompatibility via && via.cancelMetadata(player);
     }
+    public boolean marriedPlayer(Player player) {
+        return compatibilities.get("MarriageMaster") instanceof MarriageCompatibility marriage && marriage.marriedPlayer(player);
+    }
 }

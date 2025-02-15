@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.command;
 
 import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.compatibility.CompatibilityManager;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
@@ -29,6 +30,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -40,6 +42,8 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+
+import static org.bukkit.Bukkit.getServer;
 
 public class MainCommand implements CommandExecutor, TabCompleter {
 
@@ -309,7 +313,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         plugin.getMessages().send(sender, notFound);
         return null;
     }
-
+    private CompatibilityManager compatibilityManager;
     private void handleForceDivorce(CommandSender sender, @NotNull String[] args) {
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
@@ -342,6 +346,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                     string -> string.replace("%player-name%", Objects.requireNonNullElse(offline.getName(), "???")));
             return;
         }
+
 
         for (IVillagerNPC offlineVillager : tracker.getOfflineVillagers()) {
             if (!offlineVillager.getUniqueId().equals(partnerUUID)) continue;

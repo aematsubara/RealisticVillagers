@@ -127,6 +127,7 @@ public final class PlayerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
+
         handleWhistle(event);
         handleBabySpawn(event);
 

@@ -14,6 +14,7 @@ softdepend:
   - ViaBackwards
   - ViaRewind
   - Geyser-Spigot
+  - MarriageMaster
 
 commands:
   realisticvillagers:

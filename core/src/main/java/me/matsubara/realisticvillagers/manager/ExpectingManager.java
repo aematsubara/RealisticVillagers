@@ -11,6 +11,8 @@ import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import at.pcgamingfreaks.MarriageMaster.Bukkit.API.Events.DivorcedEvent;
+import at.pcgamingfreaks.MarriageMaster.API.MarriagePlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.EntityEffect;
 import org.bukkit.NamespacedKey;
@@ -60,6 +62,7 @@ public final class ExpectingManager implements Listener {
         if (!(event.getEntity() instanceof Villager villager)) return;
         villagerExpectingCache.entrySet().removeIf(next -> next.getValue().bukkit().equals(villager));
     }
+
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onVillagerFish(@NotNull VillagerFishEvent event) {

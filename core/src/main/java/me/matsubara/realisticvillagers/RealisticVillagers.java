@@ -45,6 +45,7 @@ import org.bukkit.inventory.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.Metadatable;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
@@ -164,6 +165,7 @@ public final class RealisticVillagers extends JavaPlugin {
         addCompatibility("EliteMobs", EMCompatibility::new);
         addCompatibility("ViaVersion", ViaCompatibility::new);
         addCompatibility("VillagerTradeLimiter", VTLCompatibility::new);
+        addCompatibility("MarriageMaster", MarriageCompatibility::new);
 
         logger.info("Compatibilities loaded!");
         logger.info("");
@@ -760,6 +762,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         TextureProperty textures = tracker.getTextures(npc.getSex(), "none", npc.getSkinTextureId());
         return textures.getName().equals("error") ? UNKNOWN_HEAD_TEXTURE : PluginUtils.getURLFromTexture(textures.getValue());
+
     }
 
     private @NotNull Set<Color> getColors(@NotNull FileConfiguration config, String path, String effect, String needed) {
@@ -793,11 +796,20 @@ public final class RealisticVillagers extends JavaPlugin {
         File file = new File(getDataFolder(), name);
         if (!file.exists()) saveResource(name, false);
     }
+    //MarriageMaster
 
+
+    private boolean marriedPlayer(@NotNull Player player) {
+
+        Plugin marriage = Bukkit.getServer().getPluginManager().getPlugin("MarriageMaster");
+        if (marriage == null) return false;
+        return getCompatibilityManager().marriedPlayer(player);
+    }
     public boolean isMarried(@NotNull Player player) {
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
         if (partner == null) return false;
 
+        if (!marriedPlayer(player)) return false;
         IVillagerNPC partnerInfo = tracker.getOffline(UUID.fromString(partner));
         if (partnerInfo == null) {
             player.getPersistentDataContainer().remove(marriedWith);
@@ -854,6 +866,7 @@ public final class RealisticVillagers extends JavaPlugin {
         // Not really a gift, but we use the same system.
         return GiftCategory.appliesToVillager(wantedItems, npc, item, isItemPickup);
     }
+
 
     public @Nullable LivingEntity getUnloadedOffline(@NotNull IVillagerNPC offline) {
         LivingEntity bukkit = offline.bukkit();
