@@ -813,7 +813,7 @@ public final class RealisticVillagers extends JavaPlugin {
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
         if (partner == null) return false;
 
-        if (marriedPlayer(player)) return false;
+        if (marriedPlayer(player)) return true;
         
         IVillagerNPC partnerInfo = tracker.getOffline(UUID.fromString(partner));
         if (partnerInfo == null) {

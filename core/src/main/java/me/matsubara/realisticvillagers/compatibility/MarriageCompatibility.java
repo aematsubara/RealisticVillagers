@@ -25,7 +25,6 @@ public class MarriageCompatibility implements Compatibility {
 
         UUID playerUUID = player.getUniqueId();
         MarriagePlayer data = getMarriageMaster().getPlayerData(playerUUID);
-        System.out.println("marriedplayer");
         return data.isMarried();
     }
     @Override
