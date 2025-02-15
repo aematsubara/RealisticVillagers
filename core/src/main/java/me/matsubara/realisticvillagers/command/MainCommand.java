@@ -313,7 +313,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         plugin.getMessages().send(sender, notFound);
         return null;
     }
-    private CompatibilityManager compatibilityManager;
+
     private void handleForceDivorce(CommandSender sender, @NotNull String[] args) {
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();

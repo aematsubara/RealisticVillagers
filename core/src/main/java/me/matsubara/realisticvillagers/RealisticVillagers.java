@@ -98,6 +98,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private OtherListeners otherListeners;
     private PlayerListeners playerListeners;
     private VillagerListeners villagerListeners;
+    private MarriageListener marriageListener;
 
     private VillagerTracker tracker;
     private @Setter Shape ring;
@@ -272,7 +273,8 @@ public final class RealisticVillagers extends JavaPlugin {
                 (inventoryListeners = new InventoryListeners(this)),
                 (otherListeners = new OtherListeners(this)),
                 (playerListeners = new PlayerListeners(this)),
-                (villagerListeners = new VillagerListeners(this)));
+                (villagerListeners = new VillagerListeners(this))),
+                (marriageListener = new MarriageListener(this)));
 
         // Used in previous versions, not needed any more.
         FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
