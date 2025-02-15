@@ -3,8 +3,6 @@ package me.matsubara.realisticvillagers.listener;
 import at.pcgamingfreaks.MarriageMaster.API.MarriageMasterPlugin;
 import at.pcgamingfreaks.MarriageMaster.API.MarriagePlayer;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.Events.MarriedEvent;
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Messages;
@@ -24,24 +22,29 @@ public class MarriageListener implements Listener {
 
     public MarriageListener(RealisticVillagers plugin) {
         this.plugin = plugin;
-        PacketEvents.getAPI().getEventManager().registerListener(this);
     }
+    private UUID partnerUUID1;
+    private UUID partnerUUID2;
+
 
     @EventHandler
     private void ForceDivorcewhenmarried(MarriedEvent event) {
+
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
         INMSConverter converter = plugin.getConverter();
 
 
-        MarriagePlayer marriagePlayer1 = event.getPlayer1(); // Get MarriagePlayer
-        MarriagePlayer marriagePlayer2 = event.getPlayer2();
+        MarriagePlayer marriagePlayer1 =  event.getMarriageData().getPartner1(); // Get MarriagePlayer
+        MarriagePlayer marriagePlayer2 =  event.getMarriageData().getPartner2();
 
-        UUID playerUUID1 = marriagePlayer1.getUniqueId(); // Get UUID
-        UUID playerUUID2 = marriagePlayer2.getUniqueId();
+        Player player1 = (Player) marriagePlayer1.getPlayer(); // Convert to Bukkit Player
+        Player player2 = (Player) marriagePlayer2.getPlayer();
 
-        Player player1 = Bukkit.getPlayer(playerUUID1); // Convert to Bukkit Player
-        Player player2 = Bukkit.getPlayer(playerUUID2);
+        UUID playerUUID1 = player1.getUniqueId(); // Get UUID
+        UUID playerUUID2 = player2.getUniqueId();
+
+
 
 
         String uuidString = player1.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
