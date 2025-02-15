@@ -273,8 +273,10 @@ public final class RealisticVillagers extends JavaPlugin {
                 (inventoryListeners = new InventoryListeners(this)),
                 (otherListeners = new OtherListeners(this)),
                 (playerListeners = new PlayerListeners(this)),
-                (villagerListeners = new VillagerListeners(this))),
-                (marriageListener = new MarriageListener(this)));
+                (villagerListeners = new VillagerListeners(this)),
+                (marriageListener = new MarriageListener(this))
+        );
+
 
         // Used in previous versions, not needed any more.
         FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
