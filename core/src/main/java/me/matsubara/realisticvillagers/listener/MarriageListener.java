@@ -1,7 +1,8 @@
 package me.matsubara.realisticvillagers.listener;
-
-import at.pcgamingfreaks.MarriageMaster.API.MarriageMasterPlugin;
-import at.pcgamingfreaks.MarriageMaster.API.MarriagePlayer;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriageMasterPlugin;
+import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriagePlayer;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.Events.MarriedEvent;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
@@ -29,20 +30,20 @@ public class MarriageListener implements Listener {
 
     @EventHandler
     private void ForceDivorcewhenmarried(MarriedEvent event) {
-
+        MarriageMasterPlugin marriageMasterPlugin = (MarriageMasterPlugin) Bukkit.getPluginManager().getPlugin("MarriageMaster");
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
         INMSConverter converter = plugin.getConverter();
 
 
-        MarriagePlayer marriagePlayer1 =  event.getMarriageData().getPartner1(); // Get MarriagePlayer
-        MarriagePlayer marriagePlayer2 =  event.getMarriageData().getPartner2();
+        // Obtener los UUIDs de los jugadores
+        UUID playerUUID1 = event.getMarriageData().getPartner1().getUUID();
+        UUID playerUUID2 = event.getMarriageData().getPartner2().getUUID();
 
-        Player player1 = (Player) marriagePlayer1.getPlayer(); // Convert to Bukkit Player
-        Player player2 = (Player) marriagePlayer2.getPlayer();
 
-        UUID playerUUID1 = player1.getUniqueId(); // Get UUID
-        UUID playerUUID2 = player2.getUniqueId();
+        // Convertir MarriagePlayer a Player de Bukkit
+        Player player1 = Bukkit.getPlayer(playerUUID1);
+        Player player2 = Bukkit.getPlayer(playerUUID2);
 
 
 
