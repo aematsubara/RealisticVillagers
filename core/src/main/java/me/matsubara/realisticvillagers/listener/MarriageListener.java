@@ -1,17 +1,15 @@
 package me.matsubara.realisticvillagers.listener;
+import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriagePlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriageMasterPlugin;
-import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriagePlayer;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.Events.MarriedEvent;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.persistence.PersistentDataType;
@@ -36,24 +34,24 @@ public class MarriageListener implements Listener {
         INMSConverter converter = plugin.getConverter();
 
 
-        // Obtener los UUIDs de los jugadores
-        UUID playerUUID1 = event.getMarriageData().getPartner1().getUUID();
-        UUID playerUUID2 = event.getMarriageData().getPartner2().getUUID();
 
+        MarriagePlayer marriedplayer1 = event.getPartner1();
+        MarriagePlayer marriedplayer2 = event.getPartner2();
 
-        // Convertir MarriagePlayer a Player de Bukkit
-        Player player1 = Bukkit.getPlayer(playerUUID1);
-        Player player2 = Bukkit.getPlayer(playerUUID2);
-
+        Player player1 = marriedplayer1.getPlayerOnline();
+        Player player2 = marriedplayer2.getPlayerOnline();
 
 
 
-        String uuidString = player1.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
-        if (uuidString != null) partnerUUID1 = playerUUID1;
+
+
+
+        String uuidString1 = player1.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
+        if (uuidString1 != null) partnerUUID1 = UUID.fromString(uuidString1);
         player1.getPersistentDataContainer().remove(plugin.getMarriedWith());
 
         String uuidString2 = player2.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
-        if (uuidString2 != null) partnerUUID2 = playerUUID2;
+        if (uuidString2 != null) partnerUUID2 = UUID.fromString(uuidString2);;
         player2.getPersistentDataContainer().remove(plugin.getMarriedWith());
 
 
