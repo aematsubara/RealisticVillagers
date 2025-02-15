@@ -35,8 +35,8 @@ public class MarriageListener implements Listener {
 
 
 
-        MarriagePlayer marriedplayer1 = event.getPartner1();
-        MarriagePlayer marriedplayer2 = event.getPartner2();
+        MarriagePlayer marriedplayer1 = event.getPlayer1();
+        MarriagePlayer marriedplayer2 = event.getPlayer2();
 
         Player player1 = marriedplayer1.getPlayerOnline();
         Player player2 = marriedplayer2.getPlayerOnline();
