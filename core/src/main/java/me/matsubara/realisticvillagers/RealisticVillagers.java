@@ -804,7 +804,6 @@ public final class RealisticVillagers extends JavaPlugin {
         Plugin marriage = Bukkit.getServer().getPluginManager().getPlugin("MarriageMaster");
         if (marriage == null) return false;
         return getCompatibilityManager().marriedPlayer(player);
-        getLogger().info("ismarried");
     }
     public boolean isMarried(@NotNull Player player) {
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
