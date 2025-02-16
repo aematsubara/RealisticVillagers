@@ -807,18 +807,15 @@ public final class RealisticVillagers extends JavaPlugin {
         return getCompatibilityManager().marriedPlayer(player);
     }
     public boolean isMarried(@NotNull Player player) {
+        if (marriedPlayer(player)) return true;
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
         if (partner == null) return false;
-
-        if (!marriedPlayer(player)) return false;
         
         IVillagerNPC partnerInfo = tracker.getOffline(UUID.fromString(partner));
         if (partnerInfo == null) {
             player.getPersistentDataContainer().remove(marriedWith);
             return false;
         }
-        System.out.println("esta casado");
-
         return true;
     }
 
