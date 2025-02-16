@@ -33,18 +33,11 @@ public class MarriageListener implements Listener {
         VillagerTracker tracker = plugin.getTracker();
         INMSConverter converter = plugin.getConverter();
 
-
-
         MarriagePlayer marriedplayer1 = event.getPlayer1();
         MarriagePlayer marriedplayer2 = event.getPlayer2();
 
         Player player1 = marriedplayer1.getPlayerOnline();
         Player player2 = marriedplayer2.getPlayerOnline();
-
-
-
-
-
 
         String uuidString1 = player1.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
         if (uuidString1 != null) partnerUUID1 = UUID.fromString(uuidString1);
@@ -53,8 +46,6 @@ public class MarriageListener implements Listener {
         String uuidString2 = player2.getPersistentDataContainer().get(plugin.getMarriedWith(), PersistentDataType.STRING);
         if (uuidString2 != null) partnerUUID2 = UUID.fromString(uuidString2);;
         player2.getPersistentDataContainer().remove(plugin.getMarriedWith());
-
-
 
         for (IVillagerNPC offlineVillager : tracker.getOfflineVillagers()) {
             if (!offlineVillager.getUniqueId().equals(partnerUUID1)) continue;
@@ -65,7 +56,6 @@ public class MarriageListener implements Listener {
                 if (bukkit == null) continue;
             }
 
-            // In this case, we don't need to ignore invalid villagers.
             IVillagerNPC npc = converter.getNPC(bukkit).orElse(null);
             if (npc == null) continue;
 
@@ -81,15 +71,11 @@ public class MarriageListener implements Listener {
                 if (bukkit == null) continue;
             }
 
-            // In this case, we don't need to ignore invalid villagers.
             IVillagerNPC npc = converter.getNPC(bukkit).orElse(null);
             if (npc == null) continue;
 
             npc.divorceAndDropRing(player1);
             break;
         }
-
-        // At this point, either the player or the villager (or both) should be divorced.
-
     }
 }

@@ -10,21 +10,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
-
-
-
 public class MarriageCompatibility implements Compatibility {
-
-
     public MarriageMasterPlugin getMarriageMaster() {
         Plugin bukkitPlugin = Bukkit.getPluginManager().getPlugin("MarriageMaster");
         return (MarriageMasterPlugin) bukkitPlugin;
 
     }
     public boolean marriedPlayer(@NotNull Player player) {
-
         UUID playerUUID = player.getUniqueId();
         MarriagePlayer data = getMarriageMaster().getPlayerData(playerUUID);
+        if (data.isMarried() == true) {System.out.println("isMarried: " + data.isMarried());}
         return data.isMarried();
     }
     @Override

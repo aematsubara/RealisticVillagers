@@ -801,12 +801,9 @@ public final class RealisticVillagers extends JavaPlugin {
         if (!file.exists()) saveResource(name, false);
     }
     //MarriageMaster
-
-
     private boolean marriedPlayer(@NotNull Player player) {
 
         Plugin marriage = Bukkit.getServer().getPluginManager().getPlugin("MarriageMaster");
-        if (marriage == null) return false;
         return getCompatibilityManager().marriedPlayer(player);
     }
     public boolean isMarried(@NotNull Player player) {
@@ -820,6 +817,7 @@ public final class RealisticVillagers extends JavaPlugin {
             player.getPersistentDataContainer().remove(marriedWith);
             return false;
         }
+        System.out.println("esta casado");
 
         return true;
     }
