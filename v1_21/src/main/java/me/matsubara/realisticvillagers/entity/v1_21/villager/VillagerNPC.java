@@ -671,7 +671,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         stopExchangeables();
         stopInteracting();
         stopStayingInPlace();
-        stopExpecting();
+
     }
 
     @Override
