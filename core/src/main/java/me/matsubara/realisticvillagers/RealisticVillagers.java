@@ -26,6 +26,7 @@ import me.matsubara.realisticvillagers.manager.gift.GiftManager;
 import me.matsubara.realisticvillagers.manager.revive.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
+import me.matsubara.realisticvillagers.entity.PlayerProcreationTracker;
 import me.matsubara.realisticvillagers.util.*;
 import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
@@ -100,6 +101,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private VillagerListeners villagerListeners;
     private MarriageListener marriageListener;
 
+    private PlayerProcreationTracker playerProcreationTracker;
     private VillagerTracker tracker;
     private @Setter Shape ring;
     private @Setter Shape whistle;

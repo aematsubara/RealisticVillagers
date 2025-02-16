@@ -1,5 +1,9 @@
 package me.matsubara.realisticvillagers.listener;
+import at.pcgamingfreaks.MarriageMaster.Bukkit.API.Events.KissEvent;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriagePlayer;
+import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.task.BabyTaskPlayer;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import at.pcgamingfreaks.MarriageMaster.Bukkit.API.MarriageMasterPlugin;
@@ -13,8 +17,11 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.persistence.PersistentDataType;
-
+import me.matsubara.realisticvillagers.entity.PlayerProcreationTracker;
 import java.util.UUID;
+
+import static com.sun.org.apache.xml.internal.serializer.utils.Utils.messages;
+
 
 public class MarriageListener implements Listener {
     private final RealisticVillagers plugin;
@@ -28,7 +35,6 @@ public class MarriageListener implements Listener {
 
     @EventHandler
     private void ForceDivorcewhenmarried(MarriedEvent event) {
-        MarriageMasterPlugin marriageMasterPlugin = (MarriageMasterPlugin) Bukkit.getPluginManager().getPlugin("MarriageMaster");
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
         INMSConverter converter = plugin.getConverter();
@@ -77,5 +83,23 @@ public class MarriageListener implements Listener {
             npc.divorceAndDropRing(player1);
             break;
         }
+    }
+
+    @EventHandler
+    private void KidWhenKissing(KissEvent event) {
+        MarriagePlayer kisser = event.getPlayer();
+        MarriagePlayer partner = event.getPlayer().getPartner();
+
+        Player kisserplayer = kisser.getPlayerOnline();
+        Player partnerplayer = partner.getPlayerOnline();
+
+        UUID player1UUID = kisserplayer.getUniqueId();
+        UUID player2UUID = partnerplayer.getUniqueId();
+
+
+
+        new BabyTaskPlayer(plugin, partnerplayer, kisserplayer).runTaskTimer(plugin, 0L, 20L);
+
+
     }
 }
