@@ -13,13 +13,17 @@ import java.util.UUID;
 public class MarriageCompatibility implements Compatibility {
     public MarriageMasterPlugin getMarriageMaster() {
         Plugin bukkitPlugin = Bukkit.getPluginManager().getPlugin("MarriageMaster");
+        if (bukkitPlugin == null || !(bukkitPlugin instanceof MarriageMasterPlugin)) {
+            return null;
+        }
         return (MarriageMasterPlugin) bukkitPlugin;
 
     }
     public boolean marriedPlayer(@NotNull Player player) {
+        MarriageMasterPlugin marriageMaster = getMarriageMaster();
+        if (marriageMaster == null) {return false;}
         UUID playerUUID = player.getUniqueId();
         MarriagePlayer data = getMarriageMaster().getPlayerData(playerUUID);
-        if (data.isMarried() == true) {System.out.println("isMarried: " + data.isMarried());}
         return data.isMarried();
     }
     @Override

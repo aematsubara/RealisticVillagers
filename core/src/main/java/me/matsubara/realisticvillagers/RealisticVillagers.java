@@ -290,6 +290,7 @@ public final class RealisticVillagers extends JavaPlugin {
         command.setExecutor(main);
         command.setTabCompleter(main);
 
+
         logLoadingTime(false, now);
 
         logger.info("****************************************");
@@ -346,7 +347,7 @@ public final class RealisticVillagers extends JavaPlugin {
     public void updateConfigs() {
         String pluginFolder = getDataFolder().getPath();
         String skinFolder = getSkinFolder();
-
+        this.playerProcreationTracker = new PlayerProcreationTracker();
         Predicate<FileConfiguration> noVersion = temp -> !temp.contains("config-version");
 
         // config.yml
@@ -550,6 +551,8 @@ public final class RealisticVillagers extends JavaPlugin {
             exception.printStackTrace();
         }
     }
+
+    public PlayerProcreationTracker getProcreationTracker() {return playerProcreationTracker;}
 
     public record ConfigChanges(Predicate<FileConfiguration> predicate,
                                 Consumer<FileConfiguration> consumer,

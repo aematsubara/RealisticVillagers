@@ -1,14 +1,12 @@
 package me.matsubara.realisticvillagers.task;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
@@ -60,9 +58,12 @@ public class BabyTaskPlayer extends BukkitRunnable {
 
                     long procreation = System.currentTimeMillis();
                     player.getInventory().addItem(plugin.createBaby(isBoy, result, procreation, partner.getUniqueId()));
+                    plugin.getProcreationTracker().setLastProcreation(player.getUniqueId(), partner.getUniqueId());
 
                     success = true;
                     return RealisticVillagers.CLOSE_RESPONSE;
+
+
                 })
                 .onClose(opener -> {
                     if (success) return;
