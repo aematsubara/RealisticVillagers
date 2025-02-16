@@ -20,7 +20,6 @@ import org.bukkit.persistence.PersistentDataType;
 import me.matsubara.realisticvillagers.entity.PlayerProcreationTracker;
 import java.util.UUID;
 
-import static com.sun.org.apache.xml.internal.serializer.utils.Utils.messages;
 
 
 public class MarriageListener implements Listener {
