@@ -339,7 +339,7 @@ public final class ItemStackUtils {
         living.getEquipment().setItem(slot, item);
 
         // Add previous to inventory.
-        if (inventory != null) inventory.addItem(current);
+        if (inventory != null && !current.getType().isAir()) inventory.addItem(current);
 
         return true;
     }

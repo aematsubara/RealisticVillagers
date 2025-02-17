@@ -72,6 +72,7 @@ import org.bukkit.craftbukkit.v1_21_R3.entity.CraftVillager;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ZombieVillager;
+import org.bukkit.entity.Villager.ReputationEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MusicInstrumentMeta;
@@ -234,7 +235,7 @@ public class NMSConverter implements INMSConverter {
 
         GossipContainer gossips = baby.getGossips();
         for (GossipType gossipType : GossipType.values()) {
-            gossips.remove(gossipType);
+            gossips.remove(gossipType, ReputationEvent.UNSPECIFIED);
         }
 
         int reputation = Math.min(Config.INITIAL_REPUTATION_AT_BIRTH.asInt(), 75);
