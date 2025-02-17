@@ -210,7 +210,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
     private final ItemCooldowns cooldowns = new ItemCooldowns();
     private final VillagerFoodData foodData = new VillagerFoodData(this);
-    private final @Setter(AccessLevel.NONE) CustomGossipContainer gossips = new CustomGossipContainer();
+    private final @Setter(AccessLevel.NONE) CustomGossipContainer gossips = new CustomGossipContainer(this);
 
     public static final MemoryModuleType<Boolean> HAS_HELPED_FAMILY_RECENTLY = NMSConverter.registerMemoryType("has_helped_family_recently", Codec.BOOL);
     public static final MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
