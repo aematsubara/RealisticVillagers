@@ -26,12 +26,11 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.*;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -110,7 +109,6 @@ public class NMSConverter implements INMSConverter {
     private static final MethodHandle RULE_TYPE = Reflection.getField(GameRules.Value.class, GameRules.Type.class, "a", true, "type");
     private static final Field RULE_CALLBACK;
 
-    private static final RandomSource RANDOM = RandomSource.create();
     private static final Map<String, Activity> ACTIVITIES;
     private static final FilenameFilter DATA_FILE_FILTER = (directory, name) -> new File(directory, name).isFile()
             && name.endsWith(".mca")
@@ -415,7 +413,7 @@ public class NMSConverter implements INMSConverter {
             String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
 
             GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
-            if (Boolean.FALSE.equals(nmsRule.get())) {
+            if (!nmsRule.get()) {
                 plugin.getLogger().warning(warn);
             }
 

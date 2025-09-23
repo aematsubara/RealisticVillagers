@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.3.6</version>
+        <version>3.3.4</version>
     </parent>
 
     <build>
@@ -74,24 +74,6 @@
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-v1_19</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <!-- v1_20_1 -->
-        <dependency>
-            <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-v1_20_1</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <!-- v1_20_2 -->
-        <dependency>
-            <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-v1_20_2</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <!-- v1_20_4 -->
-        <dependency>
-            <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-v1_20_4</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <!-- v1_20_6 -->

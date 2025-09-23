@@ -51,7 +51,7 @@ public class UseBonemeal extends Behavior<Villager> implements Exchangeable {
         if (villager.tickCount % 10 != 0) return false;
         if (lastBonemealingSession != 0L && lastBonemealingSession + 160L > villager.tickCount) return false;
 
-        if (villager.getVillagerData().getProfession() != VillagerProfession.FARMER) return false;
+        if (!villager.getVillagerData().profession().is(VillagerProfession.FARMER)) return false;
         if (villager.getInventory().countItem(Items.BONE_MEAL) <= 0) return false;
 
         cropPos = pickNextTarget(level, villager);

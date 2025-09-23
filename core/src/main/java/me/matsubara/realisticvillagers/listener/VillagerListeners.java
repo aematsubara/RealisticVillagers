@@ -84,7 +84,7 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         // PlayerInteractEntityEvent won't be called if this one is cancelled.
         // With this change, we fix the client freezing for some seconds when right-clicking a villager.
         EquipmentSlot slot = wrapper.getHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        if (handleInteract((Player) event.getPlayer(), slot, action, npc.get().getNpc().bukkit())) {
+        if (handleInteract(event.getPlayer(), slot, action, npc.get().getNpc().bukkit())) {
             event.setCancelled(true);
         }
     }
@@ -468,7 +468,8 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
             plugin.getMessages().send(player, npc, Messages.Message.ON_HIT);
         }
 
-        if (!npc.isDamageSourceBlocked()) return;
+        float blocking = (float) (-event.getDamage(EntityDamageEvent.DamageModifier.BLOCKING));
+        if (!npc.isDamageSourceBlocked() && blocking <= 0.0f) return;
 
         try {
             EntityDamageEvent.DamageModifier modifier = EntityDamageEvent.DamageModifier.BLOCKING;

@@ -7,12 +7,9 @@ import org.jetbrains.annotations.Nullable;
 public enum VersionMatcher {
     v1_18("1.18.2"),
     v1_19("1.19.4"),
-    v1_20_1("1.20.1"),
-    v1_20_2("1.20.2"),
-    v1_20_4("1.20.4"),
     v1_20_6("1.20.6"),
     v1_21("1.21", "1.21.1"),
-    v1_21_4("1.21.4");
+    v1_21_4("1.21.7", "1.21.8");
 
     private final String[] versions;
 

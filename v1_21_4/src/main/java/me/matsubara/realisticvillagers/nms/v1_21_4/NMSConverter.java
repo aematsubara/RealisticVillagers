@@ -20,33 +20,32 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.MappedRegistry;
+import net.minecraft.core.*;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.*;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeMap;
-import net.minecraft.world.entity.ai.gossip.GossipContainer;
 import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Cat;
 import net.minecraft.world.entity.animal.Parrot;
-import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.animal.horse.Donkey;
 import net.minecraft.world.entity.animal.horse.Horse;
 import net.minecraft.world.entity.animal.horse.Mule;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.entity.schedule.Activity;
@@ -58,17 +57,17 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
-import net.minecraft.world.level.storage.PrimaryLevelData;
+import net.minecraft.world.level.storage.*;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.craftbukkit.v1_21_R3.CraftRaid;
-import org.bukkit.craftbukkit.v1_21_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_21_R3.block.CraftBlock;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftEntity;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftVillager;
+import org.bukkit.craftbukkit.v1_21_R5.CraftRaid;
+import org.bukkit.craftbukkit.v1_21_R5.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R5.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftVillager;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ZombieVillager;
@@ -176,16 +175,16 @@ public class NMSConverter implements INMSConverter {
     @Override
     public String getNPCTag(org.bukkit.entity.LivingEntity entity, boolean isInfection) {
         if (entity instanceof AbstractVillager villager) {
-            CompoundTag tag = new CompoundTag();
+            TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
 
             Optional<IVillagerNPC> optional = getNPC(villager);
             if (optional.isEmpty()) return null;
 
             VillagerNPC npc = (VillagerNPC) optional.get();
             npc.setWasInfected(isInfection);
-            npc.savePluginData(tag);
+            npc.savePluginData(output);
 
-            return tag.get(plugin.getNpcValuesKey().toString()).toString();
+            return output.buildResult().toString();
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
             return container.getOrDefault(plugin.getZombieTransformKey(), PersistentDataType.STRING, "");
@@ -213,7 +212,9 @@ public class NMSConverter implements INMSConverter {
         baby.setSex(sex);
 
         baby.setAge(-24000);
-        baby.moveTo(location.getX(), location.getY(), location.getZ(), 0.0f, 0.0f);
+        baby.setPos(location.getX(), location.getY(), location.getZ());
+        baby.setYRot(0.0f);
+        baby.setXRot(0.0f);
 
         // Shouldn't be null unless the mother is dead.
         IVillagerNPC mother = plugin.getTracker().getOffline(motherUUID);
@@ -232,9 +233,9 @@ public class NMSConverter implements INMSConverter {
         baby.setFather(VillagerNPC.dummyPlayerOffline(fatherUUID));
         baby.setFatherVillager(false);
 
-        GossipContainer gossips = baby.getGossips();
-        for (GossipType gossipType : GossipType.values()) {
-            gossips.remove(gossipType);
+        CustomGossipContainer gossips = baby.getGossips();
+        for (GossipType type : GossipType.values()) {
+            gossips.remove(type);
         }
 
         int reputation = Math.min(Config.INITIAL_REPUTATION_AT_BIRTH.asInt(), 75);
@@ -247,15 +248,17 @@ public class NMSConverter implements INMSConverter {
     @Override
     public void loadDataFromTag(org.bukkit.entity.LivingEntity living, @NotNull String tag) {
         try {
-            CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseTag(tag);
+            CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseCompoundFully(tag);
 
             Optional<IVillagerNPC> npc = getNPC(living);
             if (npc.isEmpty()) return;
 
             if (npc.get() instanceof VillagerNPC temp) {
-                temp.loadPluginData(villagerTag);
+                ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, temp.registryAccess(), villagerTag);
+                temp.loadPluginData(input);
             } else if (npc.get() instanceof WanderingTraderNPC temp) {
-                temp.loadPluginData(villagerTag);
+                ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, temp.registryAccess(), villagerTag);
+                temp.loadPluginData(input);
             }
         } catch (CommandSyntaxException exception) {
             exception.printStackTrace();
@@ -266,13 +269,8 @@ public class NMSConverter implements INMSConverter {
     public UUID getPartnerUUIDFromPlayerNBT(File file) {
         try (FileInputStream stream = new FileInputStream(file)) {
             CompoundTag tag = NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
-
             CompoundTag bukkit = getOrCreateBukkitTag(tag);
-            if (bukkit.hasUUID(plugin.getMarriedWith().toString())) {
-                return bukkit.getUUID(plugin.getMarriedWith().toString());
-            } else {
-                return null;
-            }
+            return bukkit.getIntArray(plugin.getMarriedWith().toString()).map(UUIDUtil::uuidFromIntArray).orElse(null);
         } catch (IOException exception) {
             return null;
         }
@@ -329,24 +327,26 @@ public class NMSConverter implements INMSConverter {
         if (location.getWorld() == null) return null;
 
         BlockPos pos = BlockPos.containing(location.getX(), location.getY(), location.getZ());
-        net.minecraft.world.entity.raid.Raid raid = ((CraftWorld) location.getWorld()).getHandle().getRaidAt(pos);
 
-        return raid != null ? new CraftRaid(raid) : null;
+        ServerLevel level = ((CraftWorld) location.getWorld()).getHandle();
+        net.minecraft.world.entity.raid.Raid raid = level.getRaidAt(pos);
+
+        return raid != null ? new CraftRaid(raid, level) : null;
     }
 
     @SuppressWarnings("deprecation")
-    public static void updateTamedData(@NotNull RealisticVillagers plugin, CompoundTag tag, LivingEntity living, boolean tamedByVillager) {
-        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
+    public static void updateTamedData(@NotNull RealisticVillagers plugin, @NotNull ValueOutput output, LivingEntity living, boolean tamedByVillager) {
+        ValueOutput bukkit = output.child("BukkitValues");
 
         NamespacedKey byVillager = plugin.getTamedByVillagerKey();
         bukkit.putBoolean(byVillager.toString(), tamedByVillager);
 
         // Remove previous key, not used anymore.
-        bukkit.remove(plugin.getTamedByPlayerKey().toString());
+        bukkit.discard(plugin.getTamedByPlayerKey().toString());
 
-        tag.put("BukkitValues", bukkit);
-
-        updateBukkitValues(tag, byVillager.getNamespace(), living);
+        if (output instanceof TagValueOutput tag) {
+            updateBukkitValues(tag.buildResult(), byVillager.getNamespace(), living);
+        }
     }
 
     @Override
@@ -363,7 +363,7 @@ public class NMSConverter implements INMSConverter {
     @Override
     public IVillagerNPC getNPCFromTag(String tag) {
         try {
-            return OfflineVillagerNPC.from(TagParser.parseTag(tag));
+            return OfflineVillagerNPC.from(TagParser.parseCompoundFully(tag));
         } catch (CommandSyntaxException exception) {
             exception.printStackTrace();
             return null;
@@ -398,7 +398,9 @@ public class NMSConverter implements INMSConverter {
             }
         }
 
-        villager.moveTo(location.getX(), location.getY(), location.getZ(), location.getYaw(), 0.0f);
+        villager.setPos(location.getX(), location.getY(), location.getZ());
+        villager.setYRot(location.getYaw());
+        villager.setXRot(0.0f);
         villager.setRevivingTicks(60);
 
         level.addFreshEntity(villager, CreatureSpawnEvent.SpawnReason.DEFAULT);
@@ -413,7 +415,7 @@ public class NMSConverter implements INMSConverter {
             String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
 
             GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
-            if (Boolean.FALSE.equals(nmsRule.get())) {
+            if (!nmsRule.get()) {
                 plugin.getLogger().warning(warn);
             }
 
@@ -487,21 +489,21 @@ public class NMSConverter implements INMSConverter {
 
         stream.close();
 
-        for (Tag tag : chunkTag.getList("Entities", 10)) {
+        for (Tag tag : chunkTag.getListOrEmpty("Entities")) {
             if (!(tag instanceof CompoundTag compound)) continue;
-            if (!compound.getString("id").equals("minecraft:villager")) continue;
-            if (!compound.hasUUID("UUID")) continue;
+            if (!compound.getString("id").map(id -> id.equals("minecraft:villager")).orElse(false)) continue;
+
+            UUID uuid = compound.getIntArray("UUID").map(UUIDUtil::uuidFromIntArray).orElse(null);
+            if (uuid == null) continue;
 
             CompoundTag bukkit = getOrCreateBukkitTag(compound);
-            CompoundTag data = bukkit.getCompound(plugin.getNpcValuesKey().toString());
+            CompoundTag data = bukkit.getCompoundOrEmpty(plugin.getNpcValuesKey().toString());
             if (data.isEmpty()) continue;
 
-            ListTag pos = compound.getList("Pos", 6);
-            double xc = pos.getDouble(0);
-            double yc = pos.getDouble(1);
-            double zc = pos.getDouble(2);
-
-            UUID uuid = compound.getUUID("UUID");
+            ListTag pos = compound.getListOrEmpty("Pos");
+            double xc = pos.getDoubleOr(0, 0.0d);
+            double yc = pos.getDoubleOr(1, 0.0d);
+            double zc = pos.getDoubleOr(2, 0.0d);
 
             Set<IVillagerNPC> offlines = plugin.getTracker().getOfflineVillagers();
             if (offlines.stream().noneMatch(npc -> npc.getUniqueId().equals(uuid))) {
@@ -605,7 +607,9 @@ public class NMSConverter implements INMSConverter {
             }
         }
 
+        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, MinecraftServer.getServer().registryAccess(), tag);
+
         // Save data in craft entity to prevent data-loss.
-        living.getBukkitEntity().readBukkitValues(tag);
+        living.getBukkitEntity().readBukkitValues(input);
     }
 }

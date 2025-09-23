@@ -56,7 +56,7 @@ public class GoToWantedItem extends Behavior<Villager> {
     }
 
     private boolean force(@NotNull VillagerNPC npc, @NotNull ItemEntity closest) {
-        return npc.fished(closest.getItem()) || npc.isExpectingGiftFrom(closest.thrower);
+        return npc.fished(closest.getItem()) || (closest.thrower != null && npc.isExpectingGiftFrom(closest.thrower.getUUID()));
     }
 
     private boolean isOnPickupCooldown(@NotNull Villager level) {

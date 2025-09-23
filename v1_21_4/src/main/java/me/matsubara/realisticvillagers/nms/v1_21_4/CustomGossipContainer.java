@@ -3,10 +3,7 @@ package me.matsubara.realisticvillagers.nms.v1_21_4;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -17,6 +14,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.VisibleForDebug;
 import net.minecraft.world.entity.ai.gossip.GossipContainer;
 import net.minecraft.world.entity.ai.gossip.GossipType;
+import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -28,6 +26,9 @@ public class CustomGossipContainer extends GossipContainer {
 
     private final Map<UUID, EntityGossips> gossips = Maps.newHashMap();
 
+    public static final Codec<CustomGossipContainer> CODEC = GossipEntry.CODEC.listOf()
+            .xmap(CustomGossipContainer::new, (reputation) -> reputation.unpack().toList());
+
     private static final int DISCARD_THRESHOLD = 2;
     private static final Map<GossipType, Integer> MAX_GOSSIP_TYPE_TRANSFER = ImmutableMap.of(
             GossipType.MAJOR_NEGATIVE, 15,
@@ -35,6 +36,14 @@ public class CustomGossipContainer extends GossipContainer {
             GossipType.MINOR_POSITIVE, 30,
             GossipType.MAJOR_POSITIVE, 15,
             GossipType.TRADING, 5);
+
+    public CustomGossipContainer() {
+
+    }
+
+    private CustomGossipContainer(@NotNull List<GossipEntry> list) {
+        list.forEach((entry) -> getOrCreate(entry.target).entries.put(entry.type, entry.value));
+    }
 
     @VisibleForDebug
     @Override
@@ -125,11 +134,21 @@ public class CustomGossipContainer extends GossipContainer {
     }
 
     @Override
+    public void remove(UUID uuid, GossipType type, int amount, Villager.ReputationEvent event) {
+        // Incompatible with Paper.
+    }
+
+    @SuppressWarnings("unused")
     public void remove(UUID uuid, GossipType type, int amount) {
         add(uuid, type, -amount);
     }
 
     @Override
+    public void remove(UUID uuid, GossipType type, Villager.ReputationEvent event) {
+        // Incompatible with Paper.
+    }
+
+    @SuppressWarnings("unused")
     public void remove(UUID uuid, GossipType type) {
         EntityGossips gossips = this.gossips.get(uuid);
         if (gossips == null) return;
@@ -139,6 +158,10 @@ public class CustomGossipContainer extends GossipContainer {
     }
 
     @Override
+    public void remove(GossipType type, Villager.ReputationEvent event) {
+        // Incompatible with Paper.
+    }
+
     public void remove(GossipType type) {
         Iterator<EntityGossips> iterator = gossips.values().iterator();
 
@@ -154,19 +177,8 @@ public class CustomGossipContainer extends GossipContainer {
     }
 
     @Override
-    public <T> T store(DynamicOps<T> ops) {
-        return GossipEntry.LIST_CODEC
-                .encodeStart(ops, unpack().toList())
-                .resultOrPartial((string) -> LogUtils.getLogger().warn("Failed to serialize gossips: {}", string))
-                .orElseGet(ops::emptyList);
-    }
-
-    @Override
-    public void update(@NotNull Dynamic<?> dynamic) {
-        GossipEntry.LIST_CODEC.decode(dynamic)
-                .resultOrPartial((string) -> LogUtils.getLogger().warn("Failed to deserialize gossips: {}", string))
-                .stream().flatMap((pair) -> pair.getFirst().stream())
-                .forEach((entry) -> getOrCreate(entry.target).entries.put(entry.type, entry.value));
+    public void putAll(@NotNull GossipContainer reputation) {
+        reputation.getGossipEntries().forEach((uuid, type) -> getOrCreate(uuid).entries.putAll(type));
     }
 
     private static class EntityGossips {
@@ -223,7 +235,6 @@ public class CustomGossipContainer extends GossipContainer {
                         .forGetter(GossipEntry::type), ExtraCodecs.POSITIVE_INT.fieldOf("Value")
                         .forGetter(GossipEntry::value))
                 .apply(var0, GossipEntry::new));
-        public static final Codec<List<GossipEntry>> LIST_CODEC = CODEC.listOf();
 
         public int weightedValue() {
             return value * type.weight;

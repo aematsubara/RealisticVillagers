@@ -131,7 +131,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> implements Exchangeab
     }
 
     private void displayFirstItem(Villager villager) {
-        displayAsHeldItem(villager, displayItems.get(0));
+        displayAsHeldItem(villager, displayItems.getFirst());
     }
 
     @SuppressWarnings("WhileLoopReplaceableByForEach")

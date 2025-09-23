@@ -11,11 +11,12 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.horse.HorseEating;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.*;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.GiveGiftToHero;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.SetEntityLookTarget;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.ShowTradesToPlayer;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.TradeWithVillager;
-import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.*;
+import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.*;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.GoToPotentialJobSite;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.GoToWantedItem;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.LookAtTargetSink;
@@ -23,12 +24,11 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.SetRaidStatus;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.YieldJobSite;
-import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.core.*;
+import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.*;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.BackUpIfTooClose;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.MeleeAttack;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.SetWalkTargetFromAttackTargetIfTargetOutOfReach;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.StopAttackingIfTargetInvalid;
-import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.fight.*;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.hide.SetHiddenState;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.idle.InteractWithBreed;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.idle.VillagerMakeLove;
@@ -40,6 +40,7 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work.UseBonemeal;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work.WorkAtBarrel;
 import me.matsubara.realisticvillagers.files.Config;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -152,11 +153,11 @@ public class VillagerNPCGoalPackages {
         return new TameOrFeedPet(2, tameChance, VillagerNPC.WALK_SPEED.get(), tameFilter, tameItems);
     }
 
-    public static @NotNull ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getWorkPackage(VillagerProfession profession) {
+    public static @NotNull ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getWorkPackage(@NotNull Holder<VillagerProfession> profession) {
         Behavior<Villager> behavior;
-        if (profession == VillagerProfession.FARMER) {
+        if (profession.is(VillagerProfession.FARMER)) {
             behavior = new WorkAtComposter();
-        } else if (profession == VillagerProfession.FISHERMAN) {
+        } else if (profession.is(VillagerProfession.FISHERMAN)) {
             behavior = new WorkAtBarrel();
         } else {
             behavior = new WorkAtPoi();
@@ -169,9 +170,9 @@ public class VillagerNPCGoalPackages {
                         Pair.of(StrollAroundPoi.create(MemoryModuleType.JOB_SITE, VillagerNPC.WALK_SPEED.get(), 4), 2),
                         Pair.of(StrollToPoi.create(MemoryModuleType.JOB_SITE, VillagerNPC.WALK_SPEED.get(), 1, 10), 5),
                         Pair.of(StrollToPoiList.create(MemoryModuleType.SECONDARY_JOB_SITE, VillagerNPC.WALK_SPEED.get(), 1, 6, MemoryModuleType.JOB_SITE), 5),
-                        Pair.of(new HarvestFarmland(), profession == VillagerProfession.FARMER ? 2 : 5),
-                        Pair.of(new StartFishing(), profession == VillagerProfession.FISHERMAN ? 2 : 5),
-                        Pair.of(new UseBonemeal(), profession == VillagerProfession.FARMER ? 4 : 7)))),
+                        Pair.of(new HarvestFarmland(), profession.is(VillagerProfession.FARMER) ? 2 : 5),
+                        Pair.of(new StartFishing(), profession.is(VillagerProfession.FISHERMAN) ? 2 : 5),
+                        Pair.of(new UseBonemeal(), profession.is(VillagerProfession.FARMER) ? 4 : 7)))),
                 Pair.of(10, new ShowTradesToPlayer(400, 1600)),
                 Pair.of(10, new SetLookAndInteractPlayer(4)),
                 Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.JOB_SITE, VillagerNPC.WALK_SPEED.get(), 9, 100, 1200)),

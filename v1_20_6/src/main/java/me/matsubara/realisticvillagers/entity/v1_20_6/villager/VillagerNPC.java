@@ -136,7 +136,6 @@ import org.joml.Vector3f;
 
 import java.lang.invoke.MethodHandle;
 import java.time.LocalDate;
-import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -710,8 +709,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public ItemStack getProjectile(ItemStack itemstack) {
-        return Items.ARROW.getDefaultInstance();
+    public ItemStack getProjectile(@NotNull ItemStack stack) {
+        if (stack.getItem() instanceof ProjectileWeaponItem item) {
+            return getProjectile(item);
+        }
+        return ItemStack.EMPTY;
     }
 
     @Override
@@ -719,6 +721,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         noActionTime = 0;
     }
 
+    @SuppressWarnings("unused")
     public void shootCrossbowProjectile(LivingEntity target, ItemStack bow, Projectile projectile, float force) {
         shootCrossbowProjectile(this, target, projectile, force, Config.RANGE_WEAPON_POWER.asFloat());
     }
@@ -928,8 +931,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         if (getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
             LocalDate now = LocalDate.now();
-            int day = now.get(ChronoField.DAY_OF_MONTH);
-            int month = now.get(ChronoField.MONTH_OF_YEAR);
+            int day = now.getDayOfMonth();
+            int month = now.getMonth().getValue();
             if (month == 10 && day == 31 && random.nextFloat() < Config.CHANCE_OF_WEARING_HALLOWEEN_MASK.asFloat()) {
                 setItemSlot(
                         EquipmentSlot.HEAD,

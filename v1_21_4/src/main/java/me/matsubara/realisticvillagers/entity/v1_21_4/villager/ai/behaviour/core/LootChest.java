@@ -32,9 +32,9 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
-import org.bukkit.craftbukkit.v1_21_R3.block.CraftBlock;
-import org.bukkit.craftbukkit.v1_21_R3.block.CraftChest;
-import org.bukkit.craftbukkit.v1_21_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R5.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_21_R5.block.CraftChest;
+import org.bukkit.craftbukkit.v1_21_R5.inventory.CraftItemStack;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -219,7 +219,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         }
 
         if (items.isEmpty()) {
-            // No more item to add, close chest (only if inventory viewers is empty).
+            // No more item to add, close chest (only if inventory viewers are empty).
             containerAction(npc, level, false, isOpen);
 
             // Add cooldown to loot action.
@@ -231,7 +231,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         }
 
         // Return if item isn't in container inventory anymore.
-        ItemStack item = items.remove(0);
+        ItemStack item = items.removeFirst();
         if (!inventory.containsAtLeast(item, 1)) return;
         if (!inventory.removeItem(item).isEmpty()) {
             if (item.getAmount() == 1) return;

@@ -93,7 +93,7 @@ public class TradeWithVillager extends Behavior<Villager> {
     }
 
     private boolean isFarmer(@NotNull Villager villager) {
-        return villager.getVillagerData().getProfession() == VillagerProfession.FARMER;
+        return villager.getVillagerData().profession().is(VillagerProfession.FARMER);
     }
 
     @Override
@@ -102,8 +102,8 @@ public class TradeWithVillager extends Behavior<Villager> {
     }
 
     private static Set<Item> figureOutWhatIAmWillingToTrade(@NotNull Villager villager, @NotNull Villager target) {
-        ImmutableSet<Item> targetItems = target.getVillagerData().getProfession().requestedItems();
-        ImmutableSet<Item> villagerItems = villager.getVillagerData().getProfession().requestedItems();
+        ImmutableSet<Item> targetItems = target.getVillagerData().profession().value().requestedItems();
+        ImmutableSet<Item> villagerItems = villager.getVillagerData().profession().value().requestedItems();
         return targetItems.stream().filter((item) -> !villagerItems.contains(item)).collect(Collectors.toSet());
     }
 

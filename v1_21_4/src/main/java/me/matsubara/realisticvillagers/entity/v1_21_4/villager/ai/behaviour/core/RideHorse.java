@@ -83,7 +83,8 @@ public class RideHorse extends Behavior<Villager> {
         if (nearest.isEmpty()) return Optional.empty();
 
         return nearest.get().findClosest(living -> living instanceof OwnableEntity ownable
-                && villager.getUUID().equals(ownable.getOwnerUUID())
+                && ownable.getOwnerReference() != null
+                && villager.getUUID().equals(ownable.getOwnerReference().getUUID())
                 && living instanceof HorseEating
                 && living instanceof AbstractHorse horse
                 && horse.isTamed()

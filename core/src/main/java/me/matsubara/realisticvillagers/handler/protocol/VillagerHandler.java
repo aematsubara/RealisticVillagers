@@ -23,11 +23,13 @@ import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.npc.NPC;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.Raid;
 import org.bukkit.World;
 import org.bukkit.entity.*;
 import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +58,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
     ID = 19 | ACCESSOR ID = 19 | VALUE TYPE = TagCompound | CLAZZ = COMPOUND_TAG | Left shoulder entity data (for occupying parrot)
     ID = 20 | ACCESSOR ID = 20 | VALUE TYPE = TagCompound | CLAZZ = COMPOUND_TAG | Right shoulder entity data (for occupying parrot)
     */
-    private static final Predicate<EntityData> REMOVE_METADATA = data -> {
+    private static final Predicate<EntityData<?>> REMOVE_METADATA = data -> {
         // Data between 0-14 is the same for players and villagers.
         int index = data.getIndex();
         if (index <= 14) return false;
@@ -162,7 +164,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             if (!version.isNewerThanOrEquals(ServerVersion.V_1_20_4)) return;
 
             try {
-                List<EntityData> metadata = metadataWrapper.readEntityMetadata();
+                List<EntityData<?>> metadata = metadataWrapper.readEntityMetadata();
                 if (!metadata.removeIf(REMOVE_METADATA)) return;
 
                 event.setCancelled(true);
@@ -260,17 +262,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
     private void handleStatus(@NotNull IVillagerNPC npc, byte status) {
         LivingEntity bukkit = npc.bukkit();
 
-        XParticle particle;
-        switch (status) {
-            case 12 -> particle = XParticle.HEART;
-            case 13 -> particle = XParticle.ANGRY_VILLAGER;
-            case 14 -> particle = XParticle.HAPPY_VILLAGER;
-            case 42 -> {
-                Raid raid = plugin.getConverter().getRaidAt(bukkit.getLocation());
-                particle = raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : XParticle.SPLASH;
-            }
-            default -> particle = null;
-        }
+        Particle particle = getParticle(status, bukkit);
         if (particle == null) return;
 
         Location location = bukkit.getLocation();
@@ -282,7 +274,7 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         double z = location.getZ() + box.getWidthZ() * ((2.0d * random.nextDouble() - 1.0d) * 1.05d);
 
         bukkit.getWorld().spawnParticle(
-                particle.get(),
+                particle,
                 x,
                 y,
                 z,
@@ -290,6 +282,22 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
                 random.nextGaussian() * 0.02d,
                 random.nextGaussian() * 0.02d,
                 random.nextGaussian() * 0.02d);
+    }
+
+    private @Nullable Particle getParticle(byte status, LivingEntity bukkit) {
+        XParticle particle = switch (status) {
+            case 12 -> XParticle.HEART;
+            case 13 -> XParticle.ANGRY_VILLAGER;
+            case 14 -> XParticle.HAPPY_VILLAGER;
+            case 42 -> {
+                Raid raid = plugin.getConverter().getRaidAt(bukkit.getLocation());
+                yield raid != null && raid.getStatus() == Raid.RaidStatus.ONGOING ? null : XParticle.SPLASH;
+            }
+            default -> null;
+        };
+        return Optional.ofNullable(particle)
+                .map(XParticle::get)
+                .orElse(null);
     }
 
     private boolean isCancellableSpawnPacket(@NotNull PacketPlaySendEvent event) {

@@ -17,9 +17,9 @@ import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -30,14 +30,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftWanderingTrader;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftWanderingTrader;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -508,11 +512,11 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
 
     @Override
     public IVillagerNPC getOffline() {
-        CompoundTag tag = new CompoundTag();
-        savePluginData(tag);
+        TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
+        savePluginData(output);
 
         return OfflineVillagerNPC.from(uuid,
-                (CompoundTag) tag.get(plugin.getNpcValuesKey().toString()),
+                output.buildResult(),
                 level().getWorld().getName(),
                 getX(),
                 getY(),
@@ -529,42 +533,37 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
 
         // Save the previous (vanilla) custom name.
-        Component customName = getCustomName(true);
-        if (customName != null) {
-            tag.putString("CustomName", Component.Serializer.toJson(customName, registryAccess()));
-        } else {
-            tag.remove("CustomName");
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, getCustomName(true));
+
+        ValueOutput bukkit = output.child("BukkitValues");
+
+        ValueOutput npc = bukkit.child(plugin.getNpcValuesKey().toString());
+        savePluginData(npc);
+
+        if (output instanceof TagValueOutput tag) {
+            NMSConverter.updateBukkitValues(tag.buildResult(), plugin.getNpcValuesKey().getNamespace(), this);
         }
-
-        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
-        savePluginData(bukkit);
-
-        tag.put("BukkitValues", bukkit);
-
-        NMSConverter.updateBukkitValues(tag, plugin.getNpcValuesKey().getNamespace(), this);
     }
 
-    public void savePluginData(CompoundTag tag) {
-        CompoundTag villagerTag = new CompoundTag();
-        villagerTag.putUUID(OfflineVillagerNPC.UUID, uuid);
-        if (villagerName != null) villagerTag.putString(OfflineVillagerNPC.NAME, villagerName);
-        if (sex != null) villagerTag.putString(OfflineVillagerNPC.SEX, sex);
-        villagerTag.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
-        tag.put(plugin.getNpcValuesKey().toString(), villagerTag);
+    public void savePluginData(@NotNull ValueOutput output) {
+        output.store(OfflineVillagerNPC.UUID, UUIDUtil.CODEC, uuid);
+        if (villagerName != null) output.putString(OfflineVillagerNPC.NAME, villagerName);
+        if (sex != null) output.putString(OfflineVillagerNPC.SEX, sex);
+        output.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
 
-        CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
+        ValueInput bukkit = input.childOrEmpty("BukkitValues");
 
-        Tag base = bukkit.get(plugin.getNpcValuesKey().toString());
-        loadPluginData(base != null ? (CompoundTag) base : new CompoundTag());
+        ValueInput npc = bukkit.childOrEmpty(plugin.getNpcValuesKey().toString());
+        loadPluginData(npc);
 
         // Previous versions of this plugin used setCustomName() before.
         Component customName = getCustomName(true);
@@ -573,19 +572,17 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
         }
     }
 
-    public void loadPluginData(@NotNull CompoundTag villagerTag) {
+    public void loadPluginData(@NotNull ValueInput villagerTag) {
         VillagerTracker tracker = plugin.getTracker();
 
-        if (villagerTag.hasUUID(OfflineVillagerNPC.UUID)) setUUID(villagerTag.getUUID(OfflineVillagerNPC.UUID));
-        villagerName = villagerTag.getString(OfflineVillagerNPC.NAME);
-        sex = villagerTag.getString(OfflineVillagerNPC.SEX);
+        villagerTag.read(OfflineVillagerNPC.UUID, UUIDUtil.CODEC).ifPresent(this::setUUID);
+        villagerName = villagerTag.getStringOr(OfflineVillagerNPC.NAME, "");
+        sex = villagerTag.getStringOr(OfflineVillagerNPC.SEX, "");
         if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
         if (tracker.shouldRename(villagerName)) {
             setVillagerName(tracker.getRandomNameBySex(sex));
         }
-        skinTextureId = villagerTag.contains(OfflineVillagerNPC.SKIN_TEXTURE_ID) ?
-                villagerTag.getInt(OfflineVillagerNPC.SKIN_TEXTURE_ID) :
-                -1;
+        skinTextureId = villagerTag.getIntOr(OfflineVillagerNPC.SKIN_TEXTURE_ID, -1);
     }
 
     @Override

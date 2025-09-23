@@ -36,8 +36,8 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.GameEvent.Context;
 import org.apache.commons.lang3.tuple.Triple;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_21_R3.block.CraftBlock;
-import org.bukkit.craftbukkit.v1_21_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_21_R5.block.CraftBlock;
+import org.bukkit.craftbukkit.v1_21_R5.block.data.CraftBlockData;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,7 +87,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
     public boolean checkExtraStartConditions(@NotNull ServerLevel level, Villager villager) {
         if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(ChangeItemType.USING_HOE)) return false;
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return false;
-        if (villager.getVillagerData().getProfession() != VillagerProfession.FARMER) return false;
+        if (!villager.getVillagerData().profession().is(VillagerProfession.FARMER)) return false;
 
         BlockPos.MutableBlockPos mutable = villager.blockPosition().mutable();
         validFarmlandAroundVillager.clear();
@@ -274,7 +274,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
 
         // Use a hoe to harvest farmland.
         if (isValidDirt(level, aboveFarmlandPos, aboveState, belowState)) {
-            Item hoe = LEVEL_TO_HOE.getOrDefault(villager.getVillagerData().getLevel(), Items.NETHERITE_HOE);
+            Item hoe = LEVEL_TO_HOE.getOrDefault(villager.getVillagerData().level(), Items.NETHERITE_HOE);
             villager.setItemInHand(InteractionHand.MAIN_HAND, hoe.getDefaultInstance());
         }
     }

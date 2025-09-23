@@ -41,7 +41,7 @@
 #
 # RANGED AMOUNT (X-Y): A random value between x and y. (@amount / @enchantments (level) / @firework.power)
 #
-# PERCENTAGE (only valid for @damage, NOT DECIMAL): X% / %X (% must be included); for example: 50% (same as %50) would be half-damage.
+# PERCENTAGE (only valid for @damage, NOT DECIMAL): X% / %X (% must be included); for example, 50% (same as %50) would be half-damage.
 # NOTE: The percentage is taken from the maximum durability; this means:
 # * WOODEN_SWORD max durability = 60; if @damage is 50% (60 * 0.50) -> 30. if @damage is 25% (60 * 0.25) -> 15.
 # That value will be the damage added to the item; so, if @damage is %25, the new durability of the WOODEN_SWORD will be 60 - 15 = 45.
@@ -74,13 +74,13 @@ render-distance: 56
 
 # To generate skins faster, you will need to create your own api-key on the mineskin page.
 # NOTE: If empty, no api-key will be used, so it'll take longer to generate skins (NOT RECOMMENDED).
-# NOTE 2: DON'T login with your microsoft account, this is to contribute with a minecraft account to make the requests faster.
-# NOTE 3: You should only login with your google account. If you have problems, try clearing your cookies and try the steps again.
+# NOTE 2: DON'T log in with your microsoft account, this is to contribute with a minecraft account to make the requests faster.
+# NOTE 3: You should only log in with your Google account. If you have problems, try clearing your cookies and try the steps again.
 #
 # To create an api-key, follow the steps below:
 # * Go to https://mineskin.org/account first.
 # * You must have a Google account, then click on "Continue as X".
-# * A secure connection check will be performed by cloudflare, wait.
+# * Cloudflare will perform a secure connection check, wait.
 # * If the page just keeps refreshing, go to https://mineskin.org/ and then do the next step, you should already be logged in.
 # * Once you've logged in, go to https://mineskin.org/account again.
 # * Under "API Keys" click on "Manage api keys".
@@ -115,7 +115,7 @@ villager-defend-family-member: true
 
 # If the villager must defend the hero of the village (only if the villager has a weapon).
 # NOTE: A player is considered the hero of the village if he has the effect HERO_OF_THE_VILLAGE or
-# if he has killed at least one raider and will receive this effect if the defence is successful.
+# if he has killed at least one raider and will receive this effect if the defense is successful.
 villager-defend-hero-of-the-village: true
 
 # If the villager must defend the following player (only if the villager has a weapon).
@@ -194,7 +194,7 @@ reputation-required-to-marry: 75
 reputation-required-to-procreate: 110
 
 # Here you can allow procreation between villagers of the same sex, procreation between family members and also allow "cheating" of villagers,
-# i.e. allow villagers to procreate with other villagers even if they are married.
+# i.e., allow villagers to procreate with other villagers even if they are married.
 #
 # By default, all these options are disabled, so it can break the functioning of villager farms.
 villager-farm:
@@ -241,7 +241,7 @@ input-gui:
     title: "Search..."
     text: "Search..."
 
-# This only applies to villagers who have not yet spawned.
+# This only applies to villagers who haven't yet spawned.
 # If the villager has no weapon in hand, he'll flee from danger (only with monsters).
 # Entities: https://www.digminecraft.com/lists/entity_list_pc.php
 default-target-entities:
@@ -327,7 +327,7 @@ chance-of-chat-interaction-success: 0.65
 chat-interact-reputation: 2
 
 # The waiting time between each interaction (in seconds).
-# NOTE: @greet & @proud-of are always success, so consider putting a reasonable amount of cooldown.
+# NOTE: @greet and @proud-of are always success, so consider putting a reasonable amount of cooldown.
 # NOTE #2: for @gift, the cooldown starts after the villager picks up the gift.
 interact-cooldown:
   chat: 2
@@ -668,8 +668,8 @@ gui:
         # %partner% - partners of this villager (displayed one below the other).
         # %father% - father of this villager.
         # %mother% - mother of this villager.
-        # %childrens% - childrens of this villager (one line).
-        # %children% - childrens of this villager (displayed one below the other).
+        # %childrens% - children of this villager (one line).
+        # %children% - children of this villager (displayed one below the other).
         # %effect% - active potion effects.
         # %reputation% - player reputation with this villager.
         lore:
@@ -963,7 +963,7 @@ gui:
         display-name: "&a#%skin-id%"
         # %added-by% - the player (or console) that added the skin.
         # %when% - when was this skin added.
-        # %generated% - how many professions overlays were generated.
+        # %generated% - how many profession overlays were generated.
         # %max-professions% - max amount of professions.
         # %profession% - professions and their state (either added (GREEN) or not (RED), displayed one below the other).
         lore:
@@ -1090,7 +1090,7 @@ bad-gift-reputation: 5
 # Tag example: $LEATHER_ARMOR_PIECES
 #
 # Since 1.1.2 you can specify the profession required for the gift.
-# For example:
+# For example,
 # * Let's say you want ALL villagers to give 2 reputation ('good' category) when giving an ARROW.
 # * To do that, we just add ARROW in the list.
 # * Now, for FLETCHER villagers, you want to give 3 reputation ('better' category).
@@ -1189,7 +1189,7 @@ worlds-filter:
 tame-cooldown: 600
 
 # Here you can choose the wanted items by the villagers.
-# They'll go to pick them up if they are nearby, or they are inside a chest and villagers are allowed to loot (@loot-chest.enabled = true).
+# They'll go to pick them up if they are nearby, or they are inside a chest, and villagers are allowed to loot (@loot-chest.enabled = true).
 # If you want a specific material/tag to be picked only from a chest, you must place "*" at the end of the material.
 # Example: IRON_INGOT*
 #
@@ -1198,8 +1198,8 @@ tame-cooldown: 600
 # Example: IRON_INGOT(2)*
 #
 # This uses the same system as the gifts, you can add materials, tags, and profession condition; check @gift for more information.
-# Be careful with the items you add here, if you die near a villager they can pick up whatever they want.
-# NOTE: If you throw a wanted item to a villager they'll pick it up, but it will NOT count as a gift.
+# Be careful with the items you add here, if you die near a villager, they can pick up whatever they want.
+# NOTE: If you throw a wanted item to a villager, they'll pick it up, but it will NOT count as a gift.
 default-wanted-items:
   - BREAD
   - POTATO

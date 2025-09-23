@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work.HarvestFarmland;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.Brain;
@@ -39,10 +40,12 @@ public class SecondaryPoiSensor extends Sensor<Villager> {
                 for (int z = -4; z <= 4; z++) {
                     BlockPos offset = position.offset(x, y, z);
                     Block block = level.getBlockState(offset).getBlock();
-                    VillagerProfession profession = villager.getVillagerData().getProfession();
+
+                    Holder<VillagerProfession> professionHolder = villager.getVillagerData().profession();
+                    VillagerProfession profession = professionHolder.value();
 
                     if (profession.secondaryPoi().contains(block) ||
-                            (profession.equals(VillagerProfession.FARMER) && ArrayUtils.contains(HarvestFarmland.DIRT, block))) {
+                            (professionHolder.is(VillagerProfession.FARMER) && ArrayUtils.contains(HarvestFarmland.DIRT, block))) {
                         positions.add(GlobalPos.of(dimension, offset));
                     }
                 }

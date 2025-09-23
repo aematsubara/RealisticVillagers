@@ -7,9 +7,9 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.*;
@@ -17,14 +17,18 @@ import net.minecraft.world.entity.ai.goal.target.*;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Turtle;
-import net.minecraft.world.entity.animal.Wolf;
 import net.minecraft.world.entity.animal.horse.Llama;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftWolf;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftWolf;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -72,36 +76,39 @@ public class PetWolf extends Wolf implements Pet {
     @Override
     public void tameByVillager(@NotNull IVillagerNPC npc) {
         setTame(true, true);
-        setOwnerUUID(npc.bukkit().getUniqueId());
+        setOwner(((CraftLivingEntity) npc.bukkit()).getHandle());
         setTamedByVillager(true);
         getNavigation().stop();
         setTarget(null);
         setPersistenceRequired();
+        this.persist = true;
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        NMSConverter.updateTamedData(plugin, output, this, tamedByVillager);
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        tamedByVillager = Boolean.TRUE.equals(getBukkitEntity().getPersistentDataContainer().get(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN));
     }
 
     @Override
     public UUID getOwnerUniqueId() {
-        return super.getOwnerUUID();
-    }
-
-    @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        NMSConverter.updateTamedData(plugin, tag, this, tamedByVillager);
-    }
-
-    @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        tamedByVillager = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByVillagerKey().toString());
+        EntityReference<LivingEntity> reference = getOwnerReference();
+        if (reference != null) return reference.getUUID();
+        return null;
     }
 
     @Override
     public @Nullable LivingEntity getOwner() {
         if (!tamedByVillager) return super.getOwner();
 
-        UUID ownerUUID = getOwnerUUID();
-        return ownerUUID != null ? (LivingEntity) ((ServerLevel) level()).getEntity(ownerUUID) : null;
+        UUID ownerUUID = getOwnerUniqueId();
+        return ownerUUID != null ? (LivingEntity) level().getEntity(ownerUUID) : null;
     }
 
     @Override

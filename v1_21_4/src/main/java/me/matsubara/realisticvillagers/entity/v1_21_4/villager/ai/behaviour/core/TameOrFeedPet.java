@@ -16,7 +16,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -36,7 +35,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -179,8 +178,7 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
             if (tamable instanceof AbstractHorse horse) { // Ride horse.
                 if (!horse.isVehicle()) villager.startRiding(horse, true);
                 if (!horse.isSaddled()) {
-
-                    horse.equipSaddle(Items.SADDLE.getDefaultInstance(), SoundSource.NEUTRAL);
+                    horse.setItemSlot(EquipmentSlot.SADDLE, Items.SADDLE.getDefaultInstance());
                     villager.getInventory().removeItemType(Items.SADDLE, 1);
                 }
             }
@@ -189,13 +187,15 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
             FoodProperties info = food.getDefaultInstance().get(DataComponents.FOOD);
             float nutrition = info != null ? (float) info.nutrition() : 1.0f;
 
-            if (tamable instanceof PetWolf) {
-                tamable.heal(2.0f * nutrition, EntityRegainHealthEvent.RegainReason.EATING);
-            } else if (tamable instanceof PetCat) {
-                tamable.playSound(SoundEvents.CAT_EAT, 1.0f, 1.0f);
-                tamable.heal(nutrition);
-            } else if (tamable instanceof HorseEating horse) {
-                horse.handleEating(food.getDefaultInstance());
+            switch (tamable) {
+                case PetWolf ignored -> tamable.heal(2.0f * nutrition, EntityRegainHealthEvent.RegainReason.EATING);
+                case PetCat ignored -> {
+                    tamable.playSound(SoundEvents.CAT_EAT, 1.0f, 1.0f);
+                    tamable.heal(nutrition);
+                }
+                case HorseEating horse -> horse.handleEating(food.getDefaultInstance());
+                default -> {
+                }
             }
         }
 
@@ -239,7 +239,8 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
         if (nearest.isEmpty()) return Optional.empty();
 
         return nearest.get().findClosest(living -> living instanceof OwnableEntity ownable
-                && villager.getUUID().equals(ownable.getOwnerUUID())
+                && ownable.getOwnerReference() != null
+                && villager.getUUID().equals(ownable.getOwnerReference().getUUID())
                 && living instanceof Animal animal
                 && animal.getHealth() < animal.getMaxHealth());
     }

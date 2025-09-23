@@ -18,7 +18,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.component.ChargedProjectiles;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import org.bukkit.craftbukkit.v1_21_R3.enchantments.CraftEnchantment;
+import org.bukkit.craftbukkit.v1_21_R5.enchantments.CraftEnchantment;
 import org.bukkit.enchantments.Enchantment;
 import org.jetbrains.annotations.NotNull;
 

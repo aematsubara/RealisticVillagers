@@ -21,14 +21,14 @@ import java.util.function.Function;
 
 public class MetadataModifier extends NPCModifier {
 
-    private final List<EntityData> metadata = new ArrayList<>();
+    private final List<EntityData<?>> metadata = new ArrayList<>();
 
     public MetadataModifier(NPC npc) {
         super(npc);
     }
 
     public <I, O> MetadataModifier queue(@NotNull EntityMetadata<I, O> metadata, I value) {
-        this.metadata.add(new EntityData(metadata.index(), metadata.outputType(), metadata.mapper().apply(value)));
+        this.metadata.add(new EntityData<>(metadata.index(), metadata.outputType(), metadata.mapper().apply(value)));
         return this;
     }
 

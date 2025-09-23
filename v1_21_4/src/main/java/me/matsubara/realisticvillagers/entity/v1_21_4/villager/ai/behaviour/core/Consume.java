@@ -33,7 +33,7 @@ import net.minecraft.world.item.consume_effects.ConsumeEffect;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.bukkit.Location;
 import org.bukkit.Particle;
-import org.bukkit.craftbukkit.v1_21_R3.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R5.inventory.CraftItemStack;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -49,15 +49,15 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
     private int duration;
 
     public static final ImmutableSet<Holder<MobEffect>> HEALTH_EFFECTS = ImmutableSet.of(
-            MobEffects.HEAL,
+            MobEffects.INSTANT_HEALTH,
             MobEffects.REGENERATION,
             MobEffects.HEALTH_BOOST,
             MobEffects.ABSORPTION);
 
     public static final ImmutableSet<Holder<MobEffect>> POWER_EFFECTS = ImmutableSet.of(
-            MobEffects.MOVEMENT_SPEED,
-            MobEffects.DAMAGE_BOOST,
-            MobEffects.DAMAGE_RESISTANCE,
+            MobEffects.SPEED,
+            MobEffects.STRENGTH,
+            MobEffects.RESISTANCE,
             MobEffects.FIRE_RESISTANCE);
 
     public static final BiPredicate<ItemStack, Set<Holder<MobEffect>>> POTION_PREDICATE = (item, effects) -> {

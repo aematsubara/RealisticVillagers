@@ -104,7 +104,6 @@ public class NMSConverter implements INMSConverter {
     private static final MethodHandle RULE_TYPE = Reflection.getFieldGetter(GameRules.Value.class, "a");
     private static final Field RULE_CALLBACK;
 
-    private static final Random RANDOM = new Random();
     private static final Map<String, Activity> ACTIVITIES;
     private static final FilenameFilter DATA_FILE_FILTER = (directory, name) -> new File(directory, name).isFile()
             && name.endsWith(".mca")
@@ -416,7 +415,7 @@ public class NMSConverter implements INMSConverter {
             String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
 
             GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
-            if (Boolean.FALSE.equals(nmsRule.get())) {
+            if (!nmsRule.get()) {
                 plugin.getLogger().warning(warn);
             }
 

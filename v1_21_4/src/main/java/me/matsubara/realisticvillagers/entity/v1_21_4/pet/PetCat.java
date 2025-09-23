@@ -9,7 +9,6 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
 import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -17,6 +16,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,6 +33,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -40,8 +42,10 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.AABB;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftCat;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftCat;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
 import org.bukkit.event.entity.EntityDropItemEvent;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -91,14 +95,17 @@ public class PetCat extends Cat implements Pet {
         playSound(SoundEvents.CAT_EAT, 1.0f, 1.0f);
 
         setTame(true, true);
-        setOwnerUUID(npc.bukkit().getUniqueId());
+        setOwner(((CraftLivingEntity) npc.bukkit()).getHandle());
         setTamedByVillager(true);
         setPersistenceRequired();
+        this.persist = true;
     }
 
     @Override
     public UUID getOwnerUniqueId() {
-        return super.getOwnerUUID();
+        EntityReference<LivingEntity> reference = getOwnerReference();
+        if (reference != null) return reference.getUUID();
+        return null;
     }
 
     @Override
@@ -111,15 +118,15 @@ public class PetCat extends Cat implements Pet {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        NMSConverter.updateTamedData(plugin, tag, this, tamedByVillager);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        NMSConverter.updateTamedData(plugin, output, this, tamedByVillager);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        tamedByVillager = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByVillagerKey().toString());
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        tamedByVillager = Boolean.TRUE.equals(getBukkitEntity().getPersistentDataContainer().get(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN));
     }
 
     @Override
@@ -136,8 +143,8 @@ public class PetCat extends Cat implements Pet {
     public @Nullable LivingEntity getOwner() {
         if (!tamedByVillager) return super.getOwner();
 
-        UUID ownerUUID = getOwnerUUID();
-        return ownerUUID != null ? (LivingEntity) ((ServerLevel) level()).getEntity(ownerUUID) : null;
+        UUID ownerUUID = getOwnerUniqueId();
+        return ownerUUID != null ? (LivingEntity) level().getEntity(ownerUUID) : null;
     }
 
     @Override

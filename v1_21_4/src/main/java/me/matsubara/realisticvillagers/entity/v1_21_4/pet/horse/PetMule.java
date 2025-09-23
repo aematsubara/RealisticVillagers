@@ -7,13 +7,18 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.animal.horse.Mule;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,27 +45,30 @@ public class PetMule extends Mule implements Pet, HorseEating {
     @Override
     public void tameByVillager(@NotNull IVillagerNPC npc) {
         setTamed(true);
-        setOwnerUUID(npc.bukkit().getUniqueId());
+        setOwner(((CraftLivingEntity) npc.bukkit()).getHandle());
         setTamedByVillager(true);
         setPersistenceRequired();
+        this.persist = true;
         level().broadcastEntityEvent(this, (byte) 7);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        NMSConverter.updateTamedData(plugin, tag, this, tamedByVillager);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        NMSConverter.updateTamedData(plugin, output, this, tamedByVillager);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        tamedByVillager = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByVillagerKey().toString());
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        tamedByVillager = Boolean.TRUE.equals(getBukkitEntity().getPersistentDataContainer().get(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN));
     }
 
     @Override
     public UUID getOwnerUniqueId() {
-        return super.getOwnerUUID();
+        EntityReference<LivingEntity> reference = getOwnerReference();
+        if (reference != null) return reference.getUUID();
+        return null;
     }
 
     @Override

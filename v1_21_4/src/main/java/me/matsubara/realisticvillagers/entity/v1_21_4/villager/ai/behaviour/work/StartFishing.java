@@ -46,7 +46,7 @@ public class StartFishing extends Behavior<Villager> implements Exchangeable {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         if (Config.DISABLE_SKINS.asBool()) return false;
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return false;
-        if (villager.getVillagerData().getProfession() != VillagerProfession.FISHERMAN) return false;
+        if (!villager.getVillagerData().profession().is(VillagerProfession.FISHERMAN)) return false;
         if (fishedRecently(villager)) return false;
         if (!(villager instanceof VillagerNPC npc) || !npc.isDoingNothing(ChangeItemType.USING_FISHING_ROD)) {
             return false;

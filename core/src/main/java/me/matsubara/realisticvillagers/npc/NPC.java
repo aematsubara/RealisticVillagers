@@ -151,7 +151,7 @@ public class NPC {
         if (block) nameable.setNametagItemEntity(id);
         else nameable.setNametagEntity(id);
 
-        List<EntityData> data = new ArrayList<>();
+        List<EntityData<?>> data = new ArrayList<>();
         fillGlobalData(data, block);
 
         if (block) {
@@ -163,14 +163,14 @@ public class NPC {
                 blockData = Material.AIR.createBlockData();
             }
             WrappedBlockState state = SpigotConversionUtil.fromBukkitBlockData(blockData);
-            data.add(new EntityData(23, EntityDataTypes.BLOCK_STATE, state.getGlobalId())); // Displayed block state = WrappedBlockState#getGlobalId()
+            data.add(new EntityData<>(23, EntityDataTypes.BLOCK_STATE, state.getGlobalId())); // Displayed block state = WrappedBlockState#getGlobalId()
         } else {
-            data.add(new EntityData(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameText(bukkit)))); // Text
-            data.add(new EntityData(24, EntityDataTypes.INT, 200)); // Line width
-            data.add(new EntityData(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB())); // Background color = Color#asARGB() / 1073741824
-            data.add(new EntityData(26, EntityDataTypes.BYTE, (byte) -1)); // Text opacity
+            data.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameText(bukkit)))); // Text
+            data.add(new EntityData<>(24, EntityDataTypes.INT, 200)); // Line width
+            data.add(new EntityData<>(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB())); // Background color = Color#asARGB() / 1073741824
+            data.add(new EntityData<>(26, EntityDataTypes.BYTE, (byte) -1)); // Text opacity
             // Flags (Has shadow = 0x01 / See through = 0x02 / Use default background color = 0x04 / Alignment = ?) / 0
-            data.add(new EntityData(27, EntityDataTypes.BYTE, (byte) 0x02));
+            data.add(new EntityData<>(27, EntityDataTypes.BYTE, (byte) 0x02));
         }
 
         ProtocolManager manager = PacketEvents.getAPI().getProtocolManager();
@@ -240,7 +240,7 @@ public class NPC {
         }
     }
 
-    private void fillGlobalData(List<EntityData> data, boolean block) {
+    private void fillGlobalData(List<EntityData<?>> data, boolean block) {
         Vector3f translation, scale;
         if (block) {
             int amountOfLines = getLines(npc.bukkit()).size();
@@ -252,22 +252,22 @@ public class NPC {
             scale = new Vector3f(1.0f, 1.0f, 1.0f);
         }
 
-        data.add(new EntityData(8, EntityDataTypes.INT, 0)); // Interpolation delay
-        data.add(new EntityData(9, EntityDataTypes.INT, 0)); // Transformation interpolation duration
-        data.add(new EntityData(10, EntityDataTypes.INT, 0)); // Position/Rotation interpolation duration
-        data.add(new EntityData(11, EntityDataTypes.VECTOR3F, translation)); // Translation / 0.0, 0.0, 0.0
-        data.add(new EntityData(12, EntityDataTypes.VECTOR3F, scale)); // Scale
-        data.add(new EntityData(13, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation left
-        data.add(new EntityData(14, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation right
+        data.add(new EntityData<>(8, EntityDataTypes.INT, 0)); // Interpolation delay
+        data.add(new EntityData<>(9, EntityDataTypes.INT, 0)); // Transformation interpolation duration
+        data.add(new EntityData<>(10, EntityDataTypes.INT, 0)); // Position/Rotation interpolation duration
+        data.add(new EntityData<>(11, EntityDataTypes.VECTOR3F, translation)); // Translation / 0.0, 0.0, 0.0
+        data.add(new EntityData<>(12, EntityDataTypes.VECTOR3F, scale)); // Scale
+        data.add(new EntityData<>(13, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation left
+        data.add(new EntityData<>(14, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation right
         // Billboard Constraints (0 = FIXED, 1 = VERTICAL, 2 = HORIZONTAL, 3 = CENTER) / 0
-        data.add(new EntityData(15, EntityDataTypes.BYTE, (byte) (block ? 1 : 3)));
-        data.add(new EntityData(16, EntityDataTypes.INT, -1)); // Brightness override (blockLight << 4 | skyLight << 20)
-        data.add(new EntityData(17, EntityDataTypes.FLOAT, 1.0f)); // View range
-        data.add(new EntityData(18, EntityDataTypes.FLOAT, 0.0f)); // Shadow radius
-        data.add(new EntityData(19, EntityDataTypes.FLOAT, 1.0f)); // Shadow strength
-        data.add(new EntityData(20, EntityDataTypes.FLOAT, 0.0f)); // Width
-        data.add(new EntityData(21, EntityDataTypes.FLOAT, 0.0f)); // Height
-        data.add(new EntityData(22, EntityDataTypes.INT, -1)); // Glow color override
+        data.add(new EntityData<>(15, EntityDataTypes.BYTE, (byte) (block ? 1 : 3)));
+        data.add(new EntityData<>(16, EntityDataTypes.INT, -1)); // Brightness override (blockLight << 4 | skyLight << 20)
+        data.add(new EntityData<>(17, EntityDataTypes.FLOAT, 1.0f)); // View range
+        data.add(new EntityData<>(18, EntityDataTypes.FLOAT, 0.0f)); // Shadow radius
+        data.add(new EntityData<>(19, EntityDataTypes.FLOAT, 1.0f)); // Shadow strength
+        data.add(new EntityData<>(20, EntityDataTypes.FLOAT, 0.0f)); // Width
+        data.add(new EntityData<>(21, EntityDataTypes.FLOAT, 0.0f)); // Height
+        data.add(new EntityData<>(22, EntityDataTypes.INT, -1)); // Glow color override
     }
 
     @Contract(" -> new")

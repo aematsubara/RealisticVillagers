@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_21_4.villager;
 
+import com.mojang.serialization.Codec;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
@@ -9,9 +10,15 @@ import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
-import me.matsubara.realisticvillagers.tracker.VillagerTracker;
-import net.minecraft.nbt.*;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
@@ -24,7 +31,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.function.BiFunction;
 
 @Getter
 public class OfflineVillagerNPC implements IVillagerNPC {
@@ -63,34 +69,36 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
     public static final String PLAYERS = "Players";
-    public static final BiFunction<VillagerTracker, Tag, IVillagerNPC> OFFLINE_MAPPER = (tracker, input) -> input instanceof CompoundTag compound ?
-            OfflineVillagerNPC.from(compound) :
-            tracker.getOffline(NbtUtils.loadUUID(input));
 
     public OfflineVillagerNPC(UUID uuid, CompoundTag tag, LastKnownPosition lastKnownPosition) {
         this.uuid = uuid;
         this.tag = tag;
         this.lastKnownPosition = lastKnownPosition;
-        VillagerNPC.fillCollection(
-                partners,
-                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(plugin.getTracker(), input),
+        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, MinecraftServer.getServer().registryAccess(), tag);
+        VillagerNPC.fillCollectionModern(
                 PARTNERS,
-                tag);
-        VillagerNPC.fillCollection(
-                childrens,
-                input -> OfflineVillagerNPC.OFFLINE_MAPPER.apply(plugin.getTracker(), input),
+                partners,
+                OfflineVillagerNPC::from,
+                CompoundTag.CODEC,
+                input);
+        VillagerNPC.fillCollectionModern(
                 CHILDRENS,
-                tag);
-        VillagerNPC.fillCollection(
-                targetEntities,
-                input -> EntityType.byString(input.getAsString()).orElse(null),
+                childrens,
+                OfflineVillagerNPC::from,
+                CompoundTag.CODEC,
+                input);
+        VillagerNPC.fillCollectionModern(
                 TARGET_ENTITIES,
-                tag);
-        VillagerNPC.fillCollection(
+                targetEntities,
+                value -> EntityType.byString(value).orElse(null),
+                Codec.STRING,
+                input);
+        VillagerNPC.fillCollectionModern(
+                PLAYERS,
                 players,
-                NbtUtils::loadUUID,
-                OfflineVillagerNPC.PLAYERS,
-                tag);
+                value -> value,
+                UUIDUtil.CODEC,
+                input);
     }
 
     @Contract("_, _, _, _, _, _ -> new")
@@ -100,12 +108,12 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     public static @NotNull OfflineVillagerNPC from(CompoundTag tag) {
         LastKnownPosition position = lastPositionFrom(tag);
-        return new OfflineVillagerNPC(tag.getUUID(UUID), tag, position);
+        return new OfflineVillagerNPC(tag.read(UUID, UUIDUtil.CODEC).orElse(null), tag, position);
     }
 
     public CompoundTag getTag() {
         CompoundTag tag = this.tag.copy();
-        tag.putUUID(UUID, uuid);
+        tag.store(UUID, UUIDUtil.CODEC, uuid);
         tag.putString("World", lastKnownPosition.world());
         tag.put("Pos", newDoubleList(lastKnownPosition.x(), lastKnownPosition.y(), lastKnownPosition.z()));
         return tag;
@@ -126,7 +134,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public String getVillagerName() {
-        return tag.getString(NAME);
+        return tag.getStringOr(NAME, "");
     }
 
     @Override
@@ -150,7 +158,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isPartnerVillager() {
-        return tag.getBoolean(IS_PARTNER_VILLAGER);
+        return tag.getBooleanOr(IS_PARTNER_VILLAGER, false);
     }
 
     @Override
@@ -160,7 +168,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isFatherVillager() {
-        return tag.getBoolean(IS_FATHER_VILLAGER);
+        return tag.getBooleanOr(IS_FATHER_VILLAGER, false);
     }
 
     @Override
@@ -171,11 +179,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     private @Nullable IVillagerNPC getFamily(@NotNull CompoundTag tag, String who) {
         if (!tag.contains(who)) return null;
 
-        if (tag.hasUUID(who)) {
-            UUID partnerUUID = tag.getUUID(who);
-            return plugin.getTracker().getOffline(partnerUUID);
+        UUID uuid = tag.getIntArray(who).map(UUIDUtil::uuidFromIntArray).orElse(null);
+        if (uuid != null) {
+            return plugin.getTracker().getOffline(uuid);
         } else {
-            return OfflineVillagerNPC.from(tag.getCompound(who));
+            return OfflineVillagerNPC.from(tag.getCompoundOrEmpty(who));
         }
     }
 
@@ -226,7 +234,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public String getSex() {
-        return tag.getString(SEX);
+        return tag.getStringOr(SEX, "");
     }
 
     @Override
@@ -236,7 +244,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public int getSkinTextureId() {
-        return tag.getInt(SKIN_TEXTURE_ID);
+        return tag.getIntOr(SKIN_TEXTURE_ID, 0);
     }
 
     @Override
@@ -246,7 +254,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public int getKidSkinTextureId() {
-        return tag.getInt(KID_SKIN_TEXTURE_ID);
+        return tag.getIntOr(KID_SKIN_TEXTURE_ID, 0);
     }
 
     @Override
@@ -376,7 +384,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public long getLastProcreation() {
-        return tag.getLong(LAST_PROCREATION);
+        return tag.getLongOr(LAST_PROCREATION, 0L);
     }
 
     @Override
@@ -486,7 +494,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public int getFoodLevel() {
-        return tag.getInt("foodLevel");
+        return tag.getIntOr("foodLevel", 0);
     }
 
     @Override
@@ -526,7 +534,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isEquipped() {
-        return tag.getBoolean(EQUIPPED);
+        return tag.getBooleanOr(EQUIPPED, false);
     }
 
     @Override
@@ -561,7 +569,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public boolean isWasInfected() {
-        return tag.getBoolean(OfflineVillagerNPC.WAS_INFECTED);
+        return tag.getBooleanOr(OfflineVillagerNPC.WAS_INFECTED, false);
     }
 
     @Override
@@ -610,11 +618,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     private static @NotNull LastKnownPosition lastPositionFrom(@NotNull CompoundTag tag) {
-        String world = tag.getString("World");
-        ListTag list = tag.getList("Pos", 6);
-        double x = list.getDouble(0);
-        double y = list.getDouble(1);
-        double z = list.getDouble(2);
+        String world = tag.getStringOr("World", "");
+        ListTag list = tag.getListOrEmpty("Pos");
+        double x = list.getDoubleOr(0, 0.0d);
+        double y = list.getDoubleOr(1, 0.0d);
+        double z = list.getDoubleOr(2, 0.0d);
         return new LastKnownPosition(world, x, y, z);
     }
 }

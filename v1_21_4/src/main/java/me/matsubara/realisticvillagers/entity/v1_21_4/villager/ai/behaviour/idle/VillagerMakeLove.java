@@ -8,6 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.Brain;
@@ -19,7 +20,9 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.pathfinder.Path;
-import org.bukkit.craftbukkit.v1_21_R3.event.CraftEventFactory;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
+import org.bukkit.craftbukkit.v1_21_R5.event.CraftEventFactory;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.jetbrains.annotations.NotNull;
 
@@ -147,17 +150,20 @@ public class VillagerMakeLove extends Behavior<Villager> {
         breedWith.setAge(6000);
 
         // To initialize name and sex.
-        baby.loadPluginData(new CompoundTag());
+        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), new CompoundTag());
+        baby.loadPluginData(input);
 
-        // Add children to parents list.
+        // Add children to parents' list.
         breed.getChildrens().add(baby.getOffline());
         npc.getChildrens().add(baby.getOffline());
 
         baby.setAge(-24000);
-        baby.moveTo(villager.getX(), villager.getY(), villager.getZ(), 0.0f, 0.0f);
+        baby.setPos(villager.getX(), villager.getY(), villager.getZ());
+        baby.setYRot(0.0f);
+        baby.setXRot(0.0f);
 
-        baby.setMother(npc.isFemale() ? ((VillagerNPC) villager).getOffline() : ((VillagerNPC) breedWith).getOffline());
-        baby.setFather(npc.isFemale() ? ((VillagerNPC) breedWith).getOffline() : ((VillagerNPC) villager).getOffline());
+        baby.setMother(npc.isFemale() ? npc.getOffline() : breed.getOffline());
+        baby.setFather(npc.isFemale() ? breed.getOffline() : npc.getOffline());
         baby.setFatherVillager(true);
 
         level.addFreshEntityWithPassengers(baby, SpawnReason.BREEDING);

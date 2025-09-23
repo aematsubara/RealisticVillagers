@@ -6,7 +6,6 @@ import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -29,6 +28,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -87,7 +88,9 @@ public class DummyFishingHook extends FishingHook {
         double x = npc.getX() - (double) dX * 0.5d;
         double y = npc.getEyeY();
         double z = npc.getZ() - (double) dZ * 0.5d;
-        moveTo(x, y, z, yRot, xRot);
+        setPos(x, y, z);
+        setYRot(yRot);
+        setXRot(xRot);
 
         Vec3 delta = new Vec3(-dX, Mth.clamp(-(dsY / dcY), -5.0f, 5.0f), -dZ);
         setDeltaMovement(delta.multiply(
@@ -123,17 +126,17 @@ public class DummyFishingHook extends FishingHook {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag nbttagcompound) {
-        super.addAdditionalSaveData(nbttagcompound);
-        if (leftOwner) nbttagcompound.putBoolean("LeftOwner", true);
-        nbttagcompound.putBoolean("HasBeenShot", hasBeenShot);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        if (leftOwner) output.putBoolean("LeftOwner", true);
+        output.putBoolean("HasBeenShot", hasBeenShot);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag nbttagcompound) {
-        super.readAdditionalSaveData(nbttagcompound);
-        leftOwner = nbttagcompound.getBoolean("LeftOwner");
-        hasBeenShot = nbttagcompound.getBoolean("HasBeenShot");
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        leftOwner = input.getBooleanOr("LeftOwner", false);
+        hasBeenShot = input.getBooleanOr("HasBeenShot", false);
     }
 
     private boolean checkLeftOwner() {

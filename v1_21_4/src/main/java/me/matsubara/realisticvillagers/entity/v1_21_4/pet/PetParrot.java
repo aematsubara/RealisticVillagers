@@ -9,16 +9,12 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.animal.Parrot;
@@ -26,8 +22,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftParrot;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftParrot;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -61,22 +62,25 @@ public class PetParrot extends Parrot implements Pet {
         }
 
         setTame(true, true);
-        setOwnerUUID(npc.bukkit().getUniqueId());
+        setOwner(((CraftLivingEntity) npc.bukkit()).getHandle());
         setTamedByVillager(true);
         setPersistenceRequired();
+        this.persist = true;
     }
 
     @Override
     public UUID getOwnerUniqueId() {
-        return super.getOwnerUUID();
+        EntityReference<LivingEntity> reference = getOwnerReference();
+        if (reference != null) return reference.getUUID();
+        return null;
     }
 
     public boolean setEntityOnShoulder(@NotNull VillagerNPC npc) {
-        CompoundTag tag = new CompoundTag();
-        tag.putString("id", getEncodeId());
-        saveWithoutId(tag);
+        TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
+        output.putString("id", getEncodeId());
+        saveWithoutId(output);
 
-        if (!npc.setEntityOnShoulder(tag)) return false;
+        if (!npc.setEntityOnShoulder(output.buildResult())) return false;
 
         discard();
         return true;
@@ -101,23 +105,23 @@ public class PetParrot extends Parrot implements Pet {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        NMSConverter.updateTamedData(plugin, tag, this, tamedByVillager);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        NMSConverter.updateTamedData(plugin, output, this, tamedByVillager);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        tamedByVillager = NMSConverter.getOrCreateBukkitTag(tag).getBoolean(plugin.getTamedByVillagerKey().toString());
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        tamedByVillager = Boolean.TRUE.equals(getBukkitEntity().getPersistentDataContainer().get(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN));
     }
 
     @Override
     public @Nullable LivingEntity getOwner() {
         if (!tamedByVillager) return super.getOwner();
 
-        UUID ownerUUID = getOwnerUUID();
-        return ownerUUID != null ? (LivingEntity) ((ServerLevel) level()).getEntity(ownerUUID) : null;
+        UUID ownerUUID = getOwnerUniqueId();
+        return ownerUUID != null ? (LivingEntity) level().getEntity(ownerUUID) : null;
     }
 
     @Override

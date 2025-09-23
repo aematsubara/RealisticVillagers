@@ -22,7 +22,7 @@ import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftEntity;
 import org.bukkit.event.entity.EntityTeleportEvent;
 import org.jetbrains.annotations.NotNull;
 
@@ -158,7 +158,9 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
         to = event.getTo();
         if (to == null) return false;
 
-        mob.moveTo(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
+        mob.setPos(to.getX(), to.getY(), to.getZ());
+        mob.setYRot(to.getYaw());
+        mob.setXRot(to.getPitch());
         mob.getNavigation().stop();
         return true;
     }

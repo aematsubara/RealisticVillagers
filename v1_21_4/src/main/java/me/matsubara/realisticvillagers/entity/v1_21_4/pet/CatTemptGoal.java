@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_21_4.pet;
 
+import lombok.Getter;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -7,8 +8,8 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.animal.Cat;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.bukkit.craftbukkit.v1_21_R3.entity.CraftLivingEntity;
-import org.bukkit.craftbukkit.v1_21_R3.event.CraftEventFactory;
+import org.bukkit.craftbukkit.v1_21_R5.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_21_R5.event.CraftEventFactory;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +34,7 @@ public class CatTemptGoal extends Goal {
     private @Nullable LivingEntity b;
     private @Nullable LivingEntity c;
     private int calmDown;
+    @Getter
     private boolean isRunning;
     private int tryVillagerAgain;
 
@@ -152,9 +154,5 @@ public class CatTemptGoal extends Goal {
         } else if (cat.getRandom().nextInt(adjustedTickDelay(500)) == 0) {
             c = null;
         }
-    }
-
-    public boolean isRunning() {
-        return isRunning;
     }
 }

@@ -32,7 +32,7 @@ public class YieldJobSite {
                         behaviorBuilder.registered(MemoryModuleType.LOOK_TARGET))
                 .apply(behaviorBuilder, (potentialSite, jobSite, nearestLiving, walkTarget, lookTarget) -> (level, villager, time) -> {
                     if (villager.isBaby()) return false;
-                    if (villager.getVillagerData().getProfession() == VillagerProfession.NONE) return false;
+                    if (villager.getVillagerData().profession().is(VillagerProfession.NONE)) return false;
                     if (!GoToPotentialJobSite.isDoingNothing(villager)) return false;
 
                     BlockPos pos = behaviorBuilder.get(potentialSite).pos();
@@ -67,7 +67,7 @@ public class YieldJobSite {
         }
 
         Optional<GlobalPos> jobSite = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
-        if (villager.getVillagerData().getProfession().heldJobSite().test(type)) {
+        if (villager.getVillagerData().profession().value().heldJobSite().test(type)) {
             return jobSite.map(globalPos -> globalPos.pos().equals(pos)).orElseGet(() -> canReachPos(villager, pos, type.value()));
         }
 
