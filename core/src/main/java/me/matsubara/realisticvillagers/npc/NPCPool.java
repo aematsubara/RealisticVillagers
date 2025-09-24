@@ -21,6 +21,7 @@ public class NPCPool implements Listener, Runnable {
 
     private final @Getter RealisticVillagers plugin;
     private final Map<Integer, NPC> npcMap = new ConcurrentHashMap<>();
+    private int tick = 0;
 
     private static final double BUKKIT_VIEW_DISTANCE = Math.pow(Bukkit.getViewDistance() << 4, 2);
 
@@ -46,6 +47,7 @@ public class NPCPool implements Listener, Runnable {
                 handleVisibility(player, player.getLocation(), npc);
             }
         }
+        tick++;
     }
 
     protected void takeCareOf(NPC npc) {
@@ -63,8 +65,6 @@ public class NPCPool implements Listener, Runnable {
     public void removeNPC(int entityId) {
         getNPC(entityId).ifPresent(npc -> {
             npcMap.remove(entityId);
-
-            // If possible, remove the NPC for every player in the world to prevent ghost nametags.
             LivingEntity bukkit = npc.getNpc().bukkit();
             if (bukkit != null) {
                 List.copyOf(bukkit.getWorld().getPlayers()).forEach(npc::hide);
@@ -97,6 +97,11 @@ public class NPCPool implements Listener, Runnable {
             npc.hide(player);
         } else if (npcRange && !npc.isShownFor(player)) {
             npc.show(player);
+        }
+
+        // Send passengers again to prevent ghost-nametags.
+        if (tick % 50 == 0 && npc.isShownFor(player)) {
+            npc.sendPassengers(player);
         }
     }
 

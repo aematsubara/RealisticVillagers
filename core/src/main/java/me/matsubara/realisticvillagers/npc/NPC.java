@@ -34,6 +34,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.entity.memory.MemoryKey;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -91,6 +92,30 @@ public class NPC {
             hideBlockItem(player);
             return;
         }
+
+        WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId, new int[]{blockId});
+        manager.sendPacket(channel, blockPassengers);
+    }
+
+    public void sendPassengers(Player player) {
+        if (!ENABLED) return;
+
+        if (!(npc instanceof Nameable nameable)) return;
+        if (Config.DISABLE_NAMETAGS.asBool()) return;
+
+        int itemId = nameable.getNametagEntity();
+        if (itemId == IGNORE) return;
+
+        ProtocolManager manager = PacketEvents.getAPI().getProtocolManager();
+        Object channel = SpigotReflectionUtil.getChannel(player);
+
+        WrapperPlayServerSetPassengers itemPassengers = new WrapperPlayServerSetPassengers(npc.bukkit().getEntityId(), new int[]{itemId});
+        manager.sendPacket(channel, itemPassengers);
+
+        if (!Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool()) return;
+
+        int blockId = nameable.getNametagItemEntity();
+        if (blockId == IGNORE || blockId == NO_BLOCK) return;
 
         WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId, new int[]{blockId});
         manager.sendPacket(channel, blockPassengers);
@@ -284,26 +309,33 @@ public class NPC {
 
         VisibilityModifier modifier = visibility();
         modifier.queuePlayerListChange(false).send(player);
+        modifier.queueSpawn(location).send(player);
+        spawnCustomizer.handleSpawn(this, player);
 
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            modifier.queueSpawn(location).send(player);
-            spawnCustomizer.handleSpawn(this, player);
-            spawnNametags(player, true);
+        BukkitScheduler scheduler = Bukkit.getScheduler();
 
-            // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
-            Bukkit.getScheduler().runTaskLater(
-                    plugin,
-                    () -> modifier.queuePlayerListChange(true).send(player),
-                    40);
-        }, 10L);
+        // Spawn the nametags a few ticks after the NPC spawns.
+        scheduler.runTaskLater(plugin,
+                () -> {
+                    if (isShownFor(player)) {
+                        spawnNametags(player, true);
+                    }
+                },
+                10L);
+
+        // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
+        scheduler.runTaskLater(
+                plugin,
+                () -> modifier.queuePlayerListChange(true).send(player),
+                40L);
     }
 
     public void hide(Player player) {
+        hideNametags(player);
         visibility()
                 .queuePlayerListChange(true)
                 .queueDestroy()
                 .send(player);
-        hideNametags(player);
         removeSeeingPlayer(player);
     }
 

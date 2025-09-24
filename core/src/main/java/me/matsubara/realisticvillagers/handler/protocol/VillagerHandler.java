@@ -90,7 +90,8 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
                         PacketType.Play.Server.SPAWN_ENTITY,
                         PacketType.Play.Server.SPAWN_LIVING_ENTITY,
                         PacketType.Play.Server.ENTITY_STATUS,
-                        PacketType.Play.Server.ENTITY_METADATA)
+                        PacketType.Play.Server.ENTITY_METADATA,
+                        PacketType.Play.Server.DESTROY_ENTITIES)
                 .build()
                 .stream()
                 .map(object -> (PacketType.Play.Server) object)
@@ -126,6 +127,15 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
             // Should "fix" → IOException: Unknown nbt type id X.
             // Should "fix" → NullPointerException: null (entity)
             if (isMetadata) event.setCancelled(true);
+            return;
+        }
+
+        if (type == PacketType.Play.Server.DESTROY_ENTITIES) {
+            // NPC is removed? then remove the nametag too.
+            WrapperPlayServerDestroyEntities destroy = new WrapperPlayServerDestroyEntities(event);
+            for (int entityId : destroy.getEntityIds()) {
+                plugin.getTracker().getNPC(entityId).ifPresent(npc -> npc.hideNametags(player));
+            }
             return;
         }
 
