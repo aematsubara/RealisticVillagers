@@ -61,7 +61,7 @@
         <!-- core -->
         <dependency>
             <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-core</artifactId>
+                        <artifactId>realisticvillagers-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <!-- v1_18 -->
@@ -86,12 +86,6 @@
         <dependency>
             <groupId>me.matsubara</groupId>
             <artifactId>realisticvillagers-v1_21</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
-        <!-- v1_21_4 -->
-        <dependency>
-            <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-v1_21_4</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>

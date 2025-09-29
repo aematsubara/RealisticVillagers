@@ -26,6 +26,7 @@ import me.matsubara.realisticvillagers.manager.gift.GiftManager;
 import me.matsubara.realisticvillagers.manager.revive.ReviveManager;
 import me.matsubara.realisticvillagers.nms.INMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
+import me.matsubara.realisticvillagers.entity.PlayerProcreationTracker;
 import me.matsubara.realisticvillagers.util.*;
 import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import net.wesjd.anvilgui.AnvilGUI;
@@ -45,6 +46,7 @@ import org.bukkit.inventory.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.Metadatable;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
@@ -97,7 +99,9 @@ public final class RealisticVillagers extends JavaPlugin {
     private OtherListeners otherListeners;
     private PlayerListeners playerListeners;
     private VillagerListeners villagerListeners;
+    private MarriageListener marriageListener;
 
+    private PlayerProcreationTracker playerProcreationTracker;
     private VillagerTracker tracker;
     private @Setter Shape ring;
     private @Setter Shape whistle;
@@ -164,6 +168,7 @@ public final class RealisticVillagers extends JavaPlugin {
         addCompatibility("EliteMobs", EMCompatibility::new);
         addCompatibility("ViaVersion", ViaCompatibility::new);
         addCompatibility("VillagerTradeLimiter", VTLCompatibility::new);
+        addCompatibility("MarriageMaster", MarriageCompatibility::new);
 
         logger.info("Compatibilities loaded!");
         logger.info("");
@@ -270,7 +275,10 @@ public final class RealisticVillagers extends JavaPlugin {
                 (inventoryListeners = new InventoryListeners(this)),
                 (otherListeners = new OtherListeners(this)),
                 (playerListeners = new PlayerListeners(this)),
-                (villagerListeners = new VillagerListeners(this)));
+                (villagerListeners = new VillagerListeners(this)),
+                (marriageListener = new MarriageListener(this))
+        );
+
 
         // Used in previous versions, not needed any more.
         FileUtils.deleteQuietly(new File(getDataFolder(), "villagers.yml"));
@@ -281,6 +289,7 @@ public final class RealisticVillagers extends JavaPlugin {
         MainCommand main = new MainCommand(this);
         command.setExecutor(main);
         command.setTabCompleter(main);
+
 
         logLoadingTime(false, now);
 
@@ -338,7 +347,7 @@ public final class RealisticVillagers extends JavaPlugin {
     public void updateConfigs() {
         String pluginFolder = getDataFolder().getPath();
         String skinFolder = getSkinFolder();
-
+        this.playerProcreationTracker = new PlayerProcreationTracker();
         Predicate<FileConfiguration> noVersion = temp -> !temp.contains("config-version");
 
         // config.yml
@@ -542,6 +551,8 @@ public final class RealisticVillagers extends JavaPlugin {
             exception.printStackTrace();
         }
     }
+
+    public PlayerProcreationTracker getProcreationTracker() {return playerProcreationTracker;}
 
     public record ConfigChanges(Predicate<FileConfiguration> predicate,
                                 Consumer<FileConfiguration> consumer,
@@ -760,6 +771,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
         TextureProperty textures = tracker.getTextures(npc.getSex(), "none", npc.getSkinTextureId());
         return textures.getName().equals("error") ? UNKNOWN_HEAD_TEXTURE : PluginUtils.getURLFromTexture(textures.getValue());
+
     }
 
     private @NotNull Set<Color> getColors(@NotNull FileConfiguration config, String path, String effect, String needed) {
@@ -793,17 +805,22 @@ public final class RealisticVillagers extends JavaPlugin {
         File file = new File(getDataFolder(), name);
         if (!file.exists()) saveResource(name, false);
     }
+    //MarriageMaster
+    private boolean marriedPlayer(@NotNull Player player) {
 
+        Plugin marriage = Bukkit.getServer().getPluginManager().getPlugin("MarriageMaster");
+        return getCompatibilityManager().marriedPlayer(player);
+    }
     public boolean isMarried(@NotNull Player player) {
+        if (marriedPlayer(player)) return true;
         String partner = player.getPersistentDataContainer().get(marriedWith, PersistentDataType.STRING);
         if (partner == null) return false;
-
+        
         IVillagerNPC partnerInfo = tracker.getOffline(UUID.fromString(partner));
         if (partnerInfo == null) {
             player.getPersistentDataContainer().remove(marriedWith);
             return false;
         }
-
         return true;
     }
 
@@ -854,6 +871,7 @@ public final class RealisticVillagers extends JavaPlugin {
         // Not really a gift, but we use the same system.
         return GiftCategory.appliesToVillager(wantedItems, npc, item, isItemPickup);
     }
+
 
     public @Nullable LivingEntity getUnloadedOffline(@NotNull IVillagerNPC offline) {
         LivingEntity bukkit = offline.bukkit();
