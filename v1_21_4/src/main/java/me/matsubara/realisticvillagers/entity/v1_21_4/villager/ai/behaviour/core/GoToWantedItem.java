@@ -19,7 +19,7 @@ public class GoToWantedItem extends Behavior<Villager> {
     public GoToWantedItem(float speedModifier, int maxDistToWalk) {
         super(ImmutableMap.of(
                 MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED,
-                MemoryModuleType.WALK_TARGET, MemoryStatus.REGISTERED,
+                MemoryModuleType.WALK_TARGET, MemoryStatus.REGISTERED, // By default, this should be absent, but we need it to be registered for gifting.
                 VillagerNPC.NEAREST_WANTED_ITEM, MemoryStatus.VALUE_PRESENT));
         this.speedModifier = speedModifier;
         this.maxDistToWalk = maxDistToWalk;
@@ -29,13 +29,15 @@ public class GoToWantedItem extends Behavior<Villager> {
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         if (!(villager instanceof VillagerNPC npc)) return false;
 
-        // If item is a gift or has been fished by this villager, go to the item regardless of distance and cooldown.
-        ItemEntity closest = getClosestLovedItem(villager);
+        // If the item is a gift or has been fished by this villager, go to the item regardless of distance and cooldown.
+        ItemEntity closest = getClosestLovedItem(npc);
         if (force(npc, closest)) return true;
 
-        return closest.closerThan(villager, maxDistToWalk)
-                && !isOnPickupCooldown(villager)
-                && !villager.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET);
+        return closest.closerThan(npc, maxDistToWalk)
+                && villager.canPickUpLoot()
+                && level.getWorldBorder().isWithinBounds(closest.blockPosition())
+                && !isOnPickupCooldown(npc)
+                && !npc.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET);
     }
 
     @Override

@@ -11,11 +11,12 @@ import me.matsubara.realisticvillagers.entity.v1_20_6.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_20_6.pet.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_20_6.pet.horse.HorseEating;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.*;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.GiveGiftToHero;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.SetEntityLookTarget;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.ShowTradesToPlayer;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.TradeWithVillager;
-import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.*;
+import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.*;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.GoToPotentialJobSite;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.GoToWantedItem;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.LookAtTargetSink;
@@ -23,12 +24,11 @@ import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.SetRaidStatus;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.VillagerPanicTrigger;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.YieldJobSite;
-import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.core.*;
+import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.*;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.BackUpIfTooClose;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.MeleeAttack;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.SetWalkTargetFromAttackTargetIfTargetOutOfReach;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.StopAttackingIfTargetInvalid;
-import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fight.*;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.hide.SetHiddenState;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.idle.InteractWithBreed;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.idle.VillagerMakeLove;
@@ -40,16 +40,20 @@ import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.work
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.work.UseBonemeal;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.work.WorkAtBarrel;
 import me.matsubara.realisticvillagers.files.Config;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.behavior.GateBehavior.OrderPolicy;
 import net.minecraft.world.entity.ai.behavior.GateBehavior.RunningPolicy;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.npc.Villager;
@@ -58,6 +62,8 @@ import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -79,6 +85,9 @@ public class VillagerNPCGoalPackages {
     private static final Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
             (npc.isAttackingWithTrident() ? TridentAttack.TRIDENT_DISTANCE_ATTACK : npc.getMeleeAttackRangeSqr()) :
             MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW;
+    private static final long MIN_TIME_BETWEEN_STROLLS = 180L;
+    private static final int STROLL_MAX_XZ_DIST = 8;
+    private static final int STROLL_MAX_Y_DIST = 6;
 
     public static @NotNull ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getCorePackage(@NotNull VillagerProfession profession) {
         return ImmutableList.of(
@@ -294,10 +303,33 @@ public class VillagerNPCGoalPackages {
         return ImmutableList.of(
                 getFullLookBehavior(),
                 Pair.of(0, new RunOne<>(ImmutableList.of(
-                        Pair.of(StrollAroundPoi.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 3), 2),
+                        Pair.of(createStrollAroundStayPoint(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 3), 2),
                         Pair.of(StrollToPoi.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 1, 4), 5)))),
                 Pair.of(2, SetWalkTargetFromBlockMemory.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 5, 100, 1200)),
                 Pair.of(99, new ResetStayStatus()));
+    }
+
+    public static @NotNull OneShot<PathfinderMob> createStrollAroundStayPoint(MemoryModuleType<GlobalPos> memory, float speed, int distance) {
+        MutableLong mutable = new MutableLong(0L);
+        return BehaviorBuilder.create((instance) -> instance
+                .group(
+                        instance.registered(MemoryModuleType.WALK_TARGET),
+                        instance.present(memory))
+                .apply(instance, (target, pos) -> (level, mob, time) -> {
+                    if (!Config.STAY_STROLL_AROUND.asBool()) return false;
+
+                    GlobalPos global = instance.get(pos);
+                    if (level.dimension() != global.dimension()
+                            || !global.pos().closerToCenterThan(mob.position(), distance))
+                        return false;
+
+                    if (time <= mutable.getValue()) return true;
+
+                    Optional<Vec3> random = Optional.ofNullable(LandRandomPos.getPos(mob, STROLL_MAX_XZ_DIST, STROLL_MAX_Y_DIST));
+                    target.setOrErase(random.map((vec) -> new WalkTarget(vec, speed, 1)));
+                    mutable.setValue(time + MIN_TIME_BETWEEN_STROLLS);
+                    return true;
+                }));
     }
 
     @Contract(" -> new")

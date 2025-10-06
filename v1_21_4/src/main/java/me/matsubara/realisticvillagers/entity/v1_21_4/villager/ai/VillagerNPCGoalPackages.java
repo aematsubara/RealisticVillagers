@@ -40,17 +40,23 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work.UseBonemeal;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.work.WorkAtBarrel;
 import me.matsubara.realisticvillagers.files.Config;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.behavior.GateBehavior.OrderPolicy;
 import net.minecraft.world.entity.ai.behavior.GateBehavior.RunningPolicy;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.npc.Villager;
@@ -58,7 +64,11 @@ import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -80,6 +90,9 @@ public class VillagerNPCGoalPackages {
     private static final Function<VillagerNPC, Integer> BACK_UP_FUNCTION = npc -> npc.isHoldingMeleeWeapon() ?
             (npc.isAttackingWithTrident() ? TridentAttack.TRIDENT_DISTANCE_ATTACK : npc.getMeleeAttackRangeSqr()) :
             MIN_DESIRED_DIST_FROM_TARGET_WHEN_HOLDING_CROSSBOW;
+    private static final long MIN_TIME_BETWEEN_STROLLS = 180L;
+    private static final int STROLL_MAX_XZ_DIST = 8;
+    private static final int STROLL_MAX_Y_DIST = 6;
 
     public static @NotNull ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getCorePackage(@NotNull VillagerProfession profession) {
         return ImmutableList.of(
@@ -109,7 +122,7 @@ public class VillagerNPCGoalPackages {
                         (level, pos) -> true)),
                 Pair.of(7, new GoToPotentialJobSite(VillagerNPC.WALK_SPEED.get())),
                 Pair.of(8, YieldJobSite.create(VillagerNPC.WALK_SPEED.get())),
-                Pair.of(10, AcquirePoi.create(holder -> holder.is(PoiTypes.HOME), MemoryModuleType.HOME, false, Optional.of((byte) 14))),
+                Pair.of(10, AcquirePoi.create(holder -> holder.is(PoiTypes.HOME), MemoryModuleType.HOME, false, Optional.of((byte) 14), VillagerNPCGoalPackages::validateBedPoi)),
                 Pair.of(10, AcquirePoi.create(holder -> holder.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT, true, Optional.of((byte) 14))),
                 Pair.of(10, AssignProfessionFromJobSite.create()),
                 Pair.of(10, ResetProfession.create()),
@@ -146,6 +159,11 @@ public class VillagerNPCGoalPackages {
                         ImmutableSet.of(Items.BONE))),
                 Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())),
                 Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())));
+    }
+
+    private static boolean validateBedPoi(@NotNull ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.is(BlockTags.BEDS) && !(Boolean) state.getValue(BedBlock.OCCUPIED);
     }
 
     @Contract("_, _, _ -> new")
@@ -296,10 +314,33 @@ public class VillagerNPCGoalPackages {
         return ImmutableList.of(
                 getFullLookBehavior(),
                 Pair.of(0, new RunOne<>(ImmutableList.of(
-                        Pair.of(StrollAroundPoi.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 3), 2),
+                        Pair.of(createStrollAroundStayPoint(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 3), 2),
                         Pair.of(StrollToPoi.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 1, 4), 5)))),
                 Pair.of(2, SetWalkTargetFromBlockMemory.create(VillagerNPC.STAY_PLACE, VillagerNPC.WALK_SPEED.get(), 5, 100, 1200)),
                 Pair.of(99, new ResetStayStatus()));
+    }
+
+    public static @NotNull OneShot<PathfinderMob> createStrollAroundStayPoint(MemoryModuleType<GlobalPos> memory, float speed, int distance) {
+        MutableLong mutable = new MutableLong(0L);
+        return BehaviorBuilder.create((instance) -> instance
+                .group(
+                        instance.registered(MemoryModuleType.WALK_TARGET),
+                        instance.present(memory))
+                .apply(instance, (target, pos) -> (level, mob, time) -> {
+                    if (!Config.STAY_STROLL_AROUND.asBool()) return false;
+
+                    GlobalPos global = instance.get(pos);
+                    if (level.dimension() != global.dimension()
+                            || !global.pos().closerToCenterThan(mob.position(), distance))
+                        return false;
+
+                    if (time <= mutable.getValue()) return true;
+
+                    Optional<Vec3> random = Optional.ofNullable(LandRandomPos.getPos(mob, STROLL_MAX_XZ_DIST, STROLL_MAX_Y_DIST));
+                    target.setOrErase(random.map((vec) -> new WalkTarget(vec, speed, 1)));
+                    mutable.setValue(time + MIN_TIME_BETWEEN_STROLLS);
+                    return true;
+                }));
     }
 
     @Contract(" -> new")

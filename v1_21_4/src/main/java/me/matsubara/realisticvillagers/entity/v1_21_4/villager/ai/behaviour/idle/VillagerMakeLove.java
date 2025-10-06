@@ -1,14 +1,13 @@
 package me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.idle;
 
 import com.google.common.collect.ImmutableMap;
+import me.matsubara.realisticvillagers.entity.v1_21_4.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.DebugPackets;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.Brain;
@@ -20,8 +19,6 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.ValueInput;
 import org.bukkit.craftbukkit.v1_21_R5.event.CraftEventFactory;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.jetbrains.annotations.NotNull;
@@ -150,8 +147,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
         breedWith.setAge(6000);
 
         // To initialize name and sex.
-        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), new CompoundTag());
-        baby.loadPluginData(input);
+        baby.loadFromOffline(OfflineVillagerNPC.DUMMY_OFFLINE);
 
         // Add children to parents' list.
         breed.getChildrens().add(baby.getOffline());

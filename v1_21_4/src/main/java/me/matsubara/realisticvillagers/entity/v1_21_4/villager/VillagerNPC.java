@@ -1,9 +1,9 @@
 package me.matsubara.realisticvillagers.entity.v1_21_4.villager;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.jeff_media.morepersistentdatatypes.DataType;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
@@ -36,7 +36,10 @@ import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import net.minecraft.core.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -110,7 +113,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -118,7 +120,6 @@ import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_21_R5.CraftRegionAccessor;
@@ -140,7 +141,6 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -231,35 +231,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public static final Activity STAY = NMSConverter.registerActivity("stay");
 
-    private static final ImmutableList<MemoryModuleType<?>> MEMORIES = ImmutableList.of(
-            MemoryModuleType.HOME,
-            MemoryModuleType.JOB_SITE,
-            MemoryModuleType.POTENTIAL_JOB_SITE,
-            MemoryModuleType.MEETING_POINT,
-            MemoryModuleType.NEAREST_LIVING_ENTITIES,
-            MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-            MemoryModuleType.VISIBLE_VILLAGER_BABIES,
-            MemoryModuleType.NEAREST_PLAYERS,
-            MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-            MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-            MemoryModuleType.WALK_TARGET,
-            MemoryModuleType.LOOK_TARGET,
-            MemoryModuleType.INTERACTION_TARGET,
-            MemoryModuleType.BREED_TARGET,
-            MemoryModuleType.PATH,
-            MemoryModuleType.DOORS_TO_CLOSE,
-            MemoryModuleType.NEAREST_BED,
-            MemoryModuleType.HURT_BY,
-            MemoryModuleType.HURT_BY_ENTITY,
-            MemoryModuleType.NEAREST_HOSTILE,
-            MemoryModuleType.SECONDARY_JOB_SITE,
-            MemoryModuleType.HIDING_PLACE,
-            MemoryModuleType.HEARD_BELL_TIME,
-            MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-            MemoryModuleType.LAST_SLEPT,
-            MemoryModuleType.LAST_WOKEN,
-            MemoryModuleType.LAST_WORKED_AT_POI,
-            MemoryModuleType.GOLEM_DETECTED_RECENTLY,
+    private static final ImmutableList<MemoryModuleType<?>> MEMORIES;
+    @SuppressWarnings("DataFlowIssue")
+    private static final ImmutableList<MemoryModuleType<?>> OUR_MEMORIES = ImmutableList.of(
             HAS_HELPED_FAMILY_RECENTLY,
             HAS_HEALED_GOLEM_RECENTLY,
             HAS_FISHED_RECENTLY,
@@ -271,9 +245,44 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             PLAYER_HORN,
             TARGET_REASON,
             NEAREST_WANTED_ITEM,
-            NEAREST_PRIMED_TNT,
-            MemoryModuleType.ATTACK_TARGET,
-            MemoryModuleType.ATTACK_COOLING_DOWN);
+            NEAREST_PRIMED_TNT);
+
+    static {
+        List<MemoryModuleType<?>> memories = new ArrayList<>();
+        memories.addAll(List.of(
+                MemoryModuleType.HOME,
+                MemoryModuleType.JOB_SITE,
+                MemoryModuleType.POTENTIAL_JOB_SITE,
+                MemoryModuleType.MEETING_POINT,
+                MemoryModuleType.NEAREST_LIVING_ENTITIES,
+                MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
+                MemoryModuleType.VISIBLE_VILLAGER_BABIES,
+                MemoryModuleType.NEAREST_PLAYERS,
+                MemoryModuleType.NEAREST_VISIBLE_PLAYER,
+                MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
+                MemoryModuleType.WALK_TARGET,
+                MemoryModuleType.LOOK_TARGET,
+                MemoryModuleType.INTERACTION_TARGET,
+                MemoryModuleType.BREED_TARGET,
+                MemoryModuleType.PATH,
+                MemoryModuleType.DOORS_TO_CLOSE,
+                MemoryModuleType.NEAREST_BED,
+                MemoryModuleType.HURT_BY,
+                MemoryModuleType.HURT_BY_ENTITY,
+                MemoryModuleType.NEAREST_HOSTILE,
+                MemoryModuleType.SECONDARY_JOB_SITE,
+                MemoryModuleType.HIDING_PLACE,
+                MemoryModuleType.HEARD_BELL_TIME,
+                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
+                MemoryModuleType.LAST_SLEPT,
+                MemoryModuleType.LAST_WOKEN,
+                MemoryModuleType.LAST_WORKED_AT_POI,
+                MemoryModuleType.GOLEM_DETECTED_RECENTLY,
+                MemoryModuleType.ATTACK_TARGET,
+                MemoryModuleType.ATTACK_COOLING_DOWN));
+        memories.addAll(OUR_MEMORIES);
+        MEMORIES = ImmutableList.copyOf(memories);
+    }
 
     private static final SensorType<VillagerHostilesSensor> VILLAGER_HOSTILES = NMSConverter.registerSensor("rv_villager_hostiles", VillagerHostilesSensor::new);
     private static final SensorType<NearestItemSensor> NEAREST_ITEMS = NMSConverter.registerSensor("rv_nearest_items", NearestItemSensor::new);
@@ -413,70 +422,103 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
+        // Remove our memories BEFORE the brain is saved (we don't need them to be persistent anyways).
+        // Fix: Trying to access unbound value.
+        OUR_MEMORIES.forEach(brain::eraseMemory);
+
         super.addAdditionalSaveData(output);
+
+        // After addAdditionalSaveData() is called, CraftEntity#storeBukkitValues() will save the values inside the container.
+        // For now, we'll use the default inventory / InventoryCarrier#writeInventoryToTag() (until we find a clever way of saving/reading the whole inventory).
+        if (getOffline() instanceof OfflineVillagerNPC offline) {
+            CraftVillager bukkit = getBukkitEntity();
+            CraftPersistentDataContainer container = bukkit.getPersistentDataContainer();
+
+            container.remove(plugin.getLegacyNpcValuesKey()); // Remove previous data.
+
+            container.set(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA, offline); // Save data using the new system.
+            container.set(plugin.getInventoryKey(), DataType.ITEM_STACK_ARRAY, bukkit.getInventory().getContents()); // Save inventory.
+        }
 
         output.putLong("LastGossipDecay", lastGossipDecayTime);
 
         // Save the previous (vanilla) custom name.
         output.storeNullable("CustomName", ComponentSerialization.CODEC, getCustomName(true));
 
-        ValueOutput bukkit = output.child("BukkitValues");
-
-        ValueOutput npc = bukkit.child(plugin.getNpcValuesKey().toString());
-        savePluginData(npc);
-
-        if (output instanceof TagValueOutput tag) {
-            NMSConverter.updateBukkitValues(tag.buildResult(), plugin.getNpcValuesKey().getNamespace(), this);
-        }
-
         stopAllInteractions();
     }
 
-    public void savePluginData(@NotNull ValueOutput output) {
-        output.store(OfflineVillagerNPC.UUID, UUIDUtil.CODEC, uuid);
-        inventory.storeAsItemList(output.list("Inventory", ItemStack.CODEC));
-        if (villagerName != null) output.putString(OfflineVillagerNPC.NAME, villagerName);
-        if (sex != null) output.putString(OfflineVillagerNPC.SEX, sex);
-        if (partner != null) output.store(OfflineVillagerNPC.PARTNER, CompoundTag.CODEC, fromOffline(partner));
-        saveCollectionModern(OfflineVillagerNPC.PARTNERS, partners, this::fromOffline, CompoundTag.CODEC, output);
-        output.putBoolean(OfflineVillagerNPC.IS_PARTNER_VILLAGER, isPartnerVillager);
-        output.putLong(OfflineVillagerNPC.LAST_PROCREATION, lastProcreation);
-        output.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
-        output.putInt(OfflineVillagerNPC.KID_SKIN_TEXTURE_ID, kidSkinTextureId);
-        if (father != null) output.store(OfflineVillagerNPC.FATHER, CompoundTag.CODEC, fromOffline(father));
-        if (mother != null) output.store(OfflineVillagerNPC.MOTHER, CompoundTag.CODEC, fromOffline(mother));
-        output.putBoolean(OfflineVillagerNPC.IS_FATHER_VILLAGER, isFatherVillager);
-        output.putBoolean(OfflineVillagerNPC.WAS_INFECTED, wasInfected);
-        output.putBoolean(OfflineVillagerNPC.EQUIPPED, equipped);
-        if (!shoulderEntityLeft.isEmpty()) {
-            output.store(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT, CompoundTag.CODEC, shoulderEntityLeft);
+    @Override
+    public void load(ValueInput input) {
+        super.load(input);
+
+        // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
+        // so our data won't be present at that time.
+
+        CraftVillager bukkit = getBukkitEntity();
+        CraftPersistentDataContainer container = bukkit.getPersistentDataContainer();
+
+        // Load data.
+        OfflineVillagerNPC offline = container.get(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA);
+        loadFromOffline(offline);
+
+        // Load inventory.
+        org.bukkit.inventory.ItemStack[] contents = container.get(plugin.getInventoryKey(), DataType.ITEM_STACK_ARRAY);
+        if (contents != null) bukkit.getInventory().setContents(contents);
+
+        // Previous versions of this plugin used setCustomName() before.
+        Component customName = getCustomName(true);
+        if (customName != null && villagerName.equals(customName.getString())) {
+            setCustomName(null);
         }
-        if (!shoulderEntityRight.isEmpty()) {
-            output.store(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT, CompoundTag.CODEC, shoulderEntityRight);
-        }
-        output.store(OfflineVillagerNPC.GOSSIPS, CustomGossipContainer.CODEC, gossips);
-        saveCollectionModern(OfflineVillagerNPC.CHILDRENS, childrens, this::fromOffline, CompoundTag.CODEC, output);
-        saveCollectionModern(OfflineVillagerNPC.TARGET_ENTITIES, targetEntities, EntityType::toShortString, Codec.STRING, output);
-        saveCollectionModern(OfflineVillagerNPC.PLAYERS, players, input -> input, UUIDUtil.CODEC, output);
-        if (bedHome != null && bedHomeWorld != null) {
-            CompoundTag bedHomeTag = new CompoundTag();
-            bedHomeTag.store(OfflineVillagerNPC.BED_HOME_WORLD, UUIDUtil.CODEC, bedHomeWorld);
-            bedHomeTag.store(OfflineVillagerNPC.BED_HOME_POS, BlockPos.CODEC, bedHome);
-            output.store(OfflineVillagerNPC.BED_HOME, CompoundTag.CODEC, bedHomeTag);
-        }
-        foodData.addAdditionalSaveData(output);
     }
 
-    private CompoundTag fromOffline(IVillagerNPC villager) {
-        return villager instanceof OfflineVillagerNPC offline ? offline.getTag() : null;
-    }
+    public void loadFromOffline(@Nullable OfflineVillagerNPC offline) {
+        VillagerTracker tracker = plugin.getTracker();
 
-    private <T, Y> void saveCollectionModern(String name, @NotNull Collection<Y> values, Function<Y, T> mapper, Codec<T> codec, @NotNull ValueOutput output) {
-        // Codec.list(); Codec.STRING;
-        ValueOutput.TypedOutputList<T> list = output.list(name, codec);
-        for (Y object : values) {
-            list.add(mapper.apply(object));
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getUniqueId, this::setUUID);
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getVillagerName, this::setVillagerName, "");
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getSex, this::setSex, "");
+        if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
+        if (tracker.shouldRename(villagerName)) {
+            setVillagerName(tracker.getRandomNameBySex(sex));
         }
+        isPartnerVillager = offline != null && offline.isPartnerVillager();
+        partner = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getPartner);
+        if (offline != null) partners.addAll(offline.getPartners());
+        if (partner != null && isPartnerVillager && tracker.getOffline(partner.getUniqueId()) == null) {
+            partners.add(partner);
+            setPartner(null, false);
+        }
+        lastProcreation = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getLastProcreation, 0L);
+        skinTextureId = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getSkinTextureId, -1);
+        kidSkinTextureId = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getKidSkinTextureId, -1);
+        isFatherVillager = offline != null && offline.isFatherVillager();
+        father = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getFather);
+        mother = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getMother);
+        wasInfected = offline != null && offline.isWasInfected();
+        equipped = offline != null && offline.isEquipped();
+        shoulderEntityLeft = offline != null && offline.validShoulderEntityLeft() ?
+                (CompoundTag) offline.getShoulderEntityLeft() :
+                new CompoundTag();
+        shoulderEntityRight = offline != null && offline.validShoulderEntityRight() ?
+                (CompoundTag) offline.getShoulderEntityRight() :
+                new CompoundTag();
+
+        if (offline == null) return;
+
+        gossips.clear();
+        gossips.putAll(offline.getGosssips());
+        childrens.addAll(offline.getChildrens());
+        targetEntities.addAll(offline.getTargetEntities());
+        players.addAll(offline.getPlayers());
+        UUID uuid = offline.getBedHomeWorld();
+        BlockPos pos = offline.getBedHome();
+        if (uuid != null && pos != null) loadBedHomePosition(uuid, pos);
+        foodData.setFoodLevel(offline.getFoodLevel());
+        foodData.setTickTimer(offline.getTickTimer());
+        foodData.setSaturationLevel(offline.getSaturationLevel());
+        foodData.setExhaustionLevel(offline.getExhaustionLevel());
     }
 
     @Override
@@ -489,100 +531,18 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
         lastGossipDecayTime = input.getLongOr("LastGossipDecay", 0L);
 
-        ValueInput bukkit = input.childOrEmpty("BukkitValues");
-
-        ValueInput npc = bukkit.childOrEmpty(plugin.getNpcValuesKey().toString());
-        loadPluginData(npc);
-
-        // Previous versions of this plugin used setCustomName() before.
-        Component customName = getCustomName(true);
-        if (customName != null && villagerName.equals(customName.getString())) {
-            setCustomName(null);
-        }
-    }
-
-    public void loadPluginData(@NotNull ValueInput villagerTag) {
-        VillagerTracker tracker = plugin.getTracker();
-
-        villagerTag.read(OfflineVillagerNPC.UUID, UUIDUtil.CODEC).ifPresent(this::setUUID);
-        villagerTag.list(OfflineVillagerNPC.INVENTORY, ItemStack.CODEC).ifPresent(inventory::fromItemList);
-        villagerName = villagerTag.getStringOr(OfflineVillagerNPC.NAME, "");
-        sex = villagerTag.getStringOr(OfflineVillagerNPC.SEX, "");
-        if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
-        if (tracker.shouldRename(villagerName)) {
-            setVillagerName(tracker.getRandomNameBySex(sex));
-        }
-        isPartnerVillager = villagerTag.getBooleanOr(OfflineVillagerNPC.IS_PARTNER_VILLAGER, false);
-        partner = getFamily(villagerTag, OfflineVillagerNPC.PARTNER, isPartnerVillager);
-        fillCollectionModern(
-                OfflineVillagerNPC.PARTNERS,
-                partners,
-                OfflineVillagerNPC::from,
-                CompoundTag.CODEC,
-                villagerTag);
-        if (partner != null && isPartnerVillager && tracker.getOffline(this.partner.getUniqueId()) == null) {
-            partners.add(partner);
-            setPartner(null, false);
-        }
-        lastProcreation = villagerTag.getLongOr(OfflineVillagerNPC.LAST_PROCREATION, 0L);
-        skinTextureId = villagerTag.getIntOr(OfflineVillagerNPC.SKIN_TEXTURE_ID, -1);
-        kidSkinTextureId = villagerTag.getIntOr(OfflineVillagerNPC.KID_SKIN_TEXTURE_ID, -1);
-        isFatherVillager = villagerTag.getBooleanOr(OfflineVillagerNPC.IS_FATHER_VILLAGER, false);
-        father = getFamily(villagerTag, OfflineVillagerNPC.FATHER, isFatherVillager);
-        mother = getFamily(villagerTag, OfflineVillagerNPC.MOTHER, true);
-        wasInfected = villagerTag.getBooleanOr(OfflineVillagerNPC.WAS_INFECTED, false);
-        equipped = villagerTag.getBooleanOr(OfflineVillagerNPC.EQUIPPED, false);
-        villagerTag.read(OfflineVillagerNPC.SHOULDER_ENTITY_LEFT, CompoundTag.CODEC).ifPresent(this::setShoulderEntityLeft);
-        villagerTag.read(OfflineVillagerNPC.SHOULDER_ENTITY_RIGHT, CompoundTag.CODEC).ifPresent(this::setShoulderEntityRight);
-        villagerTag.read(OfflineVillagerNPC.GOSSIPS, CustomGossipContainer.CODEC).ifPresent(container -> {
-            gossips.clear();
-            gossips.putAll(container);
-        });
-        fillCollectionModern(
-                OfflineVillagerNPC.CHILDRENS,
-                childrens,
-                OfflineVillagerNPC::from,
-                CompoundTag.CODEC,
-                villagerTag);
-        fillCollectionModern(
-                OfflineVillagerNPC.TARGET_ENTITIES,
-                targetEntities,
-                input -> EntityType.byString(input).orElse(null),
-                Codec.STRING,
-                villagerTag);
-        fillCollectionModern(
-                OfflineVillagerNPC.PLAYERS,
-                players,
-                input -> input,
-                UUIDUtil.CODEC,
-                villagerTag);
-        villagerTag.read(OfflineVillagerNPC.BED_HOME, CompoundTag.CODEC).ifPresent(compoundTag -> {
-            UUID uuid = compoundTag.read(OfflineVillagerNPC.BED_HOME_WORLD, UUIDUtil.CODEC).orElse(null);
-            BlockPos pos = compoundTag.read(OfflineVillagerNPC.BED_HOME_POS, BlockPos.CODEC).orElse(null);
-            if (uuid != null && pos != null) loadBedHomePosition(uuid, pos);
-        });
-        foodData.readAdditionalSaveData(villagerTag);
+        // For now, we'll use the default inventory / InventoryCarrier#readInventoryFromTag() (until we find a clever way of saving/reading the whole inventory).
     }
 
     @Override
     public float getAgeScale() {
-        // Since 1.20.5, we don't want to modify scale from here.
+        // Since 1.20.5, we don't want to modify the scale from here.
         return super.getAgeScale();
     }
 
     @Override
     public boolean hasFarmSeeds() {
         return getInventory().hasAnyMatching((stack) -> stack.is(ItemTags.VILLAGER_PLANTABLE_SEEDS) || stack.is(Items.PUMPKIN_SEEDS) || stack.is(Items.MELON_SEEDS));
-    }
-
-    private @Nullable IVillagerNPC getFamily(@NotNull ValueInput input, String who, boolean isVillager) {
-        // Old method (uuid) is useless at this point.
-        UUID uuid = input.read(who, UUIDUtil.CODEC).orElse(null);
-        if (uuid != null) {
-            return isVillager ? plugin.getTracker().getOffline(uuid) : dummyPlayerOffline(uuid);
-        }
-
-        return input.read(who, CompoundTag.CODEC).map(OfflineVillagerNPC::from).orElse(null);
     }
 
     private void loadBedHomePosition(UUID uuid, BlockPos blockPos) {
@@ -611,14 +571,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         getBrain().setMemory(MemoryModuleType.HOME, pos);
         bedHome = pos.pos();
         bedHomeWorld = world.getUID();
-    }
-
-    public static <T, Y> void fillCollectionModern(String name, @NotNull Collection<Y> values, Function<T, Y> mapper, Codec<T> codec, @NotNull ValueInput output) {
-        output.list(name, codec).ifPresent(list -> {
-            for (T content : list) {
-                values.add(mapper.apply(content));
-            }
-        });
     }
 
     @Override
@@ -948,7 +900,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean canPickUpLoot() { // TODO: Is this necessary?
+    public boolean canPickUpLoot() {
         return true;
     }
 
@@ -1217,21 +1169,39 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public IVillagerNPC getOffline() {
-        TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
-        savePluginData(output);
-
-        return OfflineVillagerNPC.from(uuid,
-                output.buildResult(),
-                level().getWorld().getName(),
-                getX(),
-                getY(),
-                getZ());
+        return new OfflineVillagerNPC(
+                uuid,
+                villagerName,
+                sex,
+                partner,
+                isPartnerVillager,
+                lastProcreation,
+                skinTextureId,
+                kidSkinTextureId,
+                father,
+                mother,
+                isFatherVillager,
+                getLastKnownPosition(),
+                partners,
+                childrens,
+                targetEntities,
+                players,
+                gossips.unpack().toList(),
+                shoulderEntityLeft,
+                shoulderEntityRight,
+                bedHomeWorld,
+                bedHome,
+                wasInfected,
+                equipped,
+                foodData.getFoodLevel(),
+                foodData.getTickTimer(),
+                foodData.getSaturationLevel(),
+                foodData.getExhaustionLevel());
     }
 
     @Override
     public LastKnownPosition getLastKnownPosition() {
-        // Only needed for offlines.
-        return null;
+        return new LastKnownPosition(level().getWorld().getName(), getX(), getY(), getZ());
     }
 
     @Override
@@ -1306,13 +1276,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         }
     }
 
-    @Contract("_ -> new")
     public static @NotNull OfflineVillagerNPC dummyPlayerOffline(UUID uuid) {
-        OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-        CompoundTag tag = new CompoundTag();
-        String name = player.getName();
-        tag.putString("Name", name != null ? name : "???");
-        return new OfflineVillagerNPC(uuid, tag, LastKnownPosition.ZERO);
+        String name = Bukkit.getOfflinePlayer(uuid).getName();
+        return OfflineVillagerNPC.dummy(uuid, name != null ? name : "???");
     }
 
     @Override
@@ -1322,7 +1288,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public void setFoodLevel(int foodLevel) {
         foodData.setFoodLevel(foodLevel);
-        foodData.setLastFoodLevel(foodLevel);
     }
 
     @Override
@@ -1540,8 +1505,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     @Override
     public VillagerNPC getBreedOffspring(ServerLevel level, AgeableMob breedWith) {
-
-
         double chance = this.random.nextDouble();
         Holder<VillagerType> holder;
         if (chance < (double) 0.5F) {
@@ -1697,8 +1660,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public void remove(RemovalReason reason) {
-        super.remove(reason);
+    public void onRemoval(RemovalReason reason) {
+        super.onRemoval(reason);
 
         RealisticRemoveEvent removeEvent = new RealisticRemoveEvent(this, RealisticRemoveEvent.RemovalReason.values()[reason.ordinal()]);
         plugin.getServer().getPluginManager().callEvent(removeEvent);

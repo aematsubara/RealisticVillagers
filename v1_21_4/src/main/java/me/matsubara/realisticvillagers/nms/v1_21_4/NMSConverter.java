@@ -2,10 +2,11 @@ package me.matsubara.realisticvillagers.nms.v1_21_4;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.jeff_media.morepersistentdatatypes.datatypes.serializable.ConfigurationSerializableDataType;
 import com.mojang.authlib.GameProfile;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.LastKnownPosition;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_4.WanderingTraderNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetCat;
@@ -28,9 +29,7 @@ import net.minecraft.nbt.*;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -57,17 +56,21 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
-import net.minecraft.world.level.storage.*;
+import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.craftbukkit.v1_21_R5.CraftRaid;
 import org.bukkit.craftbukkit.v1_21_R5.CraftWorld;
 import org.bukkit.craftbukkit.v1_21_R5.block.CraftBlock;
 import org.bukkit.craftbukkit.v1_21_R5.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_21_R5.entity.CraftVillager;
+import org.bukkit.craftbukkit.v1_21_R5.persistence.CraftPersistentDataAdapterContext;
+import org.bukkit.craftbukkit.v1_21_R5.persistence.CraftPersistentDataContainer;
+import org.bukkit.craftbukkit.v1_21_R5.persistence.CraftPersistentDataTypeRegistry;
 import org.bukkit.entity.AbstractVillager;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.ZombieVillager;
@@ -86,6 +89,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unchecked")
@@ -101,12 +105,16 @@ public class NMSConverter implements INMSConverter {
     // Constructors.
     private static final MethodHandle MEMORY_MODULE_TYPE = Reflection.getConstructor(MemoryModuleType.class, Optional.class);
     private static final MethodHandle SENSOR_TYPE = Reflection.getConstructor(SensorType.class, Supplier.class);
-    private static final MethodHandle ACTIVITY = Reflection.getConstructor(Activity.class, String.class);
+    private static final MethodHandle ACTIVITY;
+    private static final boolean ACTIVITY_INT;
 
     // Other.
     private static final MethodHandle TIMELINES = Reflection.getField(Schedule.class, Map.class, "g", true, "timelines");
     private static final MethodHandle RULE_TYPE = Reflection.getField(GameRules.Value.class, GameRules.Type.class, "a", true, "type");
     private static final Field RULE_CALLBACK;
+
+    private static final CraftPersistentDataTypeRegistry REGISTRY = new CraftPersistentDataTypeRegistry();
+    private static final CraftPersistentDataAdapterContext ADAPTER_CONTEXT = new CraftPersistentDataAdapterContext(REGISTRY);
 
     private static final Map<String, Activity> ACTIVITIES;
     private static final FilenameFilter DATA_FILE_FILTER = (directory, name) -> new File(directory, name).isFile()
@@ -115,6 +123,9 @@ public class NMSConverter implements INMSConverter {
             && !name.contains("mcc");
 
     static {
+        MethodHandle temp = Reflection.getConstructor(false, Activity.class, String.class);
+        ACTIVITY_INT = temp == null;
+        ACTIVITY = ACTIVITY_INT ? Reflection.getConstructor(Activity.class, String.class, int.class) : temp;
         RULE_CALLBACK = Reflection.getFieldRaw(GameRules.Type.class, BiConsumer.class, "c", "callback");
 
         Map<String, Activity> activities = new HashMap<>();
@@ -128,7 +139,13 @@ public class NMSConverter implements INMSConverter {
             }
         }
         ACTIVITIES = Collections.unmodifiableMap(activities);
+
+        // Register our data serializators.
+        ConfigurationSerialization.registerClass(CustomGossipContainer.GossipEntry.class);
+        ConfigurationSerialization.registerClass(OfflineVillagerNPC.class);
     }
+
+    public static final PersistentDataType<byte[], OfflineVillagerNPC> VILLAGER_DATA = new ConfigurationSerializableDataType<>(OfflineVillagerNPC.class);
 
     public NMSConverter(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -175,16 +192,16 @@ public class NMSConverter implements INMSConverter {
     @Override
     public String getNPCTag(org.bukkit.entity.LivingEntity entity, boolean isInfection) {
         if (entity instanceof AbstractVillager villager) {
-            TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
-
             Optional<IVillagerNPC> optional = getNPC(villager);
             if (optional.isEmpty()) return null;
 
             VillagerNPC npc = (VillagerNPC) optional.get();
             npc.setWasInfected(isInfection);
-            npc.savePluginData(output);
 
-            return output.buildResult().toString();
+            if (npc.getOffline() instanceof OfflineVillagerNPC offline) {
+                byte[] primitive = VILLAGER_DATA.toPrimitive(offline, villager.getPersistentDataContainer().getAdapterContext());
+                return Base64.getEncoder().encodeToString(primitive);
+            }
         } else if (entity instanceof ZombieVillager) {
             PersistentDataContainer container = entity.getPersistentDataContainer();
             return container.getOrDefault(plugin.getZombieTransformKey(), PersistentDataType.STRING, "");
@@ -247,22 +264,26 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public void loadDataFromTag(org.bukkit.entity.LivingEntity living, @NotNull String tag) {
-        try {
-            CompoundTag villagerTag = tag.isEmpty() ? new CompoundTag() : TagParser.parseCompoundFully(tag);
+        Optional<IVillagerNPC> npc = getNPC(living);
+        if (npc.isEmpty()) return;
 
-            Optional<IVillagerNPC> npc = getNPC(living);
-            if (npc.isEmpty()) return;
-
-            if (npc.get() instanceof VillagerNPC temp) {
-                ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, temp.registryAccess(), villagerTag);
-                temp.loadPluginData(input);
-            } else if (npc.get() instanceof WanderingTraderNPC temp) {
-                ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, temp.registryAccess(), villagerTag);
-                temp.loadPluginData(input);
-            }
-        } catch (CommandSyntaxException exception) {
-            exception.printStackTrace();
+        if (npc.get() instanceof VillagerNPC temp) {
+            handleTagLoad(living, tag, temp::loadFromOffline);
+        } else if (npc.get() instanceof WanderingTraderNPC temp) {
+            handleTagLoad(living, tag, temp::loadFromOffline);
         }
+    }
+
+    private void handleTagLoad(org.bukkit.entity.LivingEntity living, @NotNull String tag, Consumer<OfflineVillagerNPC> consumer) {
+        OfflineVillagerNPC offline;
+        if (tag.isEmpty()) {
+            offline = OfflineVillagerNPC.DUMMY_OFFLINE;
+        } else {
+            offline = VILLAGER_DATA.fromPrimitive(
+                    Base64.getDecoder().decode(tag),
+                    living.getPersistentDataContainer().getAdapterContext());
+        }
+        consumer.accept(offline);
     }
 
     @Override
@@ -334,19 +355,10 @@ public class NMSConverter implements INMSConverter {
         return raid != null ? new CraftRaid(raid, level) : null;
     }
 
-    @SuppressWarnings("deprecation")
-    public static void updateTamedData(@NotNull RealisticVillagers plugin, @NotNull ValueOutput output, LivingEntity living, boolean tamedByVillager) {
-        ValueOutput bukkit = output.child("BukkitValues");
-
-        NamespacedKey byVillager = plugin.getTamedByVillagerKey();
-        bukkit.putBoolean(byVillager.toString(), tamedByVillager);
-
-        // Remove previous key, not used anymore.
-        bukkit.discard(plugin.getTamedByPlayerKey().toString());
-
-        if (output instanceof TagValueOutput tag) {
-            updateBukkitValues(tag.buildResult(), byVillager.getNamespace(), living);
-        }
+    public static void updateTamedData(@NotNull RealisticVillagers plugin, @NotNull LivingEntity living, boolean tamedByVillager) {
+        CraftPersistentDataContainer container = living.getBukkitEntity().getPersistentDataContainer();
+        container.set(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN, tamedByVillager);
+        container.remove(plugin.getTamedByPlayerKey()); // Remove previous key, not used anymore.
     }
 
     @Override
@@ -362,12 +374,8 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public IVillagerNPC getNPCFromTag(String tag) {
-        try {
-            return OfflineVillagerNPC.from(TagParser.parseCompoundFully(tag));
-        } catch (CommandSyntaxException exception) {
-            exception.printStackTrace();
-            return null;
-        }
+        byte[] primitive = Base64.getDecoder().decode(tag);
+        return VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
     }
 
     @Override
@@ -497,8 +505,9 @@ public class NMSConverter implements INMSConverter {
             if (uuid == null) continue;
 
             CompoundTag bukkit = getOrCreateBukkitTag(compound);
-            CompoundTag data = bukkit.getCompoundOrEmpty(plugin.getNpcValuesKey().toString());
-            if (data.isEmpty()) continue;
+
+            Tag values = bukkit.get(plugin.getNpcValuesKey().toString());
+            if (values == null) continue;
 
             ListTag pos = compound.getListOrEmpty("Pos");
             double xc = pos.getDoubleOr(0, 0.0d);
@@ -507,7 +516,9 @@ public class NMSConverter implements INMSConverter {
 
             Set<IVillagerNPC> offlines = plugin.getTracker().getOfflineVillagers();
             if (offlines.stream().noneMatch(npc -> npc.getUniqueId().equals(uuid))) {
-                offlines.add(OfflineVillagerNPC.from(uuid, data, world, xc, yc, zc));
+                OfflineVillagerNPC offline = VILLAGER_DATA.fromPrimitive(REGISTRY.extract(VILLAGER_DATA, values), ADAPTER_CONTEXT);
+                offline.setLastKnownPosition(new LastKnownPosition(world, xc, yc, zc));
+                offlines.add(offline);
             }
         }
     }
@@ -527,7 +538,7 @@ public class NMSConverter implements INMSConverter {
     public static <T> T register(Registry<? super T> registry, String name, T value) {
         unfreezeRegistry(registry);
         try {
-            return Registry.register(registry, ResourceLocation.withDefaultNamespace(name), value);
+            return Registry.register(registry, ResourceLocation.fromNamespaceAndPath("realisticvillagers", name), value);
         } finally {
             if (FROZEN != null) {
                 try {
@@ -572,7 +583,8 @@ public class NMSConverter implements INMSConverter {
     public static @Nullable Activity registerActivity(String name) {
         Preconditions.checkNotNull(ACTIVITY);
         try {
-            return register(BuiltInRegistries.ACTIVITY, name, (Activity) ACTIVITY.invoke(name));
+            Activity activity = (Activity) (ACTIVITY_INT ? ACTIVITY.invoke(name, 0) : ACTIVITY.invoke(name));
+            return register(BuiltInRegistries.ACTIVITY, name, activity);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
             return null;
@@ -585,7 +597,8 @@ public class NMSConverter implements INMSConverter {
             Map<Holder<Attribute>, AttributeInstance> attributes = (Map<Holder<Attribute>, AttributeInstance>) ATTRIBUTES.invoke(entity.getAttributes());
             if (attributes == null) return;
 
-            attributes.put(attribute, new AttributeInstance(attribute, AttributeInstance::getAttribute));
+            @SuppressWarnings("ResultOfMethodCallIgnored") Consumer<AttributeInstance> onDirty = AttributeInstance::getAttribute;
+            attributes.put(attribute, new AttributeInstance(attribute, onDirty));
 
             AttributeInstance instance = entity.getAttribute(attribute);
             if (instance != null) instance.setBaseValue(value);
@@ -596,20 +609,5 @@ public class NMSConverter implements INMSConverter {
 
     public static CompoundTag getOrCreateBukkitTag(@NotNull CompoundTag base) {
         return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
-    }
-
-    public static void updateBukkitValues(CompoundTag tag, String namespace, @NotNull LivingEntity living) {
-        // Remove previous data associated from THIS plugin only in the container.
-        PersistentDataContainer container = living.getBukkitEntity().getPersistentDataContainer();
-        for (NamespacedKey key : container.getKeys()) {
-            if (key.getNamespace().equalsIgnoreCase(namespace)) {
-                container.remove(key);
-            }
-        }
-
-        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, MinecraftServer.getServer().registryAccess(), tag);
-
-        // Save data in craft entity to prevent data-loss.
-        living.getBukkitEntity().readBukkitValues(input);
     }
 }

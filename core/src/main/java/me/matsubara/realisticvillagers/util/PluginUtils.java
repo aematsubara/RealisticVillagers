@@ -1,6 +1,7 @@
 package me.matsubara.realisticvillagers.util;
 
 import com.cryptomorin.xseries.reflection.XReflection;
+import com.cryptomorin.xseries.reflection.minecraft.MinecraftPackage;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
@@ -12,8 +13,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.bukkit.Color;
 import org.bukkit.*;
+import org.bukkit.Color;
 import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -47,11 +48,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
-import java.util.List;
+import java.time.Duration;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -81,21 +83,39 @@ public final class PluginUtils {
             BlockFace.NORTH_NORTH_WEST};
     private static final Color[] COLORS;
 
-    private static final Class<?> CRAFT_ENTITY = XReflection.getCraftClass("entity.CraftEntity");
-    private static final Class<?> CRAFT_META_SKULL = XReflection.getCraftClass("inventory.CraftMetaSkull");
+    private static final Class<?> CRAFT_ENTITY = XReflection.ofMinecraft()
+            .inPackage(MinecraftPackage.CB, "entity")
+            .named("CraftEntity")
+            .unreflect();
+
+    private static final Class<?> CRAFT_META_SKULL = XReflection.ofMinecraft()
+            .inPackage(MinecraftPackage.CB, "inventory")
+            .named("CraftMetaSkull")
+            .unreflect();
 
     private static final MethodHandle SET_PROFILE = Reflection.getMethod(CRAFT_META_SKULL, "setProfile", false, GameProfile.class);
     private static final MethodHandle SET_OWNER_PROFILE = SET_PROFILE != null ? null : Reflection.getMethod(SkullMeta.class, "setOwnerProfile", false, PlayerProfile.class);
 
     private static final MethodHandle GET_HANDLE = Reflection.getMethod(Objects.requireNonNull(CRAFT_ENTITY), "getHandle");
     private static final MethodHandle ABS_MOVE_TO = Reflection.getMethod(
-            XReflection.getNMSClass("world.entity", "Entity"),
+            XReflection.ofMinecraft()
+                    .inPackage(MinecraftPackage.NMS, "world.entity")
+                    .named("Entity")
+                    .unreflect(),
             "a",
             MethodType.methodType(void.class, double.class, double.class, double.class, float.class, float.class),
             false,
             false,
             "setLocation",
             "absMoveTo");
+
+    public static final Map<Class<?>, Object> DEFAULT_VALUES = Map.of(
+            String.class, "",
+            Integer.class, 0,
+            Long.class, 0L,
+            Float.class, 0.0f,
+            Double.class, 0.0d,
+            Boolean.class, false);
 
     static {
         ROMAN_NUMERALS.put(1000, "M");
@@ -215,13 +235,10 @@ public final class PluginUtils {
     }
 
     public static String getURLFromTexture(String texture) {
-        // String decoded = new String(Base64.getDecoder().decode(texture));
-        // return new URL(decoded.substring("{\"textures\":{\"SKIN\":{\"url\":\"".length(), decoded.length() - "\"}}}".length()));
-
-        // Decode B64.
+        // Decode Base64.
         String decoded = new String(Base64.getDecoder().decode(texture));
 
-        // Get url from json.
+        // Get url from JSON.
         return JsonParser.parseString(decoded).getAsJsonObject()
                 .getAsJsonObject("textures")
                 .getAsJsonObject("SKIN")
@@ -251,40 +268,36 @@ public final class PluginUtils {
         return new Vector(x, y, z);
     }
 
-    public static @NotNull String getTimeString(long millis) {
-        long days = TimeUnit.MILLISECONDS.toDays(millis);
+    public static @NotNull String formatMillis(long millis) {
+        Duration duration = Duration.ofMillis(millis);
 
-        millis -= TimeUnit.DAYS.toMillis(days);
-        long hours = TimeUnit.MILLISECONDS.toHours(millis);
-
-        millis -= TimeUnit.HOURS.toMillis(hours);
-        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
-
-        millis -= TimeUnit.MINUTES.toMillis(minutes);
-        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+        long days = duration.toDays();
+        long hours = duration.toHoursPart();
+        long minutes = duration.toMinutesPart();
+        long seconds = duration.toSecondsPart();
 
         StringBuilder builder = new StringBuilder();
 
-        if (days > 0L) {
-            builder.append(days).append(Config.ACRONYM_DAY.asString());
-        }
+        if (days > 0) builder
+                .append(days)
+                .append(Config.ACRONYM_DAY.asString())
+                .append(" ");
 
-        if (hours > 0L) {
-            if (days > 0L) builder.append(", ");
-            builder.append(hours).append(Config.ACRONYM_HOUR.asString());
-        }
+        if (hours > 0) builder
+                .append(hours)
+                .append(Config.ACRONYM_HOUR.asString())
+                .append(" ");
 
-        if (minutes > 0L) {
-            if (hours > 0L || days > 0L) builder.append(", ");
-            builder.append(minutes).append(Config.ACRONYM_MINUTE.asString());
-        }
+        if (minutes > 0) builder
+                .append(minutes)
+                .append(Config.ACRONYM_MINUTE.asString())
+                .append(" ");
 
-        if (seconds > 0L) {
-            if (minutes > 0L || hours > 0L || days > 0L) builder.append(", ");
-            builder.append(seconds).append(Config.ACRONYM_SECOND.asString());
-        }
+        if (seconds > 0 || builder.isEmpty()) builder
+                .append(seconds)
+                .append(Config.ACRONYM_SECOND.asString());
 
-        return builder.toString();
+        return builder.toString().trim();
     }
 
     public static String[] splitData(String string) {
@@ -546,5 +559,31 @@ public final class PluginUtils {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T getOrDefault(
+            @NotNull Map<String, Object> args,
+            String key,
+            @NotNull Class<T> clazz) {
+        return getOrDefault(args, key, clazz, (T) DEFAULT_VALUES.getOrDefault(clazz, null));
+    }
+
+    public static <T> T getOrDefault(
+            @NotNull Map<String, Object> args,
+            String key,
+            @NotNull Class<T> clazz,
+            T defaultValue) {
+        return getOrDefault(args, key, clazz, Function.identity(), defaultValue);
+    }
+
+    public static <T, Z> Z getOrDefault(
+            @NotNull Map<String, Object> args,
+            String key,
+            @NotNull Class<T> clazz,
+            Function<T, Z> mapper,
+            Z defaultValue) {
+        Object value = args.get(key);
+        return value != null ? mapper.apply(clazz.cast(value)) : defaultValue;
     }
 }

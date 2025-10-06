@@ -64,7 +64,7 @@ public class BukkitSpawnListeners implements Listener {
         handleSpawn(entity, null);
     }
 
-    @SuppressWarnings({"deprecation", "OptionalGetWithoutIsPresent"})
+    @SuppressWarnings({"OptionalGetWithoutIsPresent"})
     public void handleSpawn(Entity entity, @Nullable CreatureSpawnEvent.SpawnReason reason) {
         // Is invalid, ignore since we don't want to track those villagers.
         if (!(entity instanceof AbstractVillager villager)) return;
@@ -78,10 +78,10 @@ public class BukkitSpawnListeners implements Listener {
         INMSConverter converter = plugin.getConverter();
         PersistentDataContainer container = villager.getPersistentDataContainer();
 
-        // Removed previous ignore key, not used anymore.
+        // Removed the previous "ignore" key, not used anymore.
         container.remove(plugin.getIgnoreVillagerKey());
 
-        // Villager#readAdditionalSaveData() isn't called when entity spawn from egg or by a plugin.
+        // Villager#readAdditionalSaveData() isn't called when an entity spawns from an egg or by a plugin.
         if (createData) {
             converter.loadDataFromTag(villager, "");
         }

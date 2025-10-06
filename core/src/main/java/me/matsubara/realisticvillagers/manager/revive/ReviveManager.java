@@ -86,7 +86,7 @@ public class ReviveManager implements Listener {
         Block downBlock = block.getRelative(BlockFace.DOWN);
         if (downBlock.getType() != Material.EMERALD_BLOCK) return false;
 
-        // Sides of monument, should be 2 emerald blocks with fire at the top.
+        // Sides of monument should be 2 emerald blocks with fire at the top.
         for (BlockFace face : MONUMENT) {
             Block upBlock = block.getRelative(BlockFace.UP);
             if (upBlock.getRelative(face, 2).getType() != Material.FIRE) return false;
@@ -197,7 +197,7 @@ public class ReviveManager implements Listener {
     private void checkForMonument(Player player, @NotNull Block block) {
         if (block.getRelative(BlockFace.UP).getType() != Material.FIRE) return;
 
-        // Look for center first.
+        // Look for the center first.
         for (BlockFace face : MONUMENT) {
             Block relative = block.getRelative(face, 2);
 

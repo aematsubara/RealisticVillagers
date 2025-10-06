@@ -12,8 +12,6 @@ import net.minecraft.world.food.FoodConstants;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import org.bukkit.Bukkit;
 import org.bukkit.craftbukkit.v1_21_R5.inventory.CraftItemStack;
 import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
@@ -28,7 +26,6 @@ public class VillagerFoodData {
 
     private int foodLevel;
     private int tickTimer;
-    private int lastFoodLevel;
     private float saturationLevel;
     private float exhaustionLevel;
 
@@ -40,7 +37,6 @@ public class VillagerFoodData {
         this.npc = npc;
         this.foodLevel = 20;
         this.saturationLevel = 5.0f;
-        this.lastFoodLevel = 20;
     }
 
     private void add(int foodLevel, float saturationLevel) {
@@ -63,8 +59,9 @@ public class VillagerFoodData {
     }
 
     public void tick() {
-        Difficulty difficulty = npc.level().getDifficulty();
-        lastFoodLevel = foodLevel;
+        if (!(npc.level() instanceof ServerLevel level)) return;
+
+        Difficulty difficulty = level.getDifficulty();
 
         if (exhaustionLevel > 4.0f) {
             exhaustionLevel -= 4.0f;
@@ -76,8 +73,8 @@ public class VillagerFoodData {
             }
         }
 
-        boolean flag = npc.level() instanceof ServerLevel level && level.getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION);
-        if (flag && saturationLevel > 0.0f && npc.isHurt() && foodLevel >= 20) {
+        boolean naturalRegeneration = level.getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION);
+        if (naturalRegeneration && saturationLevel > 0.0f && npc.isHurt() && foodLevel >= 20) {
             ++tickTimer;
             if (tickTimer >= SATURATED_REGEN_RATE) {
                 float amount = Math.min(saturationLevel, 6.0f);
@@ -85,38 +82,24 @@ public class VillagerFoodData {
                 npc.causeFoodExhaustion(amount, VillagerExhaustionEvent.ExhaustionReason.REGEN);
                 tickTimer = 0;
             }
-        } else if (flag && foodLevel >= 18 && npc.isHurt()) {
+        } else if (naturalRegeneration && foodLevel >= 18 && npc.isHurt()) {
             ++tickTimer;
             if (tickTimer >= UNSATURATED_REGEN_RATE) {
                 npc.heal(1.0f, RegainReason.SATIATED);
-                npc.causeFoodExhaustion(npc.level().spigotConfig.regenExhaustion, VillagerExhaustionEvent.ExhaustionReason.REGEN);
+                npc.causeFoodExhaustion(level.spigotConfig.regenExhaustion, VillagerExhaustionEvent.ExhaustionReason.REGEN);
                 tickTimer = 0;
             }
         } else if (foodLevel <= 0) {
             ++tickTimer;
             if (tickTimer >= STARVATION_RATE) {
                 if (npc.getHealth() > 10.0f || difficulty == Difficulty.HARD || npc.getHealth() > 1.0f && difficulty == Difficulty.NORMAL) {
-                    npc.hurt(npc.damageSources().starve(), 1.0f);
+                    npc.hurtServer(level, npc.damageSources().starve(), 1.0f);
                 }
                 tickTimer = 0;
             }
         } else {
             tickTimer = 0;
         }
-    }
-
-    public void readAdditionalSaveData(@NotNull ValueInput tag) {
-        foodLevel = tag.getIntOr("foodLevel", 20);
-        tickTimer = tag.getIntOr("foodTickTimer", 0);
-        saturationLevel = tag.getFloatOr("foodSaturationLevel", 5.0f);
-        exhaustionLevel = tag.getFloatOr("foodExhaustionLevel", 0.0f);
-    }
-
-    public void addAdditionalSaveData(@NotNull ValueOutput tag) {
-        tag.putInt("foodLevel", foodLevel);
-        tag.putInt("foodTickTimer", tickTimer);
-        tag.putFloat("foodSaturationLevel", saturationLevel);
-        tag.putFloat("foodExhaustionLevel", exhaustionLevel);
     }
 
     public boolean needsFood() {

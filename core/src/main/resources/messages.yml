@@ -1,4 +1,4 @@
-# IMPORTANT: All messages must be enclosed in quotation marks (either single 'test' or double "test") or the messages will be lost and the file will be reset to 0.
+# IMPORTANT: All messages must be enclosed in quotation marks (either single 'test' or double "test"), or the messages will be lost, and the file will be reset to 0.
 # Whenever you modify this file, save a copy before reloading the plugin to avoid losses and having to start all over again.
 
 # Don't touch this!
@@ -200,7 +200,10 @@ baby-can-not-spawn: "&cThe spawn place is obstructed, there must be at least 2 f
 baby-countdown: "&6This baby is ready to be born, click %countdown% times to spawn your baby!"
 # %baby-name% - baby's name (@baby-spawned).
 baby-spawned: "&6Baby %baby-name% is born!"
-# %time% - The maximum time the villager will wait for a gift/bed (@throw-gift & @select-bed).
+# %time% - The maximum time the villager will wait for a gift/bed (@right-click-gift, @throw-gift & @select-bed).
+right-click-gift:
+  - "&aYou have %time% seconds to right-click on the villager with the gift in hand."
+  - "&cShift + right click to cancel this action!"
 throw-gift:
   - "&aYou have %time% seconds to throw the gift to the villager."
   - "&cShift + right click to cancel this action!"

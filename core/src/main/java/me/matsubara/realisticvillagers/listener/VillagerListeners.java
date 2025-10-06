@@ -18,6 +18,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.ItemBuilder;
@@ -39,10 +40,7 @@ import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.GenericGameEvent;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -271,8 +269,8 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 return;
             }
 
-            if (isExpecting(player, npc, ExpectingType.GIFT)) return;
-            if (isExpecting(player, npc, ExpectingType.BED)) return;
+            if (isExpecting(player, npc, ExpectingType.GIFT, item)) return;
+            if (isExpecting(player, npc, ExpectingType.BED, item)) return;
 
             if (npc.isInteracting()) {
                 if (!npc.getInteractingWith().equals(player.getUniqueId())) {
@@ -324,24 +322,46 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 .build());
     }
 
-    private boolean isExpecting(Player player, @NotNull IVillagerNPC npc, ExpectingType checkType) {
+    private boolean isExpecting(Player player, @NotNull IVillagerNPC npc, ExpectingType checkType, @Nullable ItemStack item) {
         if (!npc.isExpecting()) return false;
 
         ExpectingType expecting = npc.getExpectingType();
         if (expecting != checkType) return false;
 
+        UUID playerUUID = player.getUniqueId();
         Messages messages = plugin.getMessages();
 
-        if (!npc.getExpectingFrom().equals(player.getUniqueId())) {
+        // This villager is expecting something from another player.
+        if (!npc.getExpectingFrom().equals(playerUUID)) {
             messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_EXPECTING_" + expecting + "_FROM_SOMEONE"));
             return true;
         }
 
+        // This villager is expecting something from this player, can't open the menu.
         if (!player.isSneaking()) {
+            ExpectingManager expectingManager = plugin.getExpectingManager();
+            if (expecting.isGift()
+                    && expectingManager.getGiftModeFromConfig().rightClick()
+                    && item != null && !item.getType().isAir()
+                    && npc.bukkit() instanceof InventoryHolder holder) {
+                // Remove one unit.
+                ItemStack unit = new ItemBuilder(item)
+                        .setAmount(1)
+                        .build();
+
+                // Remove from player inventory, add to villager inventory.
+                player.getInventory().removeItem(unit);
+                holder.getInventory().addItem(unit);
+
+                // Handle.
+                expectingManager.handleVillagerPickUp(npc, item, playerUUID, player, null);
+                return true;
+            }
             messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_EXPECTING_" + expecting + "_FROM_YOU"));
             return true;
         }
 
+        // This villager is expecting something from this player (sneaking), stop interaction.
         messages.send(player, npc, Messages.Message.valueOf((expecting.isGift() ? "GIFT_EXPECTING" : "SET_HOME") + "_FAIL"));
         npc.stopExpecting();
         plugin.getCooldownManager().removeCooldown(player, checkType.name().toLowerCase(Locale.ROOT));

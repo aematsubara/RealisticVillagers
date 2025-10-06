@@ -35,6 +35,9 @@ public enum Config {
     ARROW_STATUS("arrow-status"),
 
     CUSTOM_NAME_SHOW_JOB_BLOCK("custom-nametags.show-job-block"),
+    CUSTOM_NAME_SHADOW("custom-nametags.shadow"),
+    CUSTOM_NAME_SEE_THROUGH("custom-nametags.see-through"),
+    CUSTOM_NAME_TEXT_OPACITY("custom-nametags.text-opacity"),
     CUSTOM_NAME_VILLAGER_LINES("custom-nametags.lines.villager"),
     CUSTOM_NAME_TRADER_LINES("custom-nametags.lines.wandering-trader"),
 
@@ -50,6 +53,7 @@ public enum Config {
     VILLAGER_SPAWN_IRON_GOLEM("villager-spawn-iron-golem"),
 
     BAD_GIFT_REPUTATION("bad-gift-reputation"),
+    GIFT_MODE("gift-mode"),
     WEDDING_RING_REPUTATION("wedding-ring-reputation"),
     CROSS_REPUTATION("cross-reputation"),
     BABY_REPUTATION("baby-reputation"),
@@ -160,6 +164,7 @@ public enum Config {
     FAMILY_BYPASS_ASK_TO_FOLLOW("family-bypass-ask-to-follow"),
     REPUTATION_REQUIRED_TO_ASK_TO_STAY("reputation-required-to-ask-to-stay"),
     FAMILY_BYPASS_ASK_TO_STAY("family-bypass-ask-to-stay"),
+    STAY_STROLL_AROUND("stay-stroll-around"),
     INITIAL_REPUTATION_AT_BIRTH("initial-reputation-at-birth"),
     SPAWN_LOOT_FORCE_EQUIP("spawn-loot.force-equip"),
     VILLAGER_ADOPTS_ABANDONED_PET("villager-adopts-abandoned-pet"),

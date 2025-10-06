@@ -192,10 +192,11 @@ public class NPC {
         } else {
             data.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameText(bukkit)))); // Text
             data.add(new EntityData<>(24, EntityDataTypes.INT, 200)); // Line width
-            data.add(new EntityData<>(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB())); // Background color = Color#asARGB() / 1073741824
-            data.add(new EntityData<>(26, EntityDataTypes.BYTE, (byte) -1)); // Text opacity
+            // Background color = Color#asARGB() / 1073741824 / same as using the flag: default background.
+            data.add(new EntityData<>(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB()));
+            data.add(new EntityData<>(26, EntityDataTypes.BYTE, (byte) getOpacity())); // Text opacity
             // Flags (Has shadow = 0x01 / See through = 0x02 / Use default background color = 0x04 / Alignment = ?) / 0
-            data.add(new EntityData<>(27, EntityDataTypes.BYTE, (byte) 0x02));
+            data.add(new EntityData<>(27, EntityDataTypes.BYTE, (byte) getFlags()));
         }
 
         ProtocolManager manager = PacketEvents.getAPI().getProtocolManager();
@@ -217,6 +218,16 @@ public class NPC {
 
         manager.sendPacket(channel, new WrapperPlayServerEntityMetadata(id, data));
         return id;
+    }
+
+    private int getOpacity() {
+        int opacity = Config.CUSTOM_NAME_TEXT_OPACITY.asInt();
+        if (opacity < -128) return -128;
+        return opacity > 127 ? opacity - 256 : opacity;
+    }
+
+    private int getFlags() {
+        return (Config.CUSTOM_NAME_SHADOW.asBool() ? 0x01 : 0x0) | (Config.CUSTOM_NAME_SEE_THROUGH.asBool() ? 0x02 : 0x0);
     }
 
     private @NotNull String getNameText(LivingEntity bukkit) {
@@ -300,11 +311,7 @@ public class NPC {
         return new Builder();
     }
 
-    public void show(Player player) {
-        show(player, null);
-    }
-
-    public void show(Player player, @Nullable Location location) {
+    public void show(Player player, Location location) {
         seeingPlayers.add(player);
 
         VisibilityModifier modifier = visibility();

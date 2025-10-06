@@ -17,7 +17,6 @@ import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.Packet;
@@ -30,27 +29,26 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.npc.WanderingTrader;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_21_R5.entity.CraftPlayer;
 import org.bukkit.craftbukkit.v1_21_R5.entity.CraftWanderingTrader;
+import org.bukkit.craftbukkit.v1_21_R5.persistence.CraftPersistentDataContainer;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -512,15 +510,34 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
 
     @Override
     public IVillagerNPC getOffline() {
-        TagValueOutput output = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
-        savePluginData(output);
-
-        return OfflineVillagerNPC.from(uuid,
-                output.buildResult(),
-                level().getWorld().getName(),
-                getX(),
-                getY(),
-                getZ());
+        return new OfflineVillagerNPC(
+                uuid,
+                villagerName,
+                sex,
+                null,
+                false,
+                0L,
+                skinTextureId,
+                -1,
+                null,
+                null,
+                false,
+                getLastKnownPosition(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptySet(),
+                Collections.emptySet(),
+                Collections.emptyList(),
+                null,
+                null,
+                null,
+                null,
+                false,
+                false,
+                0,
+                0,
+                0.0f,
+                0.0f);
     }
 
     @Override
@@ -536,34 +553,26 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
     protected void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
 
+        // After addAdditionalSaveData() is called, CraftEntity#storeBukkitValues() will save the values inside the container.
+        if (getOffline() instanceof OfflineVillagerNPC offline) {
+            CraftPersistentDataContainer container = getBukkitEntity().getPersistentDataContainer();
+            container.remove(plugin.getNpcValuesKey()); // Remove previous data.
+            container.set(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA, offline); // Use the new system.
+        }
+
         // Save the previous (vanilla) custom name.
         output.storeNullable("CustomName", ComponentSerialization.CODEC, getCustomName(true));
-
-        ValueOutput bukkit = output.child("BukkitValues");
-
-        ValueOutput npc = bukkit.child(plugin.getNpcValuesKey().toString());
-        savePluginData(npc);
-
-        if (output instanceof TagValueOutput tag) {
-            NMSConverter.updateBukkitValues(tag.buildResult(), plugin.getNpcValuesKey().getNamespace(), this);
-        }
-    }
-
-    public void savePluginData(@NotNull ValueOutput output) {
-        output.store(OfflineVillagerNPC.UUID, UUIDUtil.CODEC, uuid);
-        if (villagerName != null) output.putString(OfflineVillagerNPC.NAME, villagerName);
-        if (sex != null) output.putString(OfflineVillagerNPC.SEX, sex);
-        output.putInt(OfflineVillagerNPC.SKIN_TEXTURE_ID, skinTextureId);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput input) {
-        super.readAdditionalSaveData(input);
+    public void load(ValueInput input) {
+        super.load(input);
 
-        ValueInput bukkit = input.childOrEmpty("BukkitValues");
+        // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
+        // so our data won't be present at that time.
 
-        ValueInput npc = bukkit.childOrEmpty(plugin.getNpcValuesKey().toString());
-        loadPluginData(npc);
+        OfflineVillagerNPC offline = getBukkitEntity().getPersistentDataContainer().get(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA);
+        loadFromOffline(offline);
 
         // Previous versions of this plugin used setCustomName() before.
         Component customName = getCustomName(true);
@@ -572,22 +581,23 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
         }
     }
 
-    public void loadPluginData(@NotNull ValueInput villagerTag) {
+    public void loadFromOffline(@Nullable OfflineVillagerNPC offline) {
         VillagerTracker tracker = plugin.getTracker();
 
-        villagerTag.read(OfflineVillagerNPC.UUID, UUIDUtil.CODEC).ifPresent(this::setUUID);
-        villagerName = villagerTag.getStringOr(OfflineVillagerNPC.NAME, "");
-        sex = villagerTag.getStringOr(OfflineVillagerNPC.SEX, "");
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getUniqueId, this::setUUID);
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getVillagerName, this::setVillagerName, "");
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getSex, this::setSex, "");
         if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
         if (tracker.shouldRename(villagerName)) {
             setVillagerName(tracker.getRandomNameBySex(sex));
         }
-        skinTextureId = villagerTag.getIntOr(OfflineVillagerNPC.SKIN_TEXTURE_ID, -1);
+        skinTextureId = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getSkinTextureId, -1);
     }
 
     @Override
-    public void remove(RemovalReason reason) {
-        super.remove(reason);
+    public void onRemoval(RemovalReason reason) {
+        super.onRemoval(reason);
+
         plugin.getServer().getPluginManager().callEvent(new RealisticRemoveEvent(
                 this,
                 org.bukkit.entity.EntityType.WANDERING_TRADER,
@@ -596,8 +606,7 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
 
     @Override
     public LastKnownPosition getLastKnownPosition() {
-        // Only needed for offlines.
-        return null;
+        return new LastKnownPosition(level().getWorld().getName(), getX(), getY(), getZ());
     }
 
     @Override

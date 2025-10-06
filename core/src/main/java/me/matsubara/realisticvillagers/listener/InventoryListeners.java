@@ -225,11 +225,13 @@ public final class InventoryListeners implements Listener {
 
                 Villager bukkit = offline.bukkit() instanceof Villager villager ? villager : null;
                 boolean teleported = true;
-                if (bukkit != null) PluginUtils.teleportWithPassengers(bukkit, playerLocation);
-                else {
+                if (bukkit != null) {
+                    teleport(bukkit, playerLocation);
+                } else {
                     Villager villager = plugin.getUnloadedOffline(offline) instanceof Villager temp ? temp : null;
-                    if (villager != null) PluginUtils.teleportWithPassengers(villager, playerLocation);
-                    else teleported = false;
+                    if (villager != null) {
+                        teleport(villager, playerLocation);
+                    } else teleported = false;
                 }
 
                 plugin.getMessages().send(
@@ -431,7 +433,10 @@ public final class InventoryListeners implements Listener {
             runTask(() -> new EquipmentGUI(plugin, npc, player));
             return;
         } else if (isCustomItem(current, "gift")) {
-            handleExpecting(player, npc, ExpectingType.GIFT, Messages.Message.THROW_GIFT, Messages.Message.GIFT_EXPECTING);
+            Messages.Message message = plugin.getExpectingManager().getGiftModeFromConfig().drop() ?
+                    Messages.Message.THROW_GIFT :
+                    Messages.Message.RIGHT_CLICK_GIFT;
+            handleExpecting(player, npc, ExpectingType.GIFT, message, Messages.Message.GIFT_EXPECTING);
         } else if (isCustomItem(current, "procreate")) {
             // Return if it's a kid.
             if (conditionNotMet(player, villager.isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)) return;
@@ -445,13 +450,13 @@ public final class InventoryListeners implements Listener {
                 return;
             }
 
-            long lastProcreation = npc.getLastProcreation();
-            long elapsedTime = System.currentTimeMillis() - lastProcreation;
+            long elapsed = System.currentTimeMillis() - npc.getLastProcreation(),
+                    cooldown = Config.PROCREATION_COOLDOWN.asLong(),
+                    leftMillis = cooldown - elapsed,
+                    leftSeconds = (leftMillis / 1000L) % 60L;
 
-            int procreationCooldown = Config.PROCREATION_COOLDOWN.asInt();
-
-            if (elapsedTime <= procreationCooldown) {
-                String next = PluginUtils.getTimeString(procreationCooldown - elapsedTime);
+            if (elapsed < cooldown && leftSeconds > 0) {
+                String next = PluginUtils.formatMillis(leftMillis);
                 messages.send(player, npc, Messages.Message.PROCREATE_FAIL_HAS_BABY);
                 messages.send(player, Messages.Message.PROCREATE_COOLDOWN, string -> string.replace("%time%", next));
                 closeInventory(player);
@@ -571,6 +576,15 @@ public final class InventoryListeners implements Listener {
         }
 
         closeInventory(player);
+    }
+
+    private void teleport(@NotNull Villager villager, Location location) {
+        // For some reason this is necessary since 1.21.8? the ID changes after a teleport?
+        int previousId = villager.getEntityId();
+        PluginUtils.teleportWithPassengers(villager, location);
+        if (previousId != villager.getEntityId()) {
+            plugin.getTracker().removeNPC(previousId);
+        }
     }
 
     private void openAddNewPlayerGUI(Player player, IVillagerNPC npc) {

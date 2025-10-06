@@ -120,13 +120,17 @@ public class PetCat extends Cat implements Pet {
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
-        NMSConverter.updateTamedData(plugin, output, this, tamedByVillager);
+        NMSConverter.updateTamedData(plugin, this, tamedByVillager);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput input) {
-        super.readAdditionalSaveData(input);
-        tamedByVillager = Boolean.TRUE.equals(getBukkitEntity().getPersistentDataContainer().get(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN));
+    public void load(ValueInput input) {
+        super.load(input);
+
+        // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
+        // so our data won't be present at that time.
+
+        tamedByVillager = getBukkitEntity().getPersistentDataContainer().getOrDefault(plugin.getTamedByVillagerKey(), PersistentDataType.BOOLEAN, false);
     }
 
     @Override

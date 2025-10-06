@@ -11,11 +11,13 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 
 public class NPCPool implements Listener, Runnable {
 
@@ -44,6 +46,7 @@ public class NPCPool implements Listener, Runnable {
             if (world == null) continue;
 
             for (Player player : List.copyOf(world.getPlayers())) {
+                if (!player.isValid()) continue;
                 handleVisibility(player, player.getLocation(), npc);
             }
         }
@@ -74,7 +77,7 @@ public class NPCPool implements Listener, Runnable {
         });
     }
 
-    public void handleVisibility(Player player, Location playerLocation, @NotNull NPC npc) {
+    public void handleVisibility(@NotNull Player player, Location playerLocation, @NotNull NPC npc) {
         LivingEntity bukkit = npc.getNpc().bukkit();
         if (bukkit == null) return;
 
@@ -96,7 +99,7 @@ public class NPCPool implements Listener, Runnable {
         if (!npcRange && npc.isShownFor(player)) {
             npc.hide(player);
         } else if (npcRange && !npc.isShownFor(player)) {
-            npc.show(player);
+            npc.show(player, npcLocation);
         }
 
         // Send passengers again to prevent ghost-nametags.
@@ -105,8 +108,12 @@ public class NPCPool implements Listener, Runnable {
         }
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     public void onPlayerTeleport(@NotNull PlayerTeleportEvent event) {
+        // If the player switched worlds, then we'll handle the visibility on onPlayerChangedWorld().
+        Location to = event.getTo();
+        if (to == null || !event.getPlayer().getWorld().equals(to.getWorld())) return;
+
         handleEventVisibility(event);
     }
 
@@ -133,11 +140,19 @@ public class NPCPool implements Listener, Runnable {
     }
 
     @EventHandler
-    public void handleQuit(@NotNull PlayerQuitEvent event) {
-        Player player = event.getPlayer();
+    public void onPlayerDeath(@NotNull PlayerDeathEvent event) {
+        handleRemoval(event.getEntity(), NPC::hide);
+    }
 
+    @EventHandler
+    public void handleQuit(@NotNull PlayerQuitEvent event) {
+        // No need to send remove packets, the player left.
+        handleRemoval(event.getPlayer(), NPC::removeSeeingPlayer);
+    }
+
+    private void handleRemoval(Player player, BiConsumer<NPC, Player> action) {
         npcMap.values().stream()
                 .filter(npc -> npc.isShownFor(player))
-                .forEach(npc -> npc.removeSeeingPlayer(player));
+                .forEach(npc -> action.accept(npc, player));
     }
 }

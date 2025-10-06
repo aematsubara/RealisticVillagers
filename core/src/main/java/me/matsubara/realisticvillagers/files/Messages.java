@@ -221,6 +221,7 @@ public final class Messages {
         INTERACT_FAIL_ALREADY_ALIVE("interact-fail.already-alive"),
         GIFT_EXPECTING("gift.expecting"),
         GIFT_EXPECTING_FAIL("gift.expecting-fail"),
+        RIGHT_CLICK_GIFT,
         THROW_GIFT,
         SELECT_BED,
         RELOADING,

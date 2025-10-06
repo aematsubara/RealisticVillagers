@@ -27,11 +27,8 @@ public class ReactTo extends Behavior<Villager> {
         if (!(villager instanceof VillagerNPC npc)) return;
         Brain<Villager> brain = villager.getBrain();
 
-        Raid raid = ((ServerLevel) villager.level()).getRaidAt(villager.blockPosition());
-
-        npc.stopAllInteractions();
-
         if (memory.equals(VillagerNPC.HEARD_HORN_TIME) && npc.canAttack()) {
+            npc.stopAllInteractions();
             // If HEARD_HORN_TIME is present, is the same for PLAYER_HORN.
             @SuppressWarnings("OptionalGetWithoutIsPresent") Player playerHorn = brain.getMemory(VillagerNPC.PLAYER_HORN).get();
             VillagerPanicTrigger.handleFightReaction(brain, playerHorn, TargetReason.HORN);
@@ -39,9 +36,12 @@ public class ReactTo extends Behavior<Villager> {
             return;
         }
 
-        // Villagers will hide for 15 seconds and then stop (if not in raid && can't attack).
-        if (raid == null && !npc.canAttack()) {
-            brain.setActiveActivityIfPossible(Activity.HIDE);
-        }
+        Raid raid = ((ServerLevel) villager.level()).getRaidAt(villager.blockPosition());
+        if (raid != null || npc.canAttack()) return;
+
+        npc.stopAllInteractions();
+
+        // Villagers will hide for 15 seconds and then stop (if not in raid && unarmed).
+        brain.setActiveActivityIfPossible(Activity.HIDE);
     }
 }

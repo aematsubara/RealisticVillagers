@@ -1,5 +1,7 @@
 package me.matsubara.realisticvillagers.gui.types;
 
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.EntityCategory;
@@ -11,6 +13,7 @@ import me.matsubara.realisticvillagers.util.ItemBuilder;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.text.WordUtils;
+import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -29,6 +32,7 @@ public final class CombatGUI extends InteractGUI {
     private final List<EntityHead> heads;
     private final String keyword;
     private final boolean isAnimal;
+    private final boolean useSpawnEgg;
 
     private int current;
     private int pages;
@@ -61,6 +65,9 @@ public final class CombatGUI extends InteractGUI {
         super(plugin, npc, "combat", 45, null, false);
         this.player = player;
         this.isAnimal = isAnimal;
+        ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
+        this.useSpawnEgg = plugin.getConfig().getBoolean("gui.combat.use-spawn-egg")
+                && version.isNewerThanOrEquals(ServerVersion.V_1_20_5);
         this.current = page != null ? page : 0;
 
         enabled = getGUIItem("enabled");
@@ -119,7 +126,11 @@ public final class CombatGUI extends InteractGUI {
                     WordUtils.capitalizeFully(defaultName.toLowerCase(Locale.ROOT).replace("_", " ")));
 
             ItemBuilder builder = new ItemBuilder(getGUIItem("entity"));
-            if (skull.getUrl() == null) {
+
+            if (useSpawnEgg) {
+                Material egg = skull.getSpawnEgg();
+                if (egg != null) builder.setType(egg);
+            } else if (skull.getUrl() == null) {
                 builder.setType(skull.getHead().getType());
             } else {
                 builder.setHead(skull.getUrl(), true);

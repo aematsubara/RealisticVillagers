@@ -21,6 +21,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -39,6 +40,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -82,6 +84,9 @@ public final class ExpectingManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerDropItem(@NotNull PlayerDropItemEvent event) {
+        // We'll handle gifting on VillagerListeners#isExpecting().
+        if (!getGiftModeFromConfig().drop()) return;
+
         UUID uuid = event.getPlayer().getUniqueId();
 
         IVillagerNPC npc = villagerExpectingCache.get(uuid);
@@ -139,35 +144,20 @@ public final class ExpectingManager implements Listener {
         // We know that thrower isn't null since isOurItem() is true.
         @SuppressWarnings("DataFlowIssue") Player throwerPlayer = Bukkit.getPlayer(thrower);
 
+        // The villager picked up the item.
         if (npc.bukkit().getUniqueId().equals(pickerUUID)) {
-            remove(thrower);
             removeMetadata(item, plugin.getGiftKey());
-
-            // Stop expecting gift.
-            npc.stopExpecting();
-
-            // Cancel event if player is offline.
-            if (throwerPlayer == null) {
-                event.setCancelled(true);
-                return;
-            }
-
-            ItemStack stack = item.getItemStack();
-
-            // Call event, handle gift & add to cooldown.
-            plugin.getServer().getPluginManager().callEvent(new VillagerPickGiftEvent(
-                    npc,
-                    throwerPlayer,
-                    stack));
-            handleGift(npc, throwerPlayer, stack);
-            plugin.getCooldownManager().addCooldown(throwerPlayer, npc.bukkit(), "gift");
+            handleVillagerPickUp(npc, item.getItemStack(), thrower, throwerPlayer, event);
             return;
         }
 
+        // A random player tried to pick up the gift.
         if (!pickerUUID.equals(thrower)) {
             event.setCancelled(true);
             return;
         }
+
+        // The player gifting picked the item.
 
         npc.setGiftDropped(false);
         removeMetadata(item, plugin.getGiftKey());
@@ -179,6 +169,27 @@ public final class ExpectingManager implements Listener {
             interact.setShouldStopInteracting(true);
             throwerPlayer.closeInventory();
         }
+    }
+
+    public void handleVillagerPickUp(@NotNull IVillagerNPC npc, ItemStack item, UUID thrower, Player throwerPlayer, @Nullable Cancellable cancellable) {
+        remove(thrower);
+
+        // Stop expecting gift.
+        npc.stopExpecting();
+
+        // Cancel event if player is offline.
+        if (throwerPlayer == null) {
+            if (cancellable != null) cancellable.setCancelled(true);
+            return;
+        }
+
+        // Call event, handle gift and add to cooldown.
+        plugin.getServer().getPluginManager().callEvent(new VillagerPickGiftEvent(
+                npc,
+                throwerPlayer,
+                item));
+        handleGift(npc, throwerPlayer, item);
+        plugin.getCooldownManager().addCooldown(throwerPlayer, npc.bukkit(), "gift");
     }
 
     private boolean notOurItem(Item item) {
@@ -244,7 +255,7 @@ public final class ExpectingManager implements Listener {
         npc.stopExpecting();
     }
 
-    private void handleGift(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull ItemStack gift) {
+    public void handleGift(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull ItemStack gift) {
         UUID playerUUID = player.getUniqueId();
 
         int reputation = npc.getReputation(playerUUID);
@@ -329,7 +340,7 @@ public final class ExpectingManager implements Listener {
         }
 
         if (successByCross || (success && isCross)) {
-            // For cross, just use a random category.
+            // For cross, use a random category.
             GiftCategory randomCategory = plugin.getGiftManager().getRandomCategory();
             if (randomCategory != null) messages.sendRandomGiftMessage(player, npc, randomCategory);
             return;
@@ -372,5 +383,25 @@ public final class ExpectingManager implements Listener {
 
     public void remove(UUID uuid) {
         villagerExpectingCache.remove(uuid);
+    }
+
+    public GiftMode getGiftModeFromConfig() {
+        return PluginUtils.getOrDefault(
+                GiftMode.class,
+                Config.GIFT_MODE.asString("DROP"),
+                GiftMode.DROP);
+    }
+
+    public enum GiftMode {
+        DROP,
+        RIGHT_CLICK;
+
+        public boolean drop() {
+            return this == DROP;
+        }
+
+        public boolean rightClick() {
+            return this == RIGHT_CLICK;
+        }
     }
 }

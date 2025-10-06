@@ -53,13 +53,17 @@ public final class Reflection {
     }
 
     public static @Nullable MethodHandle getConstructor(@NotNull Class<?> clazz, Class<?>... parameterTypes) {
+        return getConstructor(true, clazz, parameterTypes);
+    }
+
+    public static @Nullable MethodHandle getConstructor(boolean printStackTrace, @NotNull Class<?> clazz, Class<?>... parameterTypes) {
         try {
             Constructor<?> constructor = clazz.getDeclaredConstructor(parameterTypes);
             constructor.setAccessible(true);
 
             return LOOKUP.unreflectConstructor(constructor);
         } catch (ReflectiveOperationException exception) {
-            exception.printStackTrace();
+            if (printStackTrace) exception.printStackTrace();
             return null;
         }
     }

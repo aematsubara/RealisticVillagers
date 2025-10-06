@@ -9,7 +9,6 @@ import com.github.retrooper.packetevents.wrapper.play.server.*;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import me.matsubara.realisticvillagers.npc.NPC;
 import org.bukkit.Location;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -56,9 +55,9 @@ public class VisibilityModifier extends NPCModifier {
         return this;
     }
 
-    public VisibilityModifier queueSpawn(@Nullable Location location) {
+    public VisibilityModifier queueSpawn(Location location) {
         queueInstantly((npc, player) -> {
-            com.github.retrooper.packetevents.protocol.world.Location at = SpigotConversionUtil.fromBukkitLocation(location != null ? location : npc.getNpc().bukkit().getLocation());
+            com.github.retrooper.packetevents.protocol.world.Location at = SpigotConversionUtil.fromBukkitLocation(location);
             if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)) {
                 return new WrapperPlayServerSpawnEntity(npc.getEntityId(),
                         npc.getProfile().getUUID(),

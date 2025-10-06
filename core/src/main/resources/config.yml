@@ -131,9 +131,15 @@ disable-nametags: false
 # Here you can modify the text displayed above the player.
 # NOTE: This function doesn't work in 1.18.2, 1.19.4 and 1.20.1 :(.
 custom-nametags:
-  # If true, a small block will be displayed above the text representing the villager's job block
-  # (except the unemployed and nitwits).
+  # If true, a small block will be displayed above the text representing the villager's job block (except the unemployed and nitwits).
   show-job-block: true
+  # Whether the text is displayed with shadow.
+  shadow: true
+  # Whether the text be visible through blocks.
+  see-through: false
+  # Alpha value of rendered text, from -128 to 127.
+  # Default to -1, which is completely opaque.
+  text-opacity: -1
   lines:
     # %villager-name% - name of the villager.
     # %level% - level of the villager (only for @villager).
@@ -212,8 +218,8 @@ villager-farm:
   # If false, 2 villagers will not be able to procreate with each other if they are from the same family (unless they are partners).
   allow-procreation-between-family-members: false
 
-# The reputation that will be lost after divorce.  Minimum value: 2; use 1 or less to disable.
-divorce-reputation-loss: 150
+# The reputation that will be lost after divorce. Minimum value: 2; use 1 or less to disable.
+divorce-reputation-loss: 50
 
 # The reputation that will be lost after divorce with divorce papers (given by clerics).  Minimum value: 2; use 1 or less to disable.
 divorce-reputation-loss-papers: 10
@@ -331,15 +337,15 @@ chat-interact-reputation: 2
 # NOTE #2: for @gift, the cooldown starts after the villager picks up the gift.
 interact-cooldown:
   chat: 2
-  greet: 60
+  greet: 30
   story: 2
   joke: 2
   flirt: 2
-  proud-of: 60
+  proud-of: 30
   insult: 2
   divorce-papers: 900
-  gift: 5
-  bed: 5
+  gift: 3
+  bed: 3
 
 # Whether to display the title in the villager's chat messages.
 # For example, James the Armorer / Juliet the Weaponsmith / etc.
@@ -437,16 +443,21 @@ variable-text:
     fight: "Fight"
     stay: "Stay"
   entity:
+    allay: "Allay"
+    armadillo: "Armadillo"
     axolotl: "Axolotl"
     bat: "Bat"
     bee: "Bee"
     blaze: "Blaze"
+    bogged: "Bogged"
+    breeze: "Breeze"
     camel: "Camel"
     cat: "Cat"
     cave-spider: "Cave Spider"
     chicken: "Chicken"
     cod: "Cod"
     cow: "Cow"
+    creaking: "Creaking"
     creeper: "Creeper"
     dolphin: "Dolphin"
     donkey: "Donkey"
@@ -459,9 +470,11 @@ variable-text:
     fox: "Fox"
     frog: "Frog"
     ghast: "Ghast"
+    giant: "Giant"
     glow-squid: "Glow Squid"
     goat: "Goat"
     guardian: "Guardian"
+    happy-ghast: "Happy Ghast"
     hoglin: "Hoglin"
     horse: "Horse"
     husk: "Husk"
@@ -477,6 +490,7 @@ variable-text:
     pig: "Pig"
     piglin: "Piglin"
     piglin-brute: "Piglin Brute"
+    pillager: "Pillager"
     polar-bear: "Polar Bear"
     pufferfish: "Pufferfish"
     rabbit: "Rabbit"
@@ -486,6 +500,7 @@ variable-text:
     shulker: "Shulker"
     silverfish: "Silverfish"
     skeleton: "Skeleton"
+    skeleton-horse: "Skeleton Horse"
     slime: "Slime"
     sniffer: "Sniffer"
     spider: "Spider"
@@ -739,6 +754,8 @@ gui:
         lore:
           - "&7Click to manage combat of this villager."
         only-if-allowed: false
+        flags:
+          - HIDE_ATTRIBUTES
   equipment:
     title: "%villager-name%'s inventory"
     items:
@@ -753,6 +770,8 @@ gui:
           - "&7Click to go to the previous menu."
   combat:
     title: "Targets (%page%/%max-page%)"
+    # Whether to use spawn eggs instead of heads (only for 1.21.5+).
+    use-spawn-egg: false
     items:
       enabled:
         material: LIME_DYE
@@ -1082,6 +1101,12 @@ change-skin:
 # The reputation that the player will receive when giving a bad gift. Minimum value: 2; use 1 or less to disable.
 bad-gift-reputation: 5
 
+# How to give a gift to a villager.
+# Valid modes (DROP/RIGHT_CLICK):
+# * DROP - the player must drop the item for the villager to pick up.
+# * RIGHT_CLICK - the player must right-click on the villager with the item in hand (only one unit will be taken).
+gift-mode: RIGHT_CLICK
+
 # The list of accepted items for each gift level.
 # Minimum reputation value: 2; use 1 or less to disable.
 #
@@ -1283,12 +1308,17 @@ reputation-required-to-ask-to-stay: 20
 # If true, members of the villager's family may ask the villager to stay regardless of the required reputation in @reputation-required-to-ask-to-stay.
 family-bypass-ask-to-stay: true
 
+# Whether villagers should walk near the stay point.
+# If true, the villager will move away some blocks from the established point and return again.
+# If false, the villager will not move, only look at nearby entities.
+stay-stroll-around: false
+
 # The initial reputation that a villager will have with the player (must be the father) at birth.
 # Minimum reputation value: 2; use 1 or less to disable.
 initial-reputation-at-birth: 50
 
 # Here you can modify the equipment a villager will receive when spawning.
-# @chance: the chance of receiving the item (from 0.0 to 1.0). If not stated it'll be 1.0.
+# @chance: the chance of receiving the item (from 0.0 to 1.0). If not stated, it'll be 1.0.
 # @only-for-range-weapon: the item will only be added to the inventory if the villager received a ranged weapon.
 # @only-for-bow: same as above, but only for bows.
 # @only-for-crossbow: same as above, but only for crossbows.
@@ -1468,7 +1498,7 @@ schedules:
 # NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
 revive:
   # Whether villagers can be revived.
-  enabled: false
+  enabled: true
   # If villagers can only be revived at night.
   only-at-night: true
   # If only villagers with a cross can be revived.

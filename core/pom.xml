@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.4</version>
+        <version>3.3.5</version>
     </parent>
 
     <pluginRepositories>
@@ -44,12 +44,12 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <relocations>
                                 <relocation>
-                                    <pattern>net.wesjd</pattern>
-                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                    <pattern>net.wesjd.anvilgui</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util.anvilgui</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>com.tchristofferson</pattern>
-                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                    <pattern>com.tchristofferson.configupdater</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util.configupdater</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.jsoup</pattern>
@@ -60,8 +60,12 @@
                                     <shadedPattern>me.matsubara.realisticvillagers.util.mineskin</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>com.cryptomorin</pattern>
-                                    <shadedPattern>me.matsubara.realisticvillagers.util</shadedPattern>
+                                    <pattern>com.cryptomorin.xseries</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util.xseries</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.bstats</pattern>
+                                    <shadedPattern>me.matsubara.realisticvillagers.util.bstats</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>
@@ -230,6 +234,18 @@
             <artifactId>packetevents-spigot</artifactId>
             <version>2.9.4-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+        <!-- MorePersistentDataTypes -->
+        <dependency>
+            <groupId>com.jeff-media</groupId>
+            <artifactId>MorePersistentDataTypes</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <!-- bStats -->
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.0.2</version>
         </dependency>
     </dependencies>
 </project>

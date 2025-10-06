@@ -23,12 +23,11 @@ public class ReactToBell extends Behavior<Villager> {
         Brain<Villager> brain = villager.getBrain();
 
         Raid raid = ((ServerLevel) villager.level).getRaidAt(villager.blockPosition());
+        if (raid != null || npc.canAttack()) return;
 
         npc.stopAllInteractions();
 
         // Villagers will hide for 15 seconds and then stop (if not in raid && can't attack).
-        if (raid == null && !npc.canAttack()) {
-            brain.setActiveActivityIfPossible(Activity.HIDE);
-        }
+        brain.setActiveActivityIfPossible(Activity.HIDE);
     }
 }

@@ -3,19 +3,19 @@ package me.matsubara.realisticvillagers.nms.v1_21_4;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.util.ExtraCodecs;
+import lombok.Getter;
+import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.VisibleForDebug;
 import net.minecraft.world.entity.ai.gossip.GossipContainer;
 import net.minecraft.world.entity.ai.gossip.GossipType;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.DoublePredicate;
@@ -24,10 +24,7 @@ import java.util.stream.Stream;
 
 public class CustomGossipContainer extends GossipContainer {
 
-    private final Map<UUID, EntityGossips> gossips = Maps.newHashMap();
-
-    public static final Codec<CustomGossipContainer> CODEC = GossipEntry.CODEC.listOf()
-            .xmap(CustomGossipContainer::new, (reputation) -> reputation.unpack().toList());
+    private final @Getter Map<UUID, EntityGossips> gossips = Maps.newHashMap();
 
     private static final int DISCARD_THRESHOLD = 2;
     private static final Map<GossipType, Integer> MAX_GOSSIP_TYPE_TRANSFER = ImmutableMap.of(
@@ -41,7 +38,7 @@ public class CustomGossipContainer extends GossipContainer {
 
     }
 
-    private CustomGossipContainer(@NotNull List<GossipEntry> list) {
+    public CustomGossipContainer(@NotNull List<GossipEntry> list) {
         list.forEach((entry) -> getOrCreate(entry.target).entries.put(entry.type, entry.value));
     }
 
@@ -65,7 +62,7 @@ public class CustomGossipContainer extends GossipContainer {
         }
     }
 
-    private Stream<GossipEntry> unpack() {
+    public Stream<GossipEntry> unpack() {
         return gossips.entrySet().stream().flatMap((entry) -> entry.getValue().unpack(entry.getKey()));
     }
 
@@ -227,17 +224,36 @@ public class CustomGossipContainer extends GossipContainer {
         }
     }
 
-    private record GossipEntry(UUID target, GossipType type, int value) {
-
-        public static final Codec<GossipEntry> CODEC = RecordCodecBuilder.create((var0) -> var0
-                .group(UUIDUtil.CODEC.fieldOf("Target")
-                        .forGetter(GossipEntry::target), GossipType.CODEC.fieldOf("Type")
-                        .forGetter(GossipEntry::type), ExtraCodecs.POSITIVE_INT.fieldOf("Value")
-                        .forGetter(GossipEntry::value))
-                .apply(var0, GossipEntry::new));
+    public record GossipEntry(UUID target, GossipType type, int value) implements ConfigurationSerializable {
 
         public int weightedValue() {
             return value * type.weight;
+        }
+
+        @Override
+        public @NotNull Map<String, Object> serialize() {
+            Map<String, Object> result = new LinkedHashMap<>();
+
+            result.put("Target", target.toString());
+            result.put("Type", type.getSerializedName());
+            result.put("Value", value);
+
+            return result;
+        }
+
+        @SuppressWarnings({"unused"})
+        public static @NotNull GossipEntry deserialize(@NotNull Map<String, Object> args) {
+            UUID target = PluginUtils.getOrDefault(args, "Target", String.class, UUID::fromString, null);
+            String type = PluginUtils.getOrDefault(args, "Type", String.class);
+            Integer value = PluginUtils.getOrDefault(args, "Value", Integer.class);
+            return new GossipEntry(target, getTypeBySerializedName(type), value);
+        }
+
+        private static @Nullable GossipType getTypeBySerializedName(String name) {
+            for (GossipType temp : GossipType.values()) {
+                if (temp.getSerializedName().equals(name)) return temp;
+            }
+            return null;
         }
     }
 }

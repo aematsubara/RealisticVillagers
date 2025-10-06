@@ -156,10 +156,11 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
                 .map(entityType -> npc.getTargetEntities().contains(entityType)).orElse(false);
     }
 
-    private static Optional<EntityType<?>> getTypeBySkullType(ItemStack item) {
+    private static @NotNull Optional<EntityType<?>> getTypeBySkullType(ItemStack item) {
         for (EntityHead skull : EntityHead.values()) {
             if (CraftItemStack.asNMSCopy(skull.getHead()).is(item.getItem())) {
-                return EntityType.byString(skull.name().toLowerCase(Locale.ROOT));
+                org.bukkit.entity.EntityType type = skull.getType();
+                if (type != null) EntityType.byString(type.name().toLowerCase(Locale.ROOT));
             }
         }
         return Optional.empty();

@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.tchristofferson.configupdater.ConfigUpdater;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
@@ -32,6 +33,7 @@ import net.wesjd.anvilgui.AnvilGUI;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
@@ -48,6 +50,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -80,11 +83,27 @@ public final class RealisticVillagers extends JavaPlugin {
     private final NamespacedKey childSexKey = key("ChildSex");
     private final NamespacedKey zombieTransformKey = key("ZombieTransform");
     private final NamespacedKey fishedKey = key("Fished");
-    private final NamespacedKey npcValuesKey = key("VillagerNPCValues");
-    private final @Deprecated NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
+
+    @ApiStatus.Internal
+    private final @Getter(AccessLevel.NONE) NamespacedKey valuesKey = key("RValues"); // New main key.
+    private final NamespacedKey inventoryKey = key("RInventory");
+    @ApiStatus.Internal
+    private final @Getter(AccessLevel.NONE) NamespacedKey npcValuesKey = key("VillagerNPCValues"); // Previous main key.
+
+    public NamespacedKey getNpcValuesKey() {
+        VersionMatcher matcher = VersionMatcher.getByMinecraftVersion();
+        return matcher != null && matcher.higherOrEqualThan(VersionMatcher.v1_21_4) ? valuesKey : getLegacyNpcValuesKey();
+    }
+
+    @ApiStatus.Internal
+    public NamespacedKey getLegacyNpcValuesKey() {
+        return npcValuesKey;
+    }
+
+    private final @ApiStatus.Internal NamespacedKey tamedByPlayerKey = key("TamedByPlayer");
     private final NamespacedKey tamedByVillagerKey = key("TamedByVillager");
     private final NamespacedKey isBeingLootedKey = key("IsBeingLooted");
-    private final @Deprecated NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
+    private final @ApiStatus.Internal NamespacedKey ignoreVillagerKey = key("IgnoreVillager");
     private final NamespacedKey villagerUUIDKey = key("VillagerUUID");
     private final NamespacedKey divorcePapersKey = key("DivorcePapers");
     private final NamespacedKey raidStatsKey = key("RaidStats");
@@ -140,13 +159,11 @@ public final class RealisticVillagers extends JavaPlugin {
             "schedules",
             "revive.head-item");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
+    private static final int BSTATS_ID = 27463;
 
     @Override
     public void onLoad() {
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
-        PacketEvents.getAPI().getSettings()
-                .reEncodeByDefault(true)
-                .checkForUpdates(false);
         PacketEvents.getAPI().load();
 
         long now = System.nanoTime();
@@ -210,6 +227,9 @@ public final class RealisticVillagers extends JavaPlugin {
             manager.disablePlugin(this);
             return;
         }
+
+        // Enable bStats so we can track which versions we should keep supporting.
+        new Metrics(this, BSTATS_ID);
 
         logger.info("Loading skin files...");
 
