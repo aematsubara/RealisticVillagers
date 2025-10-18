@@ -5,6 +5,7 @@ import com.github.retrooper.packetevents.protocol.player.TextureProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.jeff_media.morepersistentdatatypes.datatypes.serializable.ConfigurationSerializableDataType;
 import com.tchristofferson.configupdater.ConfigUpdater;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.AccessLevel;
@@ -13,6 +14,8 @@ import lombok.Setter;
 import me.matsubara.realisticvillagers.command.MainCommand;
 import me.matsubara.realisticvillagers.compatibility.*;
 import me.matsubara.realisticvillagers.data.ItemLoot;
+import me.matsubara.realisticvillagers.data.serialization.GossipEntryWrapper;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
@@ -40,6 +43,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.MemoryConfiguration;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.Listener;
@@ -160,6 +164,14 @@ public final class RealisticVillagers extends JavaPlugin {
             "revive.head-item");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
     private static final int BSTATS_ID = 27463;
+
+    static {
+        // Register our data serializators.
+        ConfigurationSerialization.registerClass(GossipEntryWrapper.class);
+        ConfigurationSerialization.registerClass(OfflineDataWrapper.class);
+    }
+
+    public static final PersistentDataType<byte[], OfflineDataWrapper> VILLAGER_DATA = new ConfigurationSerializableDataType<>(OfflineDataWrapper.class);
 
     @Override
     public void onLoad() {

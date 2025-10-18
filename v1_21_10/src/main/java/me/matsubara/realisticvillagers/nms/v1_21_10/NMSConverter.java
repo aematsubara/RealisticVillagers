@@ -2,11 +2,11 @@ package me.matsubara.realisticvillagers.nms.v1_21_10;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.jeff_media.morepersistentdatatypes.datatypes.serializable.ConfigurationSerializableDataType;
 import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_10.WanderingTraderNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_10.pet.PetCat;
@@ -61,7 +61,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.craftbukkit.v1_21_R6.CraftRaid;
 import org.bukkit.craftbukkit.v1_21_R6.CraftWorld;
 import org.bukkit.craftbukkit.v1_21_R6.block.CraftBlock;
@@ -139,13 +138,7 @@ public class NMSConverter implements INMSConverter {
             }
         }
         ACTIVITIES = Collections.unmodifiableMap(activities);
-
-        // Register our data serializators.
-        ConfigurationSerialization.registerClass(CustomGossipContainer.GossipEntry.class);
-        ConfigurationSerialization.registerClass(OfflineVillagerNPC.class);
     }
-
-    public static final PersistentDataType<byte[], OfflineVillagerNPC> VILLAGER_DATA = new ConfigurationSerializableDataType<>(OfflineVillagerNPC.class);
 
     public NMSConverter(RealisticVillagers plugin) {
         this.plugin = plugin;
@@ -159,7 +152,7 @@ public class NMSConverter implements INMSConverter {
     @Override
     public void registerEntities() {
         // "factory" field.
-        Field field = Reflection.getFieldRaw(EntityType.class, EntityType.EntityFactory.class, "bZ", "factory");
+        Field field = Reflection.getFieldRaw(EntityType.class, EntityType.EntityFactory.class, "cf", "factory");
         if (field == null) return;
 
         Reflection.setFieldUsingUnsafe(
@@ -211,7 +204,9 @@ public class NMSConverter implements INMSConverter {
             npc.setWasInfected(isInfection);
 
             if (npc.getOffline() instanceof OfflineVillagerNPC offline) {
-                byte[] primitive = VILLAGER_DATA.toPrimitive(offline, villager.getPersistentDataContainer().getAdapterContext());
+                byte[] primitive = RealisticVillagers.VILLAGER_DATA.toPrimitive(
+                        offline.toOfflineDataWrapper(),
+                        villager.getPersistentDataContainer().getAdapterContext());
                 return Base64.getEncoder().encodeToString(primitive);
             }
         } else if (entity instanceof ZombieVillager) {
@@ -291,9 +286,12 @@ public class NMSConverter implements INMSConverter {
         if (tag.isEmpty()) {
             offline = OfflineVillagerNPC.DUMMY_OFFLINE;
         } else {
-            offline = VILLAGER_DATA.fromPrimitive(
+            OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(
                     Base64.getDecoder().decode(tag),
                     living.getPersistentDataContainer().getAdapterContext());
+            offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ?
+                    temp :
+                    OfflineVillagerNPC.DUMMY_OFFLINE;
         }
         consumer.accept(offline);
     }
@@ -387,7 +385,8 @@ public class NMSConverter implements INMSConverter {
     @Override
     public IVillagerNPC getNPCFromTag(String tag) {
         byte[] primitive = Base64.getDecoder().decode(tag);
-        return VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
+        OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
+        return OfflineVillagerNPC.fromOfflineDataWrapper(wrapper);
     }
 
     @Override
@@ -528,7 +527,11 @@ public class NMSConverter implements INMSConverter {
 
             Set<IVillagerNPC> offlines = plugin.getTracker().getOfflineVillagers();
             if (offlines.stream().noneMatch(npc -> npc.getUniqueId().equals(uuid))) {
-                OfflineVillagerNPC offline = VILLAGER_DATA.fromPrimitive(REGISTRY.extract(VILLAGER_DATA, values), ADAPTER_CONTEXT);
+                byte[] primitive = REGISTRY.extract(RealisticVillagers.VILLAGER_DATA, values);
+                OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
+                OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ?
+                        temp :
+                        OfflineVillagerNPC.DUMMY_OFFLINE;
                 offline.setLastKnownPosition(new LastKnownPosition(world, xc, yc, zc));
                 offlines.add(offline);
             }

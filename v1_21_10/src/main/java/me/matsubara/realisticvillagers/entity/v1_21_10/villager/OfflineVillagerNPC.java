@@ -9,17 +9,19 @@ import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
+import me.matsubara.realisticvillagers.data.serialization.GossipEntryWrapper;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.nms.v1_21_10.CustomGossipContainer;
-import me.matsubara.realisticvillagers.util.PluginUtils;
+import me.matsubara.realisticvillagers.nms.v1_21_10.NMSConverter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.gossip.GossipType;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
@@ -33,9 +35,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Getter
-public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializable {
+public class OfflineVillagerNPC implements IVillagerNPC {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
     private final UUID uuid;
@@ -66,35 +69,6 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     private final int tickTimer;
     private final float saturationLevel;
     private final float exhaustionLevel;
-
-    public static final String UUID = "UUID";
-    public static final String NAME = "Name";
-    public static final String SEX = "Sex";
-    public static final String PARTNER = "Partner";
-    public static final String PARTNERS = "Partners";
-    public static final String IS_PARTNER_VILLAGER = "IsPartnerVillager";
-    public static final String LAST_PROCREATION = "LastProcreation";
-    public static final String SKIN_TEXTURE_ID = "SkinTextureId";
-    public static final String KID_SKIN_TEXTURE_ID = "KidSkinTextureId";
-    public static final String FATHER = "Father";
-    public static final String MOTHER = "Mother";
-    public static final String IS_FATHER_VILLAGER = "IsFatherVillager";
-    public static final String WAS_INFECTED = "WasInfected";
-    public static final String CHILDRENS = "Childrens";
-    public static final String TARGET_ENTITIES = "TargetEntities";
-    public static final String BED_HOME_WORLD = "BedHomeWorld";
-    public static final String BED_HOME_POS = "BedHomePos";
-    public static final String EQUIPPED = "Equipped";
-    public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
-    public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
-    public static final String GOSSIP_ENTRIES = "GossipsEntries";
-    public static final String PLAYERS = "Players";
-    public static final String LAST_WORLD = "LastWorld";
-    public static final String LAST_POS = "LastPos";
-    public static final String FOOD_LEVEL = "FoodLevel";
-    public static final String FOOD_TICK_TIMER = "FoodTickTimer";
-    public static final String FOOD_SATURATION_LEVEL = "FoodSaturationLevel";
-    public static final String FOOD_EXHAUSTION_LEVEL = "FoodExhaustionLevel";
 
     public static final OfflineVillagerNPC DUMMY_OFFLINE = dummy(null, null);
 
@@ -509,22 +483,22 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
 
     @Override
     public boolean validShoulderEntityLeft() {
-        return shoulderEntityLeft != null && !shoulderEntityLeft.isEmpty();
+        return getShoulderEntityLeft() != null;
     }
 
     @Override
     public Object getShoulderEntityLeft() {
-        return shoulderEntityLeft;
+        return NMSConverter.extractParrotVariant(shoulderEntityLeft);
     }
 
     @Override
     public boolean validShoulderEntityRight() {
-        return shoulderEntityRight != null && !shoulderEntityRight.isEmpty();
+        return getShoulderEntityRight() != null;
     }
 
     @Override
     public Object getShoulderEntityRight() {
-        return shoulderEntityRight;
+        return NMSConverter.extractParrotVariant(shoulderEntityRight);
     }
 
     @Override
@@ -572,116 +546,80 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
 
     }
 
-    @Override
-    public @NotNull Map<String, Object> serialize() {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put(UUID, uuid.toString());
-        if (lastKnownPosition != null) {
-            result.put(LAST_WORLD, lastKnownPosition.world());
-            result.put(LAST_POS, new Vector(lastKnownPosition.x(), lastKnownPosition.y(), lastKnownPosition.z()));
-        }
-        if (villagerName != null) result.put(NAME, villagerName);
-        if (sex != null) result.put(SEX, sex);
-        if (partner != null) result.put(PARTNER, partner);
-        result.put(PARTNERS, partners);
-        result.put(IS_PARTNER_VILLAGER, isPartnerVillager);
-        result.put(LAST_PROCREATION, lastProcreation);
-        result.put(SKIN_TEXTURE_ID, skinTextureId);
-        result.put(KID_SKIN_TEXTURE_ID, kidSkinTextureId);
-        if (father != null) result.put(FATHER, father);
-        if (mother != null) result.put(MOTHER, mother);
-        result.put(IS_FATHER_VILLAGER, isFatherVillager);
-        result.put(CHILDRENS, childrens);
-        result.put(TARGET_ENTITIES, targetEntities.stream().map(EntityType::toShortString).toList());
-        result.put(GOSSIP_ENTRIES, entries);
-        result.put(PLAYERS, players.stream().map(java.util.UUID::toString).toList());
-        if (shoulderEntityLeft != null) result.put(SHOULDER_ENTITY_LEFT, shoulderEntityLeft.toString());
-        if (shoulderEntityRight != null) result.put(SHOULDER_ENTITY_RIGHT, shoulderEntityRight.toString());
-        if (bedHomeWorld != null) result.put(BED_HOME_WORLD, bedHomeWorld.toString());
-        if (bedHome != null) result.put(BED_HOME_POS, new Vector(bedHome.getX(), bedHome.getY(), bedHome.getZ()));
-        result.put(WAS_INFECTED, wasInfected);
-        result.put(EQUIPPED, equipped);
-        result.put(FOOD_LEVEL, foodLevel);
-        result.put(FOOD_TICK_TIMER, tickTimer);
-        result.put(FOOD_SATURATION_LEVEL, saturationLevel);
-        result.put(FOOD_EXHAUSTION_LEVEL, exhaustionLevel);
-        return result;
-    }
-
-    @SuppressWarnings({"unused"})
-    public static @NotNull OfflineVillagerNPC deserialize(@NotNull Map<String, Object> args) {
-        UUID uuid = PluginUtils.getOrDefault(args, UUID, String.class, java.util.UUID::fromString, null);
-        String world = PluginUtils.getOrDefault(args, LAST_WORLD, String.class);
-        Vector vector = PluginUtils.getOrDefault(args, LAST_POS, Vector.class, new Vector(0, 0, 0));
-        LastKnownPosition lastKnownPosition = new LastKnownPosition(world, vector.getX(), vector.getY(), vector.getZ());
-        String villagerName = PluginUtils.getOrDefault(args, NAME, String.class);
-        String sex = PluginUtils.getOrDefault(args, SEX, String.class);
-        IVillagerNPC partner = PluginUtils.getOrDefault(args, PARTNER, IVillagerNPC.class);
-        @SuppressWarnings("unchecked") List<IVillagerNPC> partners = PluginUtils.getOrDefault(
-                args,
-                PARTNERS,
-                List.class,
-                Collections.emptyList());
-        boolean isPartnerVillager = PluginUtils.getOrDefault(args, IS_PARTNER_VILLAGER, Boolean.class);
-        long lastProcreation = PluginUtils.getOrDefault(args, LAST_PROCREATION, Long.class);
-        int skinTextureId = PluginUtils.getOrDefault(args, SKIN_TEXTURE_ID, Integer.class, -1);
-        int kidSkinTextureId = PluginUtils.getOrDefault(args, KID_SKIN_TEXTURE_ID, Integer.class, -1);
-        IVillagerNPC father = PluginUtils.getOrDefault(args, FATHER, IVillagerNPC.class);
-        IVillagerNPC mother = PluginUtils.getOrDefault(args, MOTHER, IVillagerNPC.class);
-        boolean isFatherVillager = PluginUtils.getOrDefault(args, IS_FATHER_VILLAGER, Boolean.class);
-        @SuppressWarnings("unchecked") List<IVillagerNPC> childrens = PluginUtils.getOrDefault(
-                args,
-                CHILDRENS,
-                List.class,
-                Collections.emptyList());
-        Set<EntityType<?>> targetEntities = new HashSet<>();
-        for (Object object : PluginUtils.getOrDefault(args, TARGET_ENTITIES, List.class, Collections.emptyList())) {
-            if (!(object instanceof String string)) continue;
-            EntityType.byString(string).ifPresent(targetEntities::add);
-        }
-        Set<UUID> players = new HashSet<>();
-        for (Object object : PluginUtils.getOrDefault(args, PLAYERS, List.class, Collections.emptyList())) {
-            if (!(object instanceof String string)) continue;
-            players.add(java.util.UUID.fromString(string));
-        }
-        @SuppressWarnings("unchecked") List<CustomGossipContainer.GossipEntry> entries = PluginUtils.getOrDefault(
-                args,
-                GOSSIP_ENTRIES,
-                List.class,
-                Collections.emptyList());
-        CompoundTag shoulderEntityLeft = getShoulderEntity(args, SHOULDER_ENTITY_LEFT);
-        CompoundTag shoulderEntityRight = getShoulderEntity(args, SHOULDER_ENTITY_RIGHT);
-        UUID bedHomeWorld = PluginUtils.getOrDefault(args, BED_HOME_WORLD, String.class, java.util.UUID::fromString, null);
-        Vector bedHome = PluginUtils.getOrDefault(args, BED_HOME_POS, Vector.class, new Vector(0, 0, 0));
-        boolean wasInfected = PluginUtils.getOrDefault(args, WAS_INFECTED, Boolean.class);
-        boolean equipped = PluginUtils.getOrDefault(args, EQUIPPED, Boolean.class);
-        int foodLevel = PluginUtils.getOrDefault(args, FOOD_LEVEL, Integer.class, 20);
-        int tickTimer = PluginUtils.getOrDefault(args, FOOD_TICK_TIMER, Integer.class);
-        float saturationLevel = PluginUtils.getOrDefault(args, FOOD_SATURATION_LEVEL, Float.class, 5.0f);
-        float exhaustionLevel = PluginUtils.getOrDefault(args, FOOD_EXHAUSTION_LEVEL, Float.class);
+    public static IVillagerNPC fromOfflineDataWrapper(OfflineDataWrapper wrapper) {
+        if (wrapper == null) return null;
 
         return new OfflineVillagerNPC(
+                wrapper.getUuid(),
+                wrapper.getVillagerName(),
+                wrapper.getSex(),
+                fromOfflineDataWrapper(wrapper.getPartner()),
+                wrapper.isPartnerVillager(),
+                wrapper.getLastProcreation(),
+                wrapper.getSkinTextureId(),
+                wrapper.getKidSkinTextureId(),
+                fromOfflineDataWrapper(wrapper.getFather()),
+                fromOfflineDataWrapper(wrapper.getMother()),
+                wrapper.isFatherVillager(),
+                wrapper.getLastKnownPosition(),
+                wrapper.getPartners().stream().map(OfflineVillagerNPC::fromOfflineDataWrapper).toList(),
+                wrapper.getChildrens().stream().map(OfflineVillagerNPC::fromOfflineDataWrapper).toList(),
+                wrapper.getTargetEntities().stream()
+                        .map(string -> EntityType.byString(string).orElse(null))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet()),
+                new HashSet<>(wrapper.getPlayers()),
+                wrapper.getEntries().stream()
+                        .map(entry -> new CustomGossipContainer.GossipEntry(
+                                entry.target(),
+                                getTypeBySerializedName(entry.typeSerializedName()),
+                                entry.value()))
+                        .toList(),
+                wrapper.getShoulderEntityLeft() != null ? getShoulderEntity(wrapper.getShoulderEntityLeft()) : null,
+                wrapper.getShoulderEntityRight() != null ? getShoulderEntity(wrapper.getShoulderEntityRight()) : null,
+                wrapper.getBedHomeWorld(),
+                wrapper.getBedHome() != null ? new BlockPos(
+                        wrapper.getBedHome().getBlockX(),
+                        wrapper.getBedHome().getBlockY(),
+                        wrapper.getBedHome().getBlockZ()) : null,
+                wrapper.isWasInfected(),
+                wrapper.isEquipped(),
+                wrapper.getFoodLevel(),
+                wrapper.getTickTimer(),
+                wrapper.getSaturationLevel(),
+                wrapper.getExhaustionLevel());
+    }
+
+    private static @Nullable GossipType getTypeBySerializedName(String name) {
+        for (GossipType temp : GossipType.values()) {
+            if (temp.getSerializedName().equals(name)) return temp;
+        }
+        return null;
+    }
+
+    public OfflineDataWrapper toOfflineDataWrapper() {
+        return new OfflineDataWrapper(
                 uuid,
                 villagerName,
                 sex,
-                partner,
+                toOfflineDataWrapper(partner),
                 isPartnerVillager,
                 lastProcreation,
                 skinTextureId,
                 kidSkinTextureId,
-                father,
-                mother,
+                toOfflineDataWrapper(father),
+                toOfflineDataWrapper(mother),
                 isFatherVillager,
-                lastKnownPosition,
-                partners,
-                childrens,
-                targetEntities,
+                lastKnownPosition != null ? lastKnownPosition : LastKnownPosition.ZERO,
+                toOfflineDataWrapper(partners),
+                toOfflineDataWrapper(childrens),
+                targetEntities.stream().map(EntityType::toShortString).toList(),
                 players,
-                entries,
-                shoulderEntityLeft,
-                shoulderEntityRight,
+                entries.stream().map(entry -> new GossipEntryWrapper(entry.target(), entry.type().getSerializedName(), entry.value())).toList(),
+                validShoulderEntityLeft() ? shoulderEntityLeft.toString() : null,
+                validShoulderEntityRight() ? shoulderEntityRight.toString() : null,
                 bedHomeWorld,
-                new BlockPos(bedHome.getBlockX(), bedHome.getBlockY(), bedHome.getBlockZ()),
+                bedHome != null ? new Vector(bedHome.getX(), bedHome.getY(), bedHome.getZ()) : null,
                 wasInfected,
                 equipped,
                 foodLevel,
@@ -690,9 +628,19 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
                 exhaustionLevel);
     }
 
-    private static CompoundTag getShoulderEntity(Map<String, Object> args, String name) {
+    private List<OfflineDataWrapper> toOfflineDataWrapper(@NotNull List<IVillagerNPC> npcs) {
+        return npcs.stream().map(this::toOfflineDataWrapper)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private OfflineDataWrapper toOfflineDataWrapper(IVillagerNPC npc) {
+        return npc instanceof OfflineVillagerNPC offline ? offline.toOfflineDataWrapper() : null;
+    }
+
+    private static CompoundTag getShoulderEntity(String string) {
         try {
-            return TagParser.parseCompoundFully(PluginUtils.getOrDefault(args, name, String.class, ""));
+            return TagParser.parseCompoundFully(string);
         } catch (CommandSyntaxException ignored) {
             // Shouldn't happen.
             return new CompoundTag();

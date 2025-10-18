@@ -7,13 +7,13 @@ import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
 import me.matsubara.realisticvillagers.data.LastKnownPosition;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_21_10.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.event.RealisticRemoveEvent;
 import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
 import me.matsubara.realisticvillagers.files.Config;
-import me.matsubara.realisticvillagers.nms.v1_21_10.NMSConverter;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import me.matsubara.realisticvillagers.util.Reflection;
@@ -558,7 +558,7 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
         if (getOffline() instanceof OfflineVillagerNPC offline) {
             CraftPersistentDataContainer container = getBukkitEntity().getPersistentDataContainer();
             container.remove(plugin.getNpcValuesKey()); // Remove previous data.
-            container.set(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA, offline); // Use the new system.
+            container.set(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA, offline.toOfflineDataWrapper()); // Use the new system.
         }
 
         // Save the previous (vanilla) custom name.
@@ -572,7 +572,8 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
         // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
         // so our data won't be present at that time.
 
-        OfflineVillagerNPC offline = getBukkitEntity().getPersistentDataContainer().get(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA);
+        OfflineDataWrapper wrapper = getBukkitEntity().getPersistentDataContainer().get(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA);
+        OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ? temp : null;
         loadFromOffline(offline);
 
         // Previous versions of this plugin used setCustomName() before.

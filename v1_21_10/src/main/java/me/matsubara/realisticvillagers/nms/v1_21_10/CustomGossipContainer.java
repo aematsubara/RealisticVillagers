@@ -7,15 +7,12 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import lombok.Getter;
-import me.matsubara.realisticvillagers.util.PluginUtils;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.VisibleForDebug;
 import net.minecraft.world.entity.ai.gossip.GossipContainer;
 import net.minecraft.world.entity.ai.gossip.GossipType;
-import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.DoublePredicate;
@@ -224,36 +221,10 @@ public class CustomGossipContainer extends GossipContainer {
         }
     }
 
-    public record GossipEntry(UUID target, GossipType type, int value) implements ConfigurationSerializable {
+    public record GossipEntry(UUID target, GossipType type, int value) {
 
         public int weightedValue() {
             return value * type.weight;
-        }
-
-        @Override
-        public @NotNull Map<String, Object> serialize() {
-            Map<String, Object> result = new LinkedHashMap<>();
-
-            result.put("Target", target.toString());
-            result.put("Type", type.getSerializedName());
-            result.put("Value", value);
-
-            return result;
-        }
-
-        @SuppressWarnings({"unused"})
-        public static @NotNull GossipEntry deserialize(@NotNull Map<String, Object> args) {
-            UUID target = PluginUtils.getOrDefault(args, "Target", String.class, UUID::fromString, null);
-            String type = PluginUtils.getOrDefault(args, "Type", String.class);
-            Integer value = PluginUtils.getOrDefault(args, "Value", Integer.class);
-            return new GossipEntry(target, getTypeBySerializedName(type), value);
-        }
-
-        private static @Nullable GossipType getTypeBySerializedName(String name) {
-            for (GossipType temp : GossipType.values()) {
-                if (temp.getSerializedName().equals(name)) return temp;
-            }
-            return null;
         }
     }
 }

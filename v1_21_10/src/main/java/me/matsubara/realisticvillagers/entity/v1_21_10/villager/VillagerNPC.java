@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.*;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.entity.Nameable;
 import me.matsubara.realisticvillagers.entity.v1_21_10.DummyFishingHook;
@@ -435,7 +436,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
             container.remove(plugin.getLegacyNpcValuesKey()); // Remove previous data.
 
-            container.set(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA, offline); // Save data using the new system.
+            container.set(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA, offline.toOfflineDataWrapper()); // Save data using the new system.
             container.set(plugin.getInventoryKey(), DataType.ITEM_STACK_ARRAY, bukkit.getInventory().getContents()); // Save inventory.
         }
 
@@ -458,7 +459,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         CraftPersistentDataContainer container = bukkit.getPersistentDataContainer();
 
         // Load data.
-        OfflineVillagerNPC offline = container.get(plugin.getNpcValuesKey(), NMSConverter.VILLAGER_DATA);
+        OfflineDataWrapper wrapper = container.get(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA);
+        OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ? temp : null;
         loadFromOffline(offline);
 
         // Load inventory.
