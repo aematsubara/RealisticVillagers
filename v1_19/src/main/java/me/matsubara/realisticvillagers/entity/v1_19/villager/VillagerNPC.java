@@ -2095,7 +2095,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
     public void drop(@NotNull ItemStack item, @Nullable NamespacedKey identifier) {
         if (item.isEmpty()) return;
-        if (level.isClientSide) swing(InteractionHand.MAIN_HAND);
+        swing(InteractionHand.MAIN_HAND);
 
         ItemEntity itemEntity = new ItemEntity(level, getX(), getEyeY() - 0.30000001192092896d, getZ(), item);
         itemEntity.setPickUpDelay(40);
