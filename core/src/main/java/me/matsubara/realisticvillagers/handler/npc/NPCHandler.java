@@ -108,11 +108,11 @@ public record NPCHandler(RealisticVillagers plugin) implements SpawnCustomizer {
         metadata.queue(MetadataModifier.EntityMetadata.SKIN_LAYERS, true).send(player);
 
         if (villager.validShoulderEntityLeft()) {
-            metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_LEFT, villager.getShoulderEntityLeft());
+            metadata.queueShoulderEntity(true, villager.getShoulderEntityLeft());
         }
 
         if (villager.validShoulderEntityRight()) {
-            metadata.queue(MetadataModifier.EntityMetadata.SHOULDER_ENTITY_RIGHT, villager.getShoulderEntityRight());
+            metadata.queueShoulderEntity(false, villager.getShoulderEntityRight());
         }
 
         metadata.send(player);

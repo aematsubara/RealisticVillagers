@@ -92,7 +92,7 @@ public final class ItemStackUtils {
         int actualIndex = getArmorIndex(actual);
 
         if (toCheckIndex == actualIndex) {
-            // If same type, we check the damage to each armor piece.
+            // If the same type, we check the damage to each armor piece.
             return getItemDamage(toCheck) < getItemDamage(actual);
         } else {
             return toCheckIndex > actualIndex;
@@ -176,10 +176,10 @@ public final class ItemStackUtils {
         EntityEquipment equipment = living.getEquipment();
         if (equipment == null) return false;
 
-        // Get item in main hand.
+        // Get item in the main hand.
         ItemStack content = equipment.getItemInMainHand();
 
-        // If main hand item is empty, we check if the picked item is a weapon, if so, set item in main hand and return.
+        // If the main hand item is empty, we check if the picked item is a weapon, if so, set item in the main hand and return.
         if (content.getType().isAir()) {
             if (isWeapon(item)) {
                 equipment.setItemInMainHand(item);
@@ -189,8 +189,8 @@ public final class ItemStackUtils {
 
         Inventory inventory = living instanceof InventoryHolder holder ? holder.getInventory() : null;
 
-        // If main hand item isn't empty or is empty but picked item isn't a weapon,
-        // we check if the picked item is a shield, if so, we try to put it the offhand, if already occupied, add to inventory and return.
+        // If the main hand item isn't empty or is empty but the picked item isn't a weapon,
+        // we check if the picked item is a shield; if so, we try to put it the offhand, if already occupied, add to inventory and return.
         if (isShield) {
             // The shield always goes in offhand.
             if (equipment.getItemInOffHand().getType().isAir() && living.getHealth() >= 8.0d) {
@@ -339,7 +339,7 @@ public final class ItemStackUtils {
         living.getEquipment().setItem(slot, item);
 
         // Add previous to inventory.
-        if (inventory != null) inventory.addItem(current);
+        if (inventory != null && !current.getType().isAir()) inventory.addItem(current);
 
         return true;
     }

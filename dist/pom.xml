@@ -88,5 +88,11 @@
             <artifactId>realisticvillagers-v1_21_4</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- v1_21_10 -->
+        <dependency>
+            <groupId>me.matsubara</groupId>
+            <artifactId>realisticvillagers-v1_21_10</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
     </dependencies>
 </project>
