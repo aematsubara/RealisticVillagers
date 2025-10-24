@@ -72,8 +72,6 @@ import java.util.logging.Logger;
 @Getter
 public final class RealisticVillagers extends JavaPlugin {
 
-    private static final String SKINS_REPO = "https://raw.githubusercontent.com/aematsubara/villager-skins/main/";
-
     private final NamespacedKey giftKey = key("GiftUUID");
     private final NamespacedKey marriedWith = key("MarriedWith");
     private final NamespacedKey procreationKey = key("Procreation");
@@ -245,8 +243,8 @@ public final class RealisticVillagers extends JavaPlugin {
 
         logger.info("Loading skin files...");
 
-        saveSkins("male");
-        saveSkins("female");
+        saveResource("skins/female.yml");
+        saveResource("skins/male.yml");
 
         logger.info("Skins loaded!");
         logger.info("");
@@ -336,18 +334,6 @@ public final class RealisticVillagers extends JavaPlugin {
     private void logLoadingTime(boolean loading, long now) {
         String time = String.format(Locale.ROOT, "%.3fs", (double) (System.nanoTime() - now) / 1.0E9);
         getLogger().info((loading ? "Loading" : "Enabling") + " took " + time + "!");
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void loadFileOrCreate(String folder, String fileName) {
-        File file = new File(folder, fileName);
-        if (file.exists()) return;
-
-        try {
-            file.createNewFile();
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
     }
 
     private void fillIgnoredSections(FileConfiguration config) {
@@ -801,23 +787,6 @@ public final class RealisticVillagers extends JavaPlugin {
             if (color != null) colors.add(color);
         }
         return colors;
-    }
-
-    private void saveSkins(String sex) {
-        String name = sex + ".yml";
-        saveFile(SKINS_REPO + name, getSkinFolder(), name);
-    }
-
-    private void saveFile(String url, String outputFolder, String outputFile) {
-        try {
-            File file = new File(outputFolder, outputFile);
-            if (file.exists()) return;
-
-            FileUtils.copyURLToFile(new URL(url), file);
-        } catch (IOException exception) {
-            exception.printStackTrace();
-            loadFileOrCreate(getSkinFolder(), outputFile);
-        }
     }
 
     @SuppressWarnings("SameParameterValue")
