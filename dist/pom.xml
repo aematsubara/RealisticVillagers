@@ -82,10 +82,10 @@
             <artifactId>realisticvillagers-v1_20_6</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <!-- v1_21_4 -->
+        <!-- v1_21_8 -->
         <dependency>
             <groupId>me.matsubara</groupId>
-            <artifactId>realisticvillagers-v1_21_4</artifactId>
+            <artifactId>realisticvillagers-v1_21_8</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <!-- v1_21_10 -->
