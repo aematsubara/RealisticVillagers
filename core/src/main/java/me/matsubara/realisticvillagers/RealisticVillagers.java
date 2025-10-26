@@ -94,7 +94,7 @@ public final class RealisticVillagers extends JavaPlugin {
 
     public NamespacedKey getNpcValuesKey() {
         VersionMatcher matcher = VersionMatcher.getByMinecraftVersion();
-        return matcher != null && matcher.higherOrEqualThan(VersionMatcher.v1_21_4) ? valuesKey : getLegacyNpcValuesKey();
+        return matcher != null && matcher.higherOrEqualThan(VersionMatcher.v1_21_8) ? valuesKey : getLegacyNpcValuesKey();
     }
 
     @ApiStatus.Internal
@@ -200,7 +200,7 @@ public final class RealisticVillagers extends JavaPlugin {
         if (matcher == null) {
             logger.severe("NMSConverter couldn't find a valid implementation for this server version.");
         } else try {
-            Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + matcher.name() + ".NMSConverter");
+            Class<?> converterClass = Class.forName(INMSConverter.class.getPackageName() + "." + matcher.getPackageName() + ".NMSConverter");
             Constructor<?> converterConstructor = converterClass.getConstructor(getClass());
             converter = (INMSConverter) converterConstructor.newInstance(this);
             converter.registerEntities();
