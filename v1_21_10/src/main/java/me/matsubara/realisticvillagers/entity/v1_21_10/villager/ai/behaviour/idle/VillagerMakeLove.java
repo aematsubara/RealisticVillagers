@@ -158,8 +158,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
         baby.setXRot(0.0f);
 
         baby.setMother(npc.isFemale() ? npc.getOffline() : breed.getOffline());
-        baby.setFather(npc.isFemale() ? breed.getOffline() : npc.getOffline());
-        baby.setFatherVillager(true);
+        baby.setFather((npc.isFemale() ? breed : npc).getUniqueId(), true);
 
         level.addFreshEntityWithPassengers(baby, SpawnReason.BREEDING);
         level.broadcastEntityEvent(baby, (byte) 12);

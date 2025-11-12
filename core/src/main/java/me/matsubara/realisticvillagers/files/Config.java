@@ -40,6 +40,8 @@ public enum Config {
     CUSTOM_NAME_TEXT_OPACITY("custom-nametags.text-opacity"),
     CUSTOM_NAME_VILLAGER_LINES("custom-nametags.lines.villager"),
     CUSTOM_NAME_TRADER_LINES("custom-nametags.lines.wandering-trader"),
+    CUSTOM_NAME_PARTNER_COLOR("custom-nametags.relationship-color.partner"),
+    CUSTOM_NAME_CHILDREN_COLOR("custom-nametags.relationship-color.children"),
 
     SKIN_PREVIEW_SECONDS("skin-preview.seconds"),
     SKIN_PREVIEW_MESSAGE("skin-preview.message"),

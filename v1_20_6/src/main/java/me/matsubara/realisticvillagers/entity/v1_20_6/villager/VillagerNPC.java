@@ -1015,6 +1015,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public boolean isFather(UUID uuid) {
+        return father != null && father.getUniqueId().equals(uuid);
+    }
+
+    @Override
     public String getActivityName(String none) {
         return getBrain().getActiveNonCoreActivity().map(Activity::getName).orElse(none);
     }
@@ -1272,19 +1277,52 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         return inventory;
     }
 
+    @Override
     public void setPartner(@Nullable UUID partner, boolean isPartnerVillager) {
-        this.isPartnerVillager = isPartnerVillager;
+        setRelationship(partner,
+                isPartnerVillager,
+                this::getPartner,
+                this::isPartnerVillager,
+                this::setPartner,
+                this::setPartnerVillager);
+    }
 
-        if (partner == null) {
-            this.partner = null;
-            return;
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
+        setRelationship(father,
+                isFatherVillager,
+                this::getFather,
+                this::isFatherVillager,
+                this::setFather,
+                this::setFatherVillager);
+    }
+
+    private void setRelationship(@Nullable UUID who,
+                                 boolean villager,
+                                 @NotNull Supplier<IVillagerNPC> getter,
+                                 Supplier<Boolean> getterVillager,
+                                 Consumer<IVillagerNPC> setter,
+                                 Consumer<Boolean> setterVillager) {
+        org.bukkit.entity.Player oldMember;
+        if (getter.get() != null && !getterVillager.get()) {
+            oldMember = Bukkit.getPlayer(getter.get().getUniqueId());
+        } else oldMember = null;
+
+        setterVillager.accept(villager);
+
+        if (who == null) {
+            setter.accept(null);
+        } else if (villager) {
+            IVillagerNPC npc = plugin.getTracker().getOffline(who);
+            if (npc != null) setter.accept(npc);
+        } else {
+            setter.accept(dummyPlayerOffline(who));
         }
 
-        if (isPartnerVillager) {
-            IVillagerNPC partnerNPC = plugin.getTracker().getOffline(partner);
-            if (partnerNPC != null) this.partner = partnerNPC;
-        } else {
-            this.partner = dummyPlayerOffline(partner);
+        // Reset nametags.
+        if (oldMember != null) resetNametagsFor(plugin, oldMember);
+        if (who != null && !villager) {
+            org.bukkit.entity.Player newMember = Bukkit.getPlayer(who);
+            if (newMember != null) resetNametagsFor(plugin, newMember);
         }
     }
 
@@ -1762,11 +1800,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean isFamily(UUID otherUUID) {
-        return isFamily(otherUUID, false);
-    }
-
-    @Override
     public void gossip(ServerLevel level, Villager with, long time) {
         if (!(with instanceof VillagerNPC npc)) return;
         if ((time >= lastGossipTime && time < lastGossipTime + 1200L)) return;
@@ -1782,7 +1815,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public boolean isFamily(UUID otherUUID, boolean checkPartner) {
         return (checkPartner && isPartner(otherUUID))
                 || isChildren(otherUUID)
-                || (father != null && father.getUniqueId().equals(otherUUID))
+                || isFather(otherUUID)
                 || (mother != null && mother.getUniqueId().equals(otherUUID));
     }
 

@@ -111,7 +111,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         return tag;
     }
 
-    private @NotNull ListTag newDoubleList(@NotNull double... nums) {
+    private @NotNull ListTag newDoubleList(double... nums) {
         ListTag list = new ListTag();
         for (double num : nums) {
             list.add(DoubleTag.valueOf(num));
@@ -313,16 +313,11 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
-    public boolean isFamily(UUID uuid) {
-        return isFamily(uuid, false);
-    }
-
-    @Override
     public boolean isFamily(UUID uuid, boolean checkPartner) {
-        IVillagerNPC father, mother;
+        IVillagerNPC mother;
         return (checkPartner && isPartner(uuid))
                 || isChildren(uuid)
-                || ((father = getFather()) != null && father.getUniqueId().equals(uuid))
+                || isFather(uuid)
                 || ((mother = getMother()) != null && mother.getUniqueId().equals(uuid));
     }
 
@@ -337,6 +332,12 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public boolean isPartner(UUID uuid) {
         IVillagerNPC partner = getPartner();
         return partner != null && partner.getUniqueId().equals(uuid);
+    }
+
+    @Override
+    public boolean isFather(UUID uuid) {
+        IVillagerNPC father = getFather();
+        return father != null && father.getUniqueId().equals(uuid);
     }
 
     @Override

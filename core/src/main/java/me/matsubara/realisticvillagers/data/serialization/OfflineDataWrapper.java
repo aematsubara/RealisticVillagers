@@ -182,7 +182,8 @@ public class OfflineDataWrapper implements ConfigurationSerializable {
         boolean isFatherVillager = PluginUtils.getOrDefault(args, IS_FATHER_VILLAGER, Boolean.class);
         List<OfflineDataWrapper> childrens = PluginUtils.getOrDefault(args, CHILDRENS, List.class, Collections.emptyList());
         List<String> targetEntities = PluginUtils.getOrDefault(args, TARGET_ENTITIES, List.class, Collections.emptyList());
-        List<UUID> players = PluginUtils.getOrDefault(args, PLAYERS, List.class, Collections.emptyList());
+        List<String> playersString = PluginUtils.getOrDefault(args, PLAYERS, List.class, Collections.emptyList());
+        List<UUID> players = playersString.stream().map(java.util.UUID::fromString).toList();
         List<GossipEntryWrapper> entries = PluginUtils.getOrDefault(args, GOSSIP_ENTRIES, List.class, Collections.emptyList());
         String shoulderEntityLeft = PluginUtils.getOrDefault(args, SHOULDER_ENTITY_LEFT, String.class);
         String shoulderEntityRight = PluginUtils.getOrDefault(args, SHOULDER_ENTITY_RIGHT, String.class);

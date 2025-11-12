@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.6.1</version>
+        <version>3.3.6.2</version>
     </parent>
 
     <pluginRepositories>
@@ -172,7 +172,7 @@
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.10.9-SNAPSHOT</version>
+            <version>1.10.10-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>

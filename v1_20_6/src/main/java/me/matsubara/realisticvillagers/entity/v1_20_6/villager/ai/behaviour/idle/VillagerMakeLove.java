@@ -149,16 +149,15 @@ public class VillagerMakeLove extends Behavior<Villager> {
         // To initialize name and sex.
         baby.loadPluginData(new CompoundTag());
 
-        // Add children to parents list.
+        // Add children to parents' list.
         breed.getChildrens().add(baby.getOffline());
         npc.getChildrens().add(baby.getOffline());
 
         baby.setAge(-24000);
         baby.moveTo(villager.getX(), villager.getY(), villager.getZ(), 0.0f, 0.0f);
 
-        baby.setMother(npc.isFemale() ? ((VillagerNPC) villager).getOffline() : ((VillagerNPC) breedWith).getOffline());
-        baby.setFather(npc.isFemale() ? ((VillagerNPC) breedWith).getOffline() : ((VillagerNPC) villager).getOffline());
-        baby.setFatherVillager(true);
+        baby.setMother(npc.isFemale() ? npc.getOffline() : breed.getOffline());
+        baby.setFather((npc.isFemale() ? breed : npc).getUniqueId(), true);
 
         level.addFreshEntityWithPassengers(baby, SpawnReason.BREEDING);
         level.broadcastEntityEvent(baby, (byte) 12);

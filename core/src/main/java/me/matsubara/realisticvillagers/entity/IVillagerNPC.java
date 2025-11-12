@@ -1,5 +1,6 @@
 package me.matsubara.realisticvillagers.entity;
 
+import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.HandleHomeResult;
 import me.matsubara.realisticvillagers.data.InteractType;
@@ -11,6 +12,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -26,6 +28,10 @@ public interface IVillagerNPC {
     void setVillagerName(String name);
 
     int getReputation(UUID uuid);
+
+    default int getReputation(@NotNull Player player) {
+        return getReputation(player.getUniqueId());
+    }
 
     IVillagerNPC getPartner();
 
@@ -48,7 +54,15 @@ public interface IVillagerNPC {
 
     void addMinorPositive(UUID uuid, int amount);
 
+    default void addMinorPositive(@NotNull Player player, int amount) {
+        addMinorPositive(player.getUniqueId(), amount);
+    }
+
     void addMinorNegative(UUID uuid, int amount);
+
+    default void addMinorNegative(@NotNull Player player, int amount) {
+        addMinorNegative(player.getUniqueId(), amount);
+    }
 
     void jumpIfPossible();
 
@@ -93,12 +107,31 @@ public interface IVillagerNPC {
 
     boolean is(Villager.Profession... professions);
 
-    @SuppressWarnings("unused")
-    boolean isFamily(UUID uuid);
+    default boolean isFamily(@NotNull Player player) {
+        return isFamily(player.getUniqueId());
+    }
+
+    default boolean isFamily(UUID uuid) {
+        return isFamily(uuid, false);
+    }
 
     boolean isFamily(UUID uuid, boolean checkPartner);
 
+    default boolean isFamily(@NotNull Player player, boolean checkPartner) {
+        return isFamily(player.getUniqueId(), checkPartner);
+    }
+
     boolean isPartner(UUID uuid);
+
+    default boolean isPartner(@NotNull Player player) {
+        return isPartner(player.getUniqueId());
+    }
+
+    boolean isFather(UUID uuid);
+
+    default boolean isFather(@NotNull Player player) {
+        return isFather(player.getUniqueId());
+    }
 
     String getActivityName(String none);
 
@@ -159,6 +192,10 @@ public interface IVillagerNPC {
 
     void setPartner(@Nullable UUID uuid, boolean isPartnerVillager);
 
+    default void setPartner(@NotNull Player player) {
+        setPartner(player.getUniqueId(), false);
+    }
+
     int getFoodLevel();
 
     boolean isFishing();
@@ -210,4 +247,13 @@ public interface IVillagerNPC {
     int getBeeStingers();
 
     void attack(LivingEntity entity);
+
+    default void resetNametagsFor(@NotNull RealisticVillagers plugin, Player player) {
+        LivingEntity bukkit = bukkit();
+        if (bukkit == null || player == null) return;
+
+        plugin.getTracker().getPool()
+                .getNPC(bukkit.getEntityId())
+                .ifPresent(temp -> temp.refreshNametags(player));
+    }
 }

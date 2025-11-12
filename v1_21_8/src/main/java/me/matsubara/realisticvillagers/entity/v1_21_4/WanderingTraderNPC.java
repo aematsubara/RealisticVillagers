@@ -227,17 +227,17 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
     }
 
     @Override
-    public boolean isFamily(UUID uuid) {
-        return false;
-    }
-
-    @Override
     public boolean isFamily(UUID uuid, boolean checkPartner) {
         return false;
     }
 
     @Override
     public boolean isPartner(UUID uuid) {
+        return false;
+    }
+
+    @Override
+    public boolean isFather(UUID uuid) {
         return false;
     }
 

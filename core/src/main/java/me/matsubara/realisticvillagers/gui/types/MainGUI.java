@@ -26,7 +26,10 @@ import org.bukkit.potion.PotionEffect;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -79,7 +82,7 @@ public final class MainGUI extends InteractGUI {
         setGUIItemInSlot("follow-me");
         setGUIItemInSlot("stay-here");
 
-        // Info, trade & no trade.
+        // Info, trade and no trade.
         updateRequiredItems();
 
         setGUIItemInSlot("inspect-inventory");
@@ -87,7 +90,7 @@ public final class MainGUI extends InteractGUI {
         setGUIItemInSlot("procreate");
 
         // Only show divorce papers if villager isn't a cleric partner.
-        boolean isPartner = npc.isPartner(player.getUniqueId());
+        boolean isPartner = npc.isPartner(player);
         if (!isPartner && npc.is(Villager.Profession.CLERIC)) {
             int slot = getItemSlot("divorce-papers");
             inventory.setItem(slot, getGUIItem("divorce-papers"));
@@ -393,20 +396,19 @@ public final class MainGUI extends InteractGUI {
     private enum Settings {
         ONLY_IF_HAS_PERMISSION("require-permission", (npc, player, name) -> player.hasPermission("realisticvillagers.gui." + name)),
         ONLY_IF_ALLOWED("only-if-allowed", (npc, player, name) -> {
-            UUID playerUUID = player.getUniqueId();
             String finalName = (name.equals("set-home") ? "home" : name).toUpperCase(Locale.ROOT);
 
             Config configSetting = PluginUtils.getOrNull(Config.class, "WHO_CAN_MODIFY_VILLAGER_" + finalName);
             if (configSetting == null) return false;
 
             return switch (configSetting.asString("FAMILY").toUpperCase(Locale.ROOT)) {
-                case "FAMILY" -> npc.isFamily(playerUUID, true);
-                case "PARTNER" -> npc.isPartner(playerUUID);
+                case "FAMILY" -> npc.isFamily(player, true);
+                case "PARTNER" -> npc.isPartner(player);
                 case "EVERYONE" -> true;
                 default -> false;
             };
         }),
-        ONLY_IF_MARRIED("only-if-married", (npc, player, name) -> npc.isPartner(player.getUniqueId()));
+        ONLY_IF_MARRIED("only-if-married", (npc, player, name) -> npc.isPartner(player));
 
         private final String name;
         private final TriFunction<IVillagerNPC, Player, String, Boolean> condition;

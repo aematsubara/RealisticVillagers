@@ -162,6 +162,7 @@ public final class RealisticVillagers extends JavaPlugin {
             "revive.head-item");
     private static final List<String> GUI_TYPES = List.of("main", "equipment", "combat", "whistle", "skin", "new-skin");
     private static final int BSTATS_ID = 27463;
+    private static final @SuppressWarnings("UnstableApiUsage") NamespacedKey MM_KEY = new NamespacedKey("mythicmobs", "type");
 
     static {
         // Register our data serializators.
@@ -191,6 +192,8 @@ public final class RealisticVillagers extends JavaPlugin {
         addCompatibility("EliteMobs", EMCompatibility::new);
         addCompatibility("ViaVersion", ViaCompatibility::new);
         addCompatibility("VillagerTradeLimiter", VTLCompatibility::new);
+        addCompatibility("MythicMobs", () ->
+                villager -> !villager.getPersistentDataContainer().has(MM_KEY, PersistentDataType.STRING));
 
         logger.info("Compatibilities loaded!");
         logger.info("");
@@ -876,12 +879,11 @@ public final class RealisticVillagers extends JavaPlugin {
                 .stream()
                 .filter(offline -> {
                     Villager bukkit = offline.bukkit() instanceof Villager villager ? villager : null;
-                    UUID playerUUID = player.getUniqueId();
                     if (bukkit != null) {
                         Optional<IVillagerNPC> online = converter.getNPC(bukkit);
-                        return online.isPresent() && online.get().isFamily(playerUUID, true);
+                        return online.isPresent() && online.get().isFamily(player, true);
                     } else {
-                        return offline.isFamily(playerUUID, true);
+                        return offline.isFamily(player, true);
                     }
                 }).toList();
 

@@ -986,6 +986,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
+    public boolean isFather(UUID uuid) {
+        return father != null && father.getUniqueId().equals(uuid);
+    }
+
+    @Override
     public String getActivityName(String none) {
         return getBrain().getActiveNonCoreActivity().map(Activity::getName).orElse(none);
     }
@@ -1740,11 +1745,6 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     @Override
-    public boolean isFamily(UUID otherUUID) {
-        return isFamily(otherUUID, false);
-    }
-
-    @Override
     public void gossip(ServerLevel level, Villager with, long time) {
         if (!(with instanceof VillagerNPC npc)) return;
         if ((time >= lastGossipTime && time < lastGossipTime + 1200L)) return;
@@ -1760,7 +1760,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public boolean isFamily(UUID otherUUID, boolean checkPartner) {
         return (checkPartner && isPartner(otherUUID))
                 || isChildren(otherUUID)
-                || (father != null && father.getUniqueId().equals(otherUUID))
+                || isFather(otherUUID)
                 || (mother != null && mother.getUniqueId().equals(otherUUID));
     }
 

@@ -229,8 +229,7 @@ public class NMSConverter implements INMSConverter {
         }
 
         UUID fatherUUID = father.getUniqueId();
-        baby.setFather(VillagerNPC.dummyPlayerOffline(fatherUUID));
-        baby.setFatherVillager(false);
+        baby.setFather(fatherUUID, false);
 
         GossipContainer gossips = baby.getGossips();
         for (GossipType gossipType : GossipType.values()) {
@@ -334,7 +333,6 @@ public class NMSConverter implements INMSConverter {
         return raid != null ? new CraftRaid(raid) : null;
     }
 
-    @SuppressWarnings("deprecation")
     public static void updateTamedData(@NotNull RealisticVillagers plugin, CompoundTag tag, LivingEntity living, boolean tamedByVillager) {
         CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
 

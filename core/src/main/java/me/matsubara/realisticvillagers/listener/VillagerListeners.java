@@ -516,9 +516,9 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
             IVillagerNPC npc = optional.orElse(null);
             if (npc == null
                     || !npc.canAttack()
-                    || npc.isFamily(damager.getUniqueId(), true)) return;
+                    || npc.isFamily(damager, true)) return;
 
-            if (npc.isFamily(player.getUniqueId(), true) && Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) {
+            if (npc.isFamily(player, true) && Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) {
                 npc.attack(damager);
                 continue;
             }

@@ -247,8 +247,7 @@ public class NMSConverter implements INMSConverter {
         }
 
         UUID fatherUUID = father.getUniqueId();
-        baby.setFather(VillagerNPC.dummyPlayerOffline(fatherUUID));
-        baby.setFatherVillager(false);
+        baby.setFather(fatherUUID, false);
 
         CustomGossipContainer gossips = baby.getGossips();
         for (GossipType type : GossipType.values()) {

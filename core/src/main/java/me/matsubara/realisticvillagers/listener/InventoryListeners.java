@@ -390,8 +390,7 @@ public final class InventoryListeners implements Listener {
             return;
         }
 
-        UUID playerUUID = player.getUniqueId();
-        int reputation = npc.getReputation(playerUUID);
+        int reputation = npc.getReputation(player);
 
         if (interact instanceof CombatSettingsGUI settings) {
             if (isCustomItem(current, "players")) {
@@ -415,8 +414,8 @@ public final class InventoryListeners implements Listener {
 
         if (!(interact instanceof MainGUI main)) return;
 
-        boolean isFamily = npc.isFamily(player.getUniqueId(), true);
-        boolean isPartner = npc.isPartner(playerUUID);
+        boolean isFamily = npc.isFamily(player, true);
+        boolean isPartner = npc.isPartner(player);
 
         Messages messages = plugin.getMessages();
 
@@ -463,7 +462,7 @@ public final class InventoryListeners implements Listener {
                 return;
             }
 
-            npc.setProcreatingWith(playerUUID);
+            npc.setProcreatingWith(player.getUniqueId());
             new BabyTask(plugin, villager, player).runTaskTimer(plugin, 0L, 20L);
         } else if (isCustomItem(current, "divorce")) {
             // Return if it's a kid.
@@ -483,7 +482,7 @@ public final class InventoryListeners implements Listener {
                 lossReputation = Config.DIVORCE_REPUTATION_LOSS.asInt();
             }
 
-            if (lossReputation > 1) npc.addMinorNegative(playerUUID, lossReputation);
+            if (lossReputation > 1) npc.addMinorNegative(player, lossReputation);
 
             if (hasDivorcePapers) {
                 messages.send(player, npc, Messages.Message.DIVORCE_PAPERS);
@@ -562,7 +561,7 @@ public final class InventoryListeners implements Listener {
                     if (isProudOf && conditionNotMet(player, !villager.isAdult(), Messages.Message.INTERACT_FAIL_NOT_A_KID)) {
                         return;
                     } else if (!isProudOf && (conditionNotMet(player, villager.isAdult(), Messages.Message.INTERACT_FAIL_NOT_AN_ADULT)
-                            || conditionNotMet(player, !npc.isFamily(player.getUniqueId()), Messages.Message.INTERACT_FAIL_ONLY_PARTNER_OR_NON_FAMILY_ADULT))) {
+                            || conditionNotMet(player, !npc.isFamily(player), Messages.Message.INTERACT_FAIL_ONLY_PARTNER_OR_NON_FAMILY_ADULT))) {
                         return;
                     }
                 }
@@ -588,47 +587,48 @@ public final class InventoryListeners implements Listener {
     }
 
     private void openAddNewPlayerGUI(Player player, IVillagerNPC npc) {
-        AtomicBoolean success = new AtomicBoolean(false);
+        AtomicBoolean success = new AtomicBoolean();
         new AnvilGUI.Builder()
                 .onClick((slot, snapshot) -> {
                     Player opener = snapshot.getPlayer();
                     if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
 
                     Messages messages = plugin.getMessages();
-                    if (plugin.getTracker().isInvalidNametag(snapshot.getText())) {
+
+                    String text = ChatColor.stripColor(snapshot.getText().strip());
+                    if (plugin.getTracker().isInvalidNametag(text)) {
                         messages.send(opener, Messages.Message.INVALID_NAME);
                         return RealisticVillagers.CLOSE_RESPONSE;
                     }
 
-                    @SuppressWarnings("deprecation") OfflinePlayer target = Bukkit.getOfflinePlayer(snapshot.getText());
+                    @SuppressWarnings("deprecation") OfflinePlayer target = Bukkit.getOfflinePlayer(text);
 
                     String targetName = target.getName();
                     UUID targetUUID = target.getUniqueId();
 
-                    if (targetName != null) {
-                        if (opener.getUniqueId().equals(targetUUID)) {
-                            messages.send(opener, Messages.Message.NOT_YOURSELF);
-                        } else if (npc.getPlayers().contains(targetUUID)) {
-                            messages.send(opener, Messages.Message.ALREADY_ADDED);
-                        } else if (!target.hasPlayedBefore()) {
-                            messages.send(opener, Messages.Message.HAS_NEVER_PLAYER_BEFORE);
-                        } else if (npc.isFamily(targetUUID, true)) {
-                            messages.send(opener, Messages.Message.PLAYER_IS_FAMILY_MEMBER);
-                        } else {
-                            success.set(true);
-                            messages.send(opener, Messages.Message.PLAYERS_ADDED, string -> string.replace("%player-name%", targetName));
-                            npc.getPlayers().add(targetUUID);
-                            openPlayersGUI(npc, snapshot.getPlayer(), null, null);
-                        }
-                    } else {
+                    if (targetName == null) {
                         messages.send(opener, Messages.Message.UNKNOWN_PLAYER);
+                    } else if (opener.getUniqueId().equals(targetUUID)) {
+                        messages.send(opener, Messages.Message.NOT_YOURSELF);
+                    } else if (npc.getPlayers().contains(targetUUID)) {
+                        messages.send(opener, Messages.Message.ALREADY_ADDED);
+                    } else if (!target.hasPlayedBefore()) {
+                        messages.send(opener, Messages.Message.HAS_NEVER_PLAYER_BEFORE);
+                    } else if (npc.isFamily(targetUUID, true)) {
+                        messages.send(opener, Messages.Message.PLAYER_IS_FAMILY_MEMBER);
+                    } else {
+                        success.set(true);
+                        messages.send(opener, Messages.Message.PLAYERS_ADDED, string -> string.replace("%player-name%", targetName));
+                        npc.getPlayers().add(targetUUID);
+                        openPlayersGUI(npc, snapshot.getPlayer(), null, null);
+                        return Collections.emptyList();
                     }
 
                     return RealisticVillagers.CLOSE_RESPONSE;
                 })
                 .onClose(snapshot -> {
                     if (success.get()) return;
-                    openPlayersGUI(npc, snapshot.getPlayer(), null, null);
+                    npc.stopInteracting();
                 })
                 .title(Config.PLAYERS_TITLE.asStringTranslated())
                 .text(Config.PLAYERS_TEXT.asStringTranslated())
@@ -670,8 +670,8 @@ public final class InventoryListeners implements Listener {
 
         Messages messages = plugin.getMessages();
         if (player.hasPermission("realisticvillagers.bypass." + type.name().toLowerCase(Locale.ROOT).replace("_", ""))
-                || (bypass.asBool() && npc.isFamily(player.getUniqueId(), true))
-                || npc.getReputation(player.getUniqueId()) >= required.asInt()) {
+                || (bypass.asBool() && npc.isFamily(player, true))
+                || npc.getReputation(player) >= required.asInt()) {
 
             if (forced) npc.setInteractingWithAndType(player.getUniqueId(), type);
             else npc.setInteractType(type);
@@ -759,9 +759,7 @@ public final class InventoryListeners implements Listener {
     }
 
     public void handleChatInteraction(IVillagerNPC npc, @NotNull GUIInteractType interactType, @NotNull Player player) {
-        UUID playerUUID = player.getUniqueId();
-
-        boolean successByJoke = interactType.isJoke() && Config.PARTNER_JOKE_ALWAYS_SUCCESS.asBool() && npc.isPartner(playerUUID);
+        boolean successByJoke = interactType.isJoke() && Config.PARTNER_JOKE_ALWAYS_SUCCESS.asBool() && npc.isPartner(player);
         boolean success = !interactType.isInsult()
                 && (successByJoke
                 || interactType.isGreet()
@@ -774,9 +772,9 @@ public final class InventoryListeners implements Listener {
         int amount = Config.CHAT_INTERACT_REPUTATION.asInt();
         if (amount > 1) {
             if (chatEvent.isSuccess()) {
-                npc.addMinorPositive(playerUUID, amount);
+                npc.addMinorPositive(player, amount);
             } else {
-                npc.addMinorNegative(playerUUID, amount);
+                npc.addMinorNegative(player, amount);
             }
         }
 
@@ -1158,11 +1156,16 @@ public final class InventoryListeners implements Listener {
     }
 
     public boolean canModifyInventory(IVillagerNPC npc, Player player) {
-        return !notAllowedToModifyInventoryOrName(player, npc, Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY, "realisticvillagers.bypass.inventory");
+        return !notAllowedToModifyInventoryOrName(player,
+                npc,
+                Config.WHO_CAN_MODIFY_VILLAGER_INVENTORY,
+                "realisticvillagers.bypass.inventory");
     }
 
-    public boolean notAllowedToModifyInventoryOrName(@NotNull Player player, @NotNull IVillagerNPC npc, Config whoCanModify, String permission) {
-        UUID playerUUID = player.getUniqueId();
-        return notAllowedToModify(player, npc.isPartner(playerUUID), npc.isFamily(playerUUID, true), whoCanModify, false, permission);
+    public boolean notAllowedToModifyInventoryOrName(@NotNull Player player,
+                                                     @NotNull IVillagerNPC npc,
+                                                     Config whoCanModify,
+                                                     String permission) {
+        return notAllowedToModify(player, npc.isPartner(player), npc.isFamily(player, true), whoCanModify, false, permission);
     }
 }

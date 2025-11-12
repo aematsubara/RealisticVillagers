@@ -179,6 +179,11 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     }
 
     @Override
+    public String getVillagerName() {
+        return villagerName != null ? villagerName : "";
+    }
+
+    @Override
     public void setVillagerName(String name) {
     }
 
@@ -225,6 +230,11 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     @Override
     public boolean canAttack() {
         return false;
+    }
+
+    @Override
+    public String getSex() {
+        return sex != null ? sex : "";
     }
 
     @Override
@@ -301,16 +311,11 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     }
 
     @Override
-    public boolean isFamily(UUID uuid) {
-        return isFamily(uuid, false);
-    }
-
-    @Override
     public boolean isFamily(UUID uuid, boolean checkPartner) {
-        IVillagerNPC father, mother;
+        IVillagerNPC mother;
         return (checkPartner && isPartner(uuid))
                 || isChildren(uuid)
-                || ((father = getFather()) != null && father.getUniqueId().equals(uuid))
+                || isFather(uuid)
                 || ((mother = getMother()) != null && mother.getUniqueId().equals(uuid));
     }
 
@@ -325,6 +330,12 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     public boolean isPartner(UUID uuid) {
         IVillagerNPC partner = getPartner();
         return partner != null && partner.getUniqueId().equals(uuid);
+    }
+
+    @Override
+    public boolean isFather(UUID uuid) {
+        IVillagerNPC father = getFather();
+        return father != null && father.getUniqueId().equals(uuid);
     }
 
     @Override
@@ -703,7 +714,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     public static @NotNull OfflineVillagerNPC dummy(UUID uuid, String villagerName) {
         return new OfflineVillagerNPC(
                 uuid, villagerName,
-                null, null,
+                "", null,
                 false,
                 0L,
                 -1, -1,

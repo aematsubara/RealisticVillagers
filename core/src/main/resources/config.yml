@@ -150,6 +150,13 @@ custom-nametags:
     wandering-trader:
       - "&dWandering Trader"
       - "&f%villager-name%"
+  # Here you can apply a special color to the villager's name if they have a family relationship with the player.
+  # At the moment, it is only evaluated if the player is the partner or father of a villager.
+  relationship-color:
+    # Color for partners.
+    partner: "&d"
+    # Color for childrens.
+    children: "&b"
 
 skin-preview:
   # The seconds that the preview will last.

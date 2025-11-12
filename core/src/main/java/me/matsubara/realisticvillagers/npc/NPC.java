@@ -190,7 +190,7 @@ public class NPC {
             WrappedBlockState state = SpigotConversionUtil.fromBukkitBlockData(blockData);
             data.add(new EntityData<>(23, EntityDataTypes.BLOCK_STATE, state.getGlobalId())); // Displayed block state = WrappedBlockState#getGlobalId()
         } else {
-            data.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameText(bukkit)))); // Text
+            data.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameTextFor(player)))); // Text
             data.add(new EntityData<>(24, EntityDataTypes.INT, 200)); // Line width
             // Background color = Color#asARGB() / 1073741824 / same as using the flag: default background.
             data.add(new EntityData<>(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB()));
@@ -230,20 +230,30 @@ public class NPC {
         return (Config.CUSTOM_NAME_SHADOW.asBool() ? 0x01 : 0x0) | (Config.CUSTOM_NAME_SEE_THROUGH.asBool() ? 0x02 : 0x0);
     }
 
-    private @NotNull String getNameText(LivingEntity bukkit) {
+    private @NotNull String getNameTextFor(Player player) {
+        LivingEntity bukkit = npc.bukkit();
+
         StringBuilder builder = new StringBuilder();
         List<String> lines = getLines(bukkit);
 
         for (int i = 0; i < lines.size(); i++) {
+            Config color;
+            if (npc.isPartner(player)) {
+                color = Config.CUSTOM_NAME_PARTNER_COLOR;
+            } else if (npc.isFather(player)) {
+                color = Config.CUSTOM_NAME_CHILDREN_COLOR;
+            } else {
+                color = null;
+            }
+            String colorExtra = color != null ? color.asStringTranslated() : "";
+
             // For some reason, the name is null?
             String villagerName = Objects.requireNonNullElse(npc.getVillagerName(), Config.UNKNOWN.asStringTranslated());
-            String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", villagerName));
+            String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", colorExtra + villagerName));
 
             builder.append(bukkit instanceof Villager villager ? line
-                    .replace("%villager-name%", villagerName)
                     .replace("%level%", String.valueOf(villager.getVillagerLevel()))
-                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession().name()
-                            .toLowerCase(Locale.ROOT), npc.isMale())) : line);
+                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession(), npc.isMale())) : line);
 
             if (i != lines.size() - 1) builder.append("\n");
         }
