@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import me.matsubara.realisticvillagers.data.TargetReason;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
 import me.matsubara.realisticvillagers.util.EntityHead;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -66,7 +67,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         }
 
         if (villager instanceof VillagerNPC npc) npc.stopAllInteractions();
-        if (villager.isPassenger()) villager.stopRiding();
+        NMSConverter.leaveVehicle(villager);
 
         // Use the same condition as canStillUse(), but the name doesn't mean anything.
         if (canStillUse(level, villager, time)) {

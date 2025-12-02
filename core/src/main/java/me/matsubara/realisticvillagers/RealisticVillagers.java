@@ -21,6 +21,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.types.WhistleGUI;
 import me.matsubara.realisticvillagers.listener.*;
+import me.matsubara.realisticvillagers.manager.AnnoyingMeterManager;
 import me.matsubara.realisticvillagers.manager.ChestManager;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.manager.InteractCooldownManager;
@@ -50,6 +51,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.*;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.Metadatable;
+import org.bukkit.persistence.PersistentDataAdapterContext;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -124,6 +127,7 @@ public final class RealisticVillagers extends JavaPlugin {
     private @Setter Shape whistle;
     private @Setter Shape cross;
 
+    private AnnoyingMeterManager annoyingManager;
     private ReviveManager reviveManager;
     private GiftManager giftManager;
     private ChestManager chestManager;
@@ -266,6 +270,7 @@ public final class RealisticVillagers extends JavaPlugin {
         logger.info("");
         logger.info("Creating managers...");
 
+        annoyingManager = new AnnoyingMeterManager(this);
         reviveManager = new ReviveManager(this);
         giftManager = new GiftManager(this);
         chestManager = new ChestManager(this);
@@ -1037,5 +1042,21 @@ public final class RealisticVillagers extends JavaPlugin {
         return getConfig().getString(
                 String.format("variable-text.profession.%s.%s", sex, profession),
                 PluginUtils.capitalizeFully(profession));
+    }
+
+    public static @Nullable OfflineDataWrapper villagerDataFromPDC(RealisticVillagers plugin, PersistentDataContainer container) {
+        try {
+            return container.get(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA);
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    public static @Nullable OfflineDataWrapper villagerDataFromPrimitive(byte[] primitive, PersistentDataAdapterContext context) {
+        try {
+            return VILLAGER_DATA.fromPrimitive(primitive, context);
+        } catch (Exception exception) {
+            return null;
+        }
     }
 }

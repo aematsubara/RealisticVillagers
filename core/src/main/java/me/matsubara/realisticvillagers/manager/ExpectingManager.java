@@ -336,6 +336,11 @@ public final class ExpectingManager implements Listener {
             return;
         }
 
+        // Stop being annoyed after a good gift.
+        if (success && Config.ANNOYING_METER_CLEAR_AFTER_SUCCESS_INTERACTION.asBool()) {
+            plugin.getAnnoyingManager().stopBeingAnnoyed(player, npc);
+        }
+
         if (successByCross || (success && isCross)) {
             // For cross, use a random category.
             GiftCategory randomCategory = plugin.getGiftManager().getRandomCategory();

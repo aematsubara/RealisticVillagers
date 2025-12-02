@@ -10,6 +10,15 @@ config-version: 1
 # %villager-name% - the name of the villager involved in this conversation.
 # %random-villager-name% - the name of a random villager nearby.
 
+annoyed:
+  - "Ugh… you again…?"
+  - "I was busy, you know."
+  - "Seriously? AGAIN?"
+  - "I don't get paid enough for this."
+  - "If you keep this up, I’ll raise my prices just for you."
+  - "Even zombies are less annoying."
+  - "You’re why I lock my doors at night."
+
 reaction:
   on-hit:
     - "That hurt!"

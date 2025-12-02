@@ -105,6 +105,14 @@ public enum Config {
     REPUTATION_REQUIRED_TO_MARRY("reputation-required-to-marry"),
     REPUTATION_REQUIRED_TO_PROCREATE("reputation-required-to-procreate"),
 
+    ANNOYING_METER_ENABLED("annoying-meter.enabled"),
+    ANNOYING_METER_IGNORE_FAMILY_MEMBERS("annoying-meter.ignore-family-members"),
+    ANNOYING_METER_CLEAR_AFTER_SUCCESS_INTERACTION("annoying-meter.clear-after-success-interaction"),
+    ANNOYING_METER_MAX_CLICKS("annoying-meter.max-clicks"),
+    ANNOYING_METER_TIMEFRAME("annoying-meter.timeframe"),
+    ANNOYING_METER_REPUTATION_LOSS("annoying-meter.reputation-loss"),
+    ANNOYING_METER_ANGRY_PARTICLES("annoying-meter.angry-particles"),
+
     IGNORE_SEX_WHEN_PROCREATING("villager-farm.ignore-sex-when-procreating"),
     ALLOW_PARTNER_CHEATING("villager-farm.allow-partner-cheating"),
     ALLOW_PARTNER_CHEATING_FOR_ALL("villager-farm.allow-partner-cheating-for-all"),

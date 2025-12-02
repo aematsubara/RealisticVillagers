@@ -557,7 +557,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     }
 
-    public static IVillagerNPC fromOfflineDataWrapper(OfflineDataWrapper wrapper) {
+    public static IVillagerNPC fromOfflineDataWrapper(@Nullable OfflineDataWrapper wrapper) {
         if (wrapper == null) return null;
 
         return new OfflineVillagerNPC(

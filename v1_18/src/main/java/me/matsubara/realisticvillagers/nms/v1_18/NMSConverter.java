@@ -26,6 +26,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.nbt.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -48,6 +49,8 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
+import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.Minecart;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.chunk.storage.RegionFile;
@@ -82,6 +85,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unchecked")
@@ -337,7 +341,6 @@ public class NMSConverter implements INMSConverter {
         return raid != null ? new CraftRaid(raid) : null;
     }
 
-    @SuppressWarnings("deprecation")
     public static void updateTamedData(@NotNull RealisticVillagers plugin, CompoundTag tag, LivingEntity living, boolean tamedByVillager) {
         CompoundTag bukkit = NMSConverter.getOrCreateBukkitTag(tag);
 
@@ -574,7 +577,8 @@ public class NMSConverter implements INMSConverter {
             Map<Attribute, AttributeInstance> attributes = (Map<Attribute, AttributeInstance>) ATTRIBUTES.invoke(entity.getAttributes());
             if (attributes == null) return;
 
-            attributes.put(attribute, new AttributeInstance(attribute, AttributeInstance::getAttribute));
+            @SuppressWarnings("ResultOfMethodCallIgnored") Consumer<AttributeInstance> onDirty = AttributeInstance::getAttribute;
+            attributes.put(attribute, new AttributeInstance(attribute, onDirty));
 
             AttributeInstance instance = entity.getAttribute(attribute);
             if (instance != null) instance.setBaseValue(value);
@@ -598,5 +602,14 @@ public class NMSConverter implements INMSConverter {
 
         // Save data in craft entity to prevent data-loss.
         living.getBukkitEntity().readBukkitValues(tag);
+    }
+
+    public static void leaveVehicle(@NotNull Entity entity) {
+        Entity vehicle = entity.getVehicle();
+        if (vehicle != null
+                && !(vehicle instanceof Boat)
+                && !(vehicle instanceof Minecart)) {
+            entity.stopRiding();
+        }
     }
 }

@@ -572,7 +572,7 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
         // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
         // so our data won't be present at that time.
 
-        OfflineDataWrapper wrapper = getBukkitEntity().getPersistentDataContainer().get(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA);
+        OfflineDataWrapper wrapper = RealisticVillagers.villagerDataFromPDC(plugin, getBukkitEntity().getPersistentDataContainer());
         OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ? temp : null;
         loadFromOffline(offline);
 

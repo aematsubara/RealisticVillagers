@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.manager.revive;
 import com.google.common.collect.ImmutableList;
 import lombok.Getter;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.util.PluginUtils;
 import org.bukkit.*;
@@ -75,7 +76,10 @@ public class MonumentAnimation extends BukkitRunnable {
     private @Nullable BossBar initializeBossBar() {
         if (!Config.REVIVE_BOSSBAR_ENABLED.asBool()) return null;
 
-        String name = plugin.getConverter().getNPCFromTag(tag).getVillagerName();
+        IVillagerNPC npc = plugin.getConverter().getNPCFromTag(tag);
+        if (npc == null) return null;
+
+        String name = npc.getVillagerName();
         String title = Config.REVIVE_BOSSBAR_TITLE.asStringTranslated(name).replace("%villager-name%", name);
 
         BossBar display = Bukkit.createBossBar(

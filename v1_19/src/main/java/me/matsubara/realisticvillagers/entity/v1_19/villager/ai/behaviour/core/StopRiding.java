@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_19.villager.ai.behaviour.core;
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_19.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.nms.v1_19.NMSConverter;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.npc.Villager;
@@ -26,7 +27,7 @@ public class StopRiding extends Behavior<Villager> {
 
         if (npc.checkCurrentActivity(Activity.REST, Activity.WORK, VillagerNPC.STAY)
                 || (npc.checkCurrentActivity(Activity.MEET) && !npc.isFollowing())) {
-            villager.stopRiding();
+            NMSConverter.leaveVehicle(npc);
         }
     }
 }

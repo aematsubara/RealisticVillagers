@@ -206,6 +206,26 @@ reputation-required-to-marry: 75
 # Reputation required to procreate with a villager.
 reputation-required-to-procreate: 110
 
+# Here you can apply a reputation loss to a player for repeatedly interacting with a villager to the point of annoying them.
+annoying-meter:
+  # Whether the annoying-meter system is enabled.
+  enabled: true
+  # If true, players who are considered family of the villager won't trigger the annoying-meter.
+  ignore-family-members: true
+  # If true, the counter will be reset after a good interaction with this villager.
+  clear-after-success-interaction: true
+  # How many right-clicks are allowed before the villager becomes annoyed?
+  max-clicks: 10
+  # Time frame (in seconds) in which the clicks are counted.
+  # Example: 30 = more than 10 clicks in 30 seconds = annoyed villager.
+  timeframe: 30
+  # How many reputation points the player loses when they annoy a villager.
+  reputation-loss: 2
+  # Whether to spawn angry particles above the villager.
+  angry-particles: true
+  # Si se desea o no que los familiares eviten este sistema.
+  family-bypass: true
+
 # Here you can allow procreation between villagers of the same sex, procreation between family members and also allow "cheating" of villagers,
 # i.e., allow villagers to procreate with other villagers even if they are married.
 #

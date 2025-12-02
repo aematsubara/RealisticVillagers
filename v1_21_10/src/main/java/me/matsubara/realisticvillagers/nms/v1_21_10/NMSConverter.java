@@ -30,6 +30,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -51,6 +52,8 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
+import net.minecraft.world.entity.vehicle.AbstractBoat;
+import net.minecraft.world.entity.vehicle.Minecart;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -99,7 +102,7 @@ public class NMSConverter implements INMSConverter {
     // Registry fields.
     private static final MethodHandle INSTRUSIVE_HOLDER_CACHE = Reflection.getField(MappedRegistry.class, Map.class, "m", false, "unregisteredIntrusiveHolders");
     private static final MethodHandle FROZEN = Reflection.getField(MappedRegistry.class, boolean.class, "l", false, "frozen");
-    private static final MethodHandle ATTRIBUTES = Reflection.getField(AttributeMap.class, Map.class, "b", true, "attributes");
+    private static final MethodHandle ATTRIBUTES = Reflection.getField(AttributeMap.class, Map.class, "a", true, "attributes");
 
     // Constructors.
     private static final MethodHandle MEMORY_MODULE_TYPE = Reflection.getConstructor(MemoryModuleType.class, Optional.class);
@@ -281,18 +284,18 @@ public class NMSConverter implements INMSConverter {
     }
 
     private void handleTagLoad(org.bukkit.entity.LivingEntity living, @NotNull String tag, Consumer<OfflineVillagerNPC> consumer) {
-        OfflineVillagerNPC offline;
         if (tag.isEmpty()) {
-            offline = OfflineVillagerNPC.DUMMY_OFFLINE;
-        } else {
-            OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(
-                    Base64.getDecoder().decode(tag),
-                    living.getPersistentDataContainer().getAdapterContext());
-            offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ?
-                    temp :
-                    OfflineVillagerNPC.DUMMY_OFFLINE;
+            consumer.accept(OfflineVillagerNPC.DUMMY_OFFLINE);
+            return;
         }
-        consumer.accept(offline);
+
+        OfflineDataWrapper wrapper = RealisticVillagers.villagerDataFromPrimitive(
+                Base64.getDecoder().decode(tag),
+                living.getPersistentDataContainer().getAdapterContext());
+
+        consumer.accept(OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ?
+                temp :
+                OfflineVillagerNPC.DUMMY_OFFLINE);
     }
 
     @Override
@@ -383,9 +386,9 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public IVillagerNPC getNPCFromTag(String tag) {
-        byte[] primitive = Base64.getDecoder().decode(tag);
-        OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
-        return OfflineVillagerNPC.fromOfflineDataWrapper(wrapper);
+        return OfflineVillagerNPC.fromOfflineDataWrapper(RealisticVillagers.villagerDataFromPrimitive(
+                Base64.getDecoder().decode(tag),
+                ADAPTER_CONTEXT));
     }
 
     @Override
@@ -525,14 +528,17 @@ public class NMSConverter implements INMSConverter {
             double zc = pos.getDoubleOr(2, 0.0d);
 
             Set<IVillagerNPC> offlines = plugin.getTracker().getOfflineVillagers();
-            if (offlines.stream().noneMatch(npc -> npc.getUniqueId().equals(uuid))) {
+            if (offlines.stream().anyMatch(npc -> npc.getUniqueId().equals(uuid))) continue;
+
+            try {
                 byte[] primitive = REGISTRY.extract(RealisticVillagers.VILLAGER_DATA, values);
-                OfflineDataWrapper wrapper = RealisticVillagers.VILLAGER_DATA.fromPrimitive(primitive, ADAPTER_CONTEXT);
+                OfflineDataWrapper wrapper = RealisticVillagers.villagerDataFromPrimitive(primitive, ADAPTER_CONTEXT);
                 OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ?
                         temp :
                         OfflineVillagerNPC.DUMMY_OFFLINE;
                 offline.setLastKnownPosition(new LastKnownPosition(world, xc, yc, zc));
                 offlines.add(offline);
+            } catch (Exception ignored) {
             }
         }
     }
@@ -623,5 +629,14 @@ public class NMSConverter implements INMSConverter {
 
     public static CompoundTag getOrCreateBukkitTag(@NotNull CompoundTag base) {
         return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
+    }
+
+    public static void leaveVehicle(@NotNull Entity entity) {
+        Entity vehicle = entity.getVehicle();
+        if (vehicle != null
+                && !(vehicle instanceof AbstractBoat)
+                && !(vehicle instanceof Minecart)) {
+            entity.stopRiding();
+        }
     }
 }

@@ -30,6 +30,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -51,6 +52,8 @@ import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.entity.schedule.Schedule;
 import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.entity.schedule.Timeline;
+import net.minecraft.world.entity.vehicle.AbstractBoat;
+import net.minecraft.world.entity.vehicle.Minecart;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
@@ -608,5 +611,14 @@ public class NMSConverter implements INMSConverter {
 
     public static CompoundTag getOrCreateBukkitTag(@NotNull CompoundTag base) {
         return base.get("BukkitValues") instanceof CompoundTag tag ? tag : new CompoundTag();
+    }
+
+    public static void leaveVehicle(@NotNull Entity entity) {
+        Entity vehicle = entity.getVehicle();
+        if (vehicle != null
+                && !(vehicle instanceof AbstractBoat)
+                && !(vehicle instanceof Minecart)) {
+            entity.stopRiding();
+        }
     }
 }

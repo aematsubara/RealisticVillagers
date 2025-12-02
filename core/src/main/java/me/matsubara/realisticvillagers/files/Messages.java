@@ -10,6 +10,7 @@ import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -21,9 +22,11 @@ import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Messages {
@@ -96,12 +99,13 @@ public final class Messages {
         ThreadLocalRandom random = ThreadLocalRandom.current();
 
         if (exceptPlayer != null) {
-            List<String> offlineNames = Arrays.stream(Bukkit.getOfflinePlayers())
-                    .map(OfflinePlayer::getName)
-                    .filter(Predicate.not(exceptPlayer::equals))
-                    .toList();
             // If there isn't any offline player (shouldn't happen), a random villager name will be used.
-            if (!offlineNames.isEmpty()) return offlineNames.get(random.nextInt(offlineNames.size()));
+            OfflinePlayer[] offlines = Bukkit.getOfflinePlayers();
+            OfflinePlayer offline = ArrayUtils.get(offlines, random.nextInt(Math.max(1, offlines.length)));
+            String name;
+            if (offline != null && (name = offline.getName()) != null && !name.equals(exceptPlayer)) {
+                return name;
+            }
         }
 
         // If there isn't any villager nearby, we pick a random name.
@@ -176,6 +180,7 @@ public final class Messages {
 
     @Getter
     public enum Message {
+        ANNOYED,
         ON_HIT("reaction.on-hit"),
         MARRRY_SUCCESS("marry.success"),
         MARRY_FAIL_MARRIED_TO_GIVER("marry.fail.married-to-giver"),

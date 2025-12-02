@@ -778,6 +778,11 @@ public final class InventoryListeners implements Listener {
             }
         }
 
+        // Stop being annoyed after a success chat interaction.
+        if (success && Config.ANNOYING_METER_CLEAR_AFTER_SUCCESS_INTERACTION.asBool()) {
+            plugin.getAnnoyingManager().stopBeingAnnoyed(player, npc);
+        }
+
         EntityEffect effect = chatEvent.isSuccess() ? interactType.isFlirt() ? EntityEffect.VILLAGER_HEART : EntityEffect.VILLAGER_HAPPY : EntityEffect.VILLAGER_ANGRY;
         npc.bukkit().playEffect(effect);
 

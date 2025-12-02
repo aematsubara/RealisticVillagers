@@ -292,6 +292,8 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 return;
             }
 
+            if (plugin.getAnnoyingManager().isVillagerAnnoyed(player, npc)) return;
+
             // Open custom GUI.
             new MainGUI(plugin, npc, player);
 
