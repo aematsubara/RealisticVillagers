@@ -1,6 +1,9 @@
 package me.matsubara.realisticvillagers.util;
 
 import com.cryptomorin.xseries.reflection.XReflection;
+import com.cryptomorin.xseries.reflection.minecraft.MinecraftClassHandle;
+import com.cryptomorin.xseries.reflection.minecraft.MinecraftMapping;
+import com.cryptomorin.xseries.reflection.minecraft.MinecraftPackage;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -81,6 +84,14 @@ public final class Reflection {
             if (printStackTrace) exception.printStackTrace();
             return null;
         }
+    }
+
+    public static MethodHandle getMethod(Class<?> refc, String name, MethodType type) {
+        return getMethod(refc, name, type, false, true);
+    }
+
+    public static @Nullable MethodHandle getMethod(Class<?> refc, String name, MethodType type, String... extraNames) {
+        return getMethod(refc, name, type, false, true, extraNames);
     }
 
     public static void setFieldUsingUnsafe(@NotNull Field field, Object object, Object newValue) {
@@ -219,5 +230,46 @@ public final class Reflection {
             }
         }
         return null;
+    }
+
+    public static @Nullable Class<?> getClazzSilently(String clazzName) {
+        try {
+            return Class.forName(clazzName);
+        } catch (ClassNotFoundException ignored) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("PatternValidation")
+    public static @NotNull Class<?> getCraftClass(@Nullable String packageName, String className) {
+        MinecraftClassHandle handle = XReflection.ofMinecraft();
+
+        if (packageName != null) {
+            handle.inPackage(MinecraftPackage.CB, packageName);
+        } else {
+            handle.inPackage(MinecraftPackage.CB);
+        }
+
+        return handle.named(className).unreflect();
+    }
+
+    @SuppressWarnings("PatternValidation")
+    public static @NotNull Class<?> getNMSClass(@Nullable String packageName, String mojangName, String spigotName) {
+        MinecraftClassHandle handle = XReflection.ofMinecraft();
+
+        if (packageName != null) {
+            handle.inPackage(MinecraftPackage.NMS, packageName);
+        } else {
+            handle.inPackage(MinecraftPackage.NMS);
+        }
+
+        return handle
+                .map(MinecraftMapping.MOJANG, mojangName)
+                .map(MinecraftMapping.SPIGOT, spigotName)
+                .unreflect();
+    }
+
+    public static @NotNull Class<?> getNMSClass(@Nullable String packageName, String sameName) {
+        return getNMSClass(packageName, sameName, sameName);
     }
 }

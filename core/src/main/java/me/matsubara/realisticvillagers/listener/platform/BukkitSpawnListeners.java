@@ -1,4 +1,4 @@
-package me.matsubara.realisticvillagers.listener.spawn;
+package me.matsubara.realisticvillagers.listener.platform;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.files.Config;

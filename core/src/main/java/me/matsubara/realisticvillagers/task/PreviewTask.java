@@ -47,7 +47,7 @@ public class PreviewTask extends BukkitRunnable {
         this.player = player;
         this.seconds = Config.SKIN_PREVIEW_SECONDS.asInt();
 
-        plugin.getTracker().checkNametagTeam();
+        plugin.getTracker().checkNametagTeam(null);
 
         targetLocation = getPlayerTargetLocation(player);
 

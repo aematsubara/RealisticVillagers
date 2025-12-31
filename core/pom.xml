@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.6.3</version>
+        <version>3.3.6.4</version>
     </parent>
 
     <pluginRepositories>
@@ -80,7 +80,7 @@
                                     <includes>
                                         <include>com/cryptomorin/xseries/base/**</include>
                                         <include>com/cryptomorin/xseries/reflection/**</include>
-                                        <include>com/cryptomorin/xseries/particles/XParticle*</include>
+                                        <include>com/cryptomorin/xseries/particles/**</include>
                                     </includes>
                                 </filter>
                                 <filter>
@@ -134,8 +134,8 @@
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </repository>
         <repository>
-            <id>codemc-snapshots</id>
-            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+            <id>mvn-wesjd-net</id>
+            <url>https://mvn.wesjd.net/</url>
         </repository>
         <repository>
             <id>codemc-releases</id>
@@ -172,7 +172,7 @@
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.10.10-SNAPSHOT</version>
+            <version>1.10.11-SNAPSHOT</version>
         </dependency>
         <!-- ConfigUpdater -->
         <dependency>
@@ -226,7 +226,7 @@
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>13.5.1</version>
+            <version>13.6.0</version>
         </dependency>
         <!-- PacketEvents -->
         <dependency>

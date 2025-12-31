@@ -10,7 +10,8 @@ public enum VersionMatcher {
     v1_19(null, "1.19.4"),
     v1_20_6(null, "1.20.6"),
     v1_21_8("v1_21_4", "1.21.7", "1.21.8"),
-    v1_21_10(null, "1.21.10");
+    v1_21_10(null, "1.21.10"),
+    v1_21_11(null, "1.21.11");
 
     private final String differentName;
     private final String[] versions;

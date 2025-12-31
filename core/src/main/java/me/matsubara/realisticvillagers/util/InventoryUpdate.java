@@ -25,6 +25,7 @@ import com.cryptomorin.xseries.reflection.XReflection;
 import com.cryptomorin.xseries.reflection.minecraft.MinecraftConnection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import lombok.Getter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.InventoryView;
@@ -32,7 +33,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.util.Locale;
@@ -69,9 +69,6 @@ public final class InventoryUpdate {
     private static final MethodHandle activeContainer;
     private static final MethodHandle windowId;
 
-    // Methods factory.
-    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
-
     private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(InventoryUpdate.class);
     private static final Set<String> UNOPENABLES = Sets.newHashSet("CRAFTING", "CREATIVE", "PLAYER");
     private static final boolean SUPPORTS_19 = XReflection.supports(19);
@@ -81,19 +78,19 @@ public final class InventoryUpdate {
         // Initialize classes.
         CRAFT_PLAYER = XReflection.getCraftClass("entity.CraftPlayer");
         CHAT_MESSAGE = SUPPORTS_19 ? null : XReflection.getNMSClass("network.chat", "ChatMessage");
-        PACKET_PLAY_OUT_OPEN_WINDOW = XReflection.getNMSClass("network.protocol.game", "PacketPlayOutOpenWindow");
-        I_CHAT_BASE_COMPONENT = XReflection.getNMSClass("network.chat", "IChatBaseComponent");
+        PACKET_PLAY_OUT_OPEN_WINDOW = Reflection.getNMSClass("network.protocol.game", "ClientboundOpenScreenPacket", "PacketPlayOutOpenWindow");
+        I_CHAT_BASE_COMPONENT = Reflection.getNMSClass("network.chat", "Component", "IChatBaseComponent");
         // Check if we use containers, otherwise, can throw errors on older versions.
-        CONTAINERS = useContainers() ? XReflection.getNMSClass("world.inventory", "Containers") : null;
-        ENTITY_PLAYER = XReflection.getNMSClass("server.level", "EntityPlayer");
-        ENTITY_HUMAN = XReflection.getNMSClass("world.entity.player", "EntityHuman");
-        CONTAINER = XReflection.getNMSClass("world.inventory", "Container");
-        I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? XReflection.getNMSClass("network.chat", "IChatMutableComponent") : null;
+        CONTAINERS = useContainers() ? Reflection.getNMSClass("world.inventory", "MenuType", "Containers") : null;
+        ENTITY_PLAYER = Reflection.getNMSClass("server.level", "ServerPlayer", "EntityPlayer");
+        ENTITY_HUMAN = Reflection.getNMSClass("world.entity.player", "Player", "EntityHuman");
+        CONTAINER = Reflection.getNMSClass("world.inventory", "AbstractContainerMenu", "Container");
+        I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? Reflection.getNMSClass("network.chat", "MutableComponent", "IChatMutableComponent") : null;
 
         // Initialize methods.
-        getHandle = getMethod(CRAFT_PLAYER, "getHandle", MethodType.methodType(ENTITY_PLAYER));
-        getBukkitView = getMethod(CONTAINER, "getBukkitView", MethodType.methodType(InventoryView.class));
-        literal = SUPPORTS_19 ? getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true) : null;
+        getHandle = Reflection.getMethod(CRAFT_PLAYER, "getHandle", MethodType.methodType(ENTITY_PLAYER));
+        getBukkitView = Reflection.getMethod(CONTAINER, "getBukkitView", MethodType.methodType(InventoryView.class));
+        literal = SUPPORTS_19 ? Reflection.getMethod(I_CHAT_BASE_COMPONENT, "b", MethodType.methodType(I_CHAT_MUTABLE_COMPONENT, String.class), true, true, "literal") : null;
 
         // Initialize constructors.
         chatMessage = SUPPORTS_19 ? null : Reflection.getConstructor(CHAT_MESSAGE, String.class, Object[].class);
@@ -111,7 +108,7 @@ public final class InventoryUpdate {
     /**
      * Update the player inventory, so you can change the title.
      *
-     * @param player   whose inventory will be updated.
+     * @param player   the player whose inventory will be updated.
      * @param newTitle the new title for the inventory.
      */
     @SuppressWarnings("UnstableApiUsage")
@@ -199,20 +196,6 @@ public final class InventoryUpdate {
         }
     }
 
-    private static MethodHandle getMethod(Class<?> refc, String name, MethodType type) {
-        return getMethod(refc, name, type, false);
-    }
-
-    private static @Nullable MethodHandle getMethod(Class<?> refc, String name, MethodType type, boolean isStatic) {
-        try {
-            if (isStatic) return LOOKUP.findStatic(refc, name, type);
-            return LOOKUP.findVirtual(refc, name, type);
-        } catch (ReflectiveOperationException exception) {
-            exception.printStackTrace();
-            return null;
-        }
-    }
-
     /**
      * Containers were added in 1.14, a String was used in previous versions.
      *
@@ -225,6 +208,7 @@ public final class InventoryUpdate {
     /**
      * An enum class for the necessary containers.
      */
+    @Getter
     private enum Containers {
         GENERIC_9X1(14, "minecraft:chest", "CHEST"),
         GENERIC_9X2(14, "minecraft:chest", "CHEST"),
@@ -257,16 +241,21 @@ public final class InventoryUpdate {
         // Added in 1.14, functional since 1.16.
         SMITHING(16, null, "SMITHING");
 
+        // The version in which the inventory container was added.
         private final int containerVersion;
+
+        // The name of the inventory from Minecraft for older versions.
         private final String minecraftName;
-        private final String[] inventoryTypesNames;
+
+        // Inventory type names of the inventory.
+        private final String[] inventoryTypeNames;
 
         private static final char[] ALPHABET = "abcdefghijklmnopqrstuvwxyz".toCharArray();
 
-        Containers(int containerVersion, String minecraftName, String... inventoryTypesNames) {
+        Containers(int containerVersion, String minecraftName, String... inventoryTypeNames) {
             this.containerVersion = containerVersion;
             this.minecraftName = minecraftName;
-            this.inventoryTypesNames = inventoryTypesNames;
+            this.inventoryTypeNames = inventoryTypeNames;
         }
 
         /**
@@ -280,7 +269,7 @@ public final class InventoryUpdate {
                 return Containers.valueOf("GENERIC_9X" + size / 9);
             }
             for (Containers container : Containers.values()) {
-                for (String bukkitName : container.getInventoryTypesNames()) {
+                for (String bukkitName : container.getInventoryTypeNames()) {
                     if (bukkitName.equalsIgnoreCase(type.toString())) {
                         return container;
                     }
@@ -307,33 +296,6 @@ public final class InventoryUpdate {
                 exception.printStackTrace();
             }
             return null;
-        }
-
-        /**
-         * Get the version in which the inventory container was added.
-         *
-         * @return the version.
-         */
-        public int getContainerVersion() {
-            return containerVersion;
-        }
-
-        /**
-         * Get the name of the inventory from Minecraft for older versions.
-         *
-         * @return name of the inventory.
-         */
-        public String getMinecraftName() {
-            return minecraftName;
-        }
-
-        /**
-         * Get inventory types names of the inventory.
-         *
-         * @return bukkit names.
-         */
-        public String[] getInventoryTypesNames() {
-            return inventoryTypesNames;
         }
     }
 }

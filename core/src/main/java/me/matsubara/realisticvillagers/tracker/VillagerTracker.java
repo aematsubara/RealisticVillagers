@@ -11,8 +11,8 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.handler.npc.NPCHandler;
 import me.matsubara.realisticvillagers.handler.protocol.VillagerHandler;
-import me.matsubara.realisticvillagers.listener.spawn.BukkitSpawnListeners;
-import me.matsubara.realisticvillagers.listener.spawn.PaperSpawnListeners;
+import me.matsubara.realisticvillagers.listener.platform.BukkitSpawnListeners;
+import me.matsubara.realisticvillagers.listener.platform.PaperListeners;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.npc.NPCPool;
 import me.matsubara.realisticvillagers.task.PreviewTask;
@@ -58,8 +58,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -70,6 +70,7 @@ public final class VillagerTracker implements Listener {
 
     private final RealisticVillagers plugin;
     private final NPCPool pool;
+    private final PaperListeners paperListeners;
     private final BukkitSpawnListeners spawnListeners;
     private final Map<UUID, String> transformations = new HashMap<>();
     private final Map<UUID, Integer> portalTransform = new HashMap<>();
@@ -95,11 +96,10 @@ public final class VillagerTracker implements Listener {
         updateMineskinApiKey();
 
         PluginManager manager = plugin.getServer().getPluginManager();
-
-        PaperSpawnListeners paperListener = new PaperSpawnListeners(plugin);
-        if (!paperListener.isRegistered()) manager.registerEvents(spawnListeners, plugin);
-
         manager.registerEvents(this, plugin);
+        if (!(this.paperListeners = new PaperListeners(plugin)).isSpawnRegistered()) {
+            manager.registerEvents(spawnListeners, plugin);
+        }
 
         PacketEvents.getAPI().getEventManager().registerListener(handler = new VillagerHandler(plugin));
     }
@@ -370,7 +370,7 @@ public final class VillagerTracker implements Listener {
                 || defaultName.equals(HIDE_NAMETAG_NAME)
                 || isInvalidNametag(defaultName)) {
             name = HIDE_NAMETAG_NAME;
-            checkNametagTeam();
+            checkNametagTeam(defaultName);
         } else {
             // Only show nametag if it's valid.
             name = defaultName;
@@ -387,7 +387,7 @@ public final class VillagerTracker implements Listener {
                 .build(pool);
     }
 
-    public void checkNametagTeam() {
+    public void checkNametagTeam(@Nullable String defaultName) {
         ScoreboardManager manager = Bukkit.getScoreboardManager();
         if (manager == null) return;
 
@@ -401,8 +401,10 @@ public final class VillagerTracker implements Listener {
 
         try {
             team.addEntry(HIDE_NAMETAG_NAME);
-        } catch (IllegalStateException ignored) {
+        } catch (IllegalStateException exception) {
             // Nothing we can do, maybe the NPC was added to another team by another plugin?
+            if (defaultName == null) return;
+            plugin.getLogger().warning("It wasn't possible to disable the nametag of the villager {" + defaultName + "}!");
         }
     }
 

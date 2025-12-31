@@ -24,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.*;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -57,10 +58,7 @@ import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Raid;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.craftbukkit.v1_18_R2.CraftRaid;
 import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
@@ -412,15 +410,15 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public void addGameRuleListener(World world) {
+        // There's no need to add a hacky listener if we can use the Paper event.
+        if (plugin.getTracker().getPaperListeners().isRuleRegistered()) return;
+
+        Preconditions.checkArgument(RULE_TYPE != null && RULE_CALLBACK != null);
         try {
             GameRules.Key<GameRules.BooleanValue> rule = GameRules.RULE_MOBGRIEFING;
 
-            String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
-
             GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
-            if (!nmsRule.get()) {
-                plugin.getLogger().warning(warn);
-            }
+            if (!nmsRule.get()) INMSConverter.printRuleWarning(plugin, world, GameRule.MOB_GRIEFING);
 
             Object type = RULE_TYPE.invoke(nmsRule);
 
@@ -428,8 +426,7 @@ public class NMSConverter implements INMSConverter {
                     RULE_CALLBACK,
                     type,
                     (BiConsumer<ServerLevel, GameRules.BooleanValue>) (level, value) -> {
-                        if (value.get()) return;
-                        plugin.getLogger().warning(warn);
+                        if (!value.get()) INMSConverter.printRuleWarning(plugin, world, GameRule.MOB_GRIEFING);
                     }
             );
         } catch (Throwable exception) {

@@ -1,0 +1,2288 @@
+package me.matsubara.realisticvillagers.entity.v1_21_11.villager;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.jeff_media.morepersistentdatatypes.DataType;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.*;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.entity.Nameable;
+import me.matsubara.realisticvillagers.entity.v1_21_11.DummyFishingHook;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.VillagerNPCGoalPackages;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.behaviour.core.LootChest;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.behaviour.core.VillagerPanicTrigger;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.sensing.NearestItemSensor;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.sensing.NearestLivingEntitySensor;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.sensing.SecondaryPoiSensor;
+import me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.sensing.VillagerHostilesSensor;
+import me.matsubara.realisticvillagers.event.RealisticRemoveEvent;
+import me.matsubara.realisticvillagers.event.VillagerExhaustionEvent;
+import me.matsubara.realisticvillagers.event.VillagerFishEvent;
+import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.files.Messages;
+import me.matsubara.realisticvillagers.nms.v1_21_11.CustomGossipContainer;
+import me.matsubara.realisticvillagers.nms.v1_21_11.NMSConverter;
+import me.matsubara.realisticvillagers.nms.v1_21_11.VillagerFoodData;
+import me.matsubara.realisticvillagers.npc.NPC;
+import me.matsubara.realisticvillagers.tracker.VillagerTracker;
+import me.matsubara.realisticvillagers.util.ItemStackUtils;
+import me.matsubara.realisticvillagers.util.PluginUtils;
+import me.matsubara.realisticvillagers.util.Reflection;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.*;
+import net.minecraft.world.attribute.EnvironmentAttribute;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.behavior.BehaviorControl;
+import net.minecraft.world.entity.ai.behavior.GateBehavior;
+import net.minecraft.world.entity.ai.behavior.ShufflingList;
+import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
+import net.minecraft.world.entity.ai.gossip.GossipContainer;
+import net.minecraft.world.entity.ai.gossip.GossipType;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
+import net.minecraft.world.entity.ai.sensing.Sensor;
+import net.minecraft.world.entity.ai.sensing.SensorType;
+import net.minecraft.world.entity.ai.village.ReputationEventType;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.entity.animal.parrot.Parrot;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.monster.CrossbowAttackMob;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.npc.villager.VillagerType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
+import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.BlocksAttacks;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.ArrayUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.v1_21_R7.CraftRegionAccessor;
+import org.bukkit.craftbukkit.v1_21_R7.CraftWorld;
+import org.bukkit.craftbukkit.v1_21_R7.enchantments.CraftEnchantment;
+import org.bukkit.craftbukkit.v1_21_R7.entity.CraftLivingEntity;
+import org.bukkit.craftbukkit.v1_21_R7.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_21_R7.entity.CraftVillager;
+import org.bukkit.craftbukkit.v1_21_R7.event.CraftEventFactory;
+import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_21_R7.persistence.CraftPersistentDataContainer;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.AbstractArrow.PickupStatus;
+import org.bukkit.entity.Boat;
+import org.bukkit.entity.FishHook;
+import org.bukkit.event.entity.*;
+import org.bukkit.event.weather.LightningStrikeEvent;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
+import org.slf4j.Logger;
+
+import java.lang.invoke.MethodHandle;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+@SuppressWarnings({"Guava", "deprecation", "resource"})
+@Getter
+@Setter
+public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttackMob, Nameable {
+
+    private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
+
+    private String villagerName;
+    private String sex;
+    private IVillagerNPC partner;
+    private List<IVillagerNPC> partners = new ArrayList<>();
+    private boolean isPartnerVillager;
+    private long lastProcreation;
+    private int skinTextureId = -1;
+    private int kidSkinTextureId = -1;
+    private UUID interactingWith;
+    private InteractType interactType;
+    private ExpectingType expectingType;
+    private UUID expectingFrom;
+    private int expectingTicks;
+    private int revivingTicks;
+    private boolean giftDropped;
+    private UUID procreatingWith;
+    private IVillagerNPC father;
+    private boolean isFatherVillager;
+    private IVillagerNPC mother;
+    private boolean isMotherVillager = true;
+    private List<IVillagerNPC> childrens = new ArrayList<>();
+    private UUID bedHomeWorld;
+    private BlockPos bedHome;
+    private Set<EntityType<?>> targetEntities = getDefaultTargets();
+    private long lastGossipTime;
+    private long lastGossipDecayTime;
+    private long lastDamageStamp;
+    private DummyFishingHook fishing;
+    private boolean isEating;
+    private boolean showingTrades;
+    private boolean isTaming;
+    private boolean isHealingGolem;
+    private boolean isHelpingFamily;
+    private boolean isUsingBoneMeal;
+    private boolean isUsingHoe;
+    private boolean isUsingFishingRod;
+    private boolean isLooting;
+    private boolean wasInfected;
+    private boolean shakingHead;
+    private boolean equipped;
+    private boolean isAttackingWithTrident;
+    private final Set<UUID> players = new HashSet<>();
+    private ThrownTrident thrownTrident;
+    private ServerPlayer shakingHeadAt;
+    private long timeEntitySatOnShoulder;
+    private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityLeft = new CompoundTag();
+    private @Getter(AccessLevel.NONE) CompoundTag shoulderEntityRight = new CompoundTag();
+
+    private int nametagEntity = -1;
+    private int nametagItemEntity = -1;
+
+    private final SimpleContainer inventory = new SimpleContainer(Math.min(36, Config.VILLAGER_INVENTORY_SIZE.asInt()), getBukkitEntity());
+    private final ItemCooldowns cooldowns = new ItemCooldowns();
+    private final VillagerFoodData foodData = new VillagerFoodData(this);
+    private final @Setter(AccessLevel.NONE) CustomGossipContainer gossips = new CustomGossipContainer();
+
+    public static final MemoryModuleType<Boolean> HAS_HELPED_FAMILY_RECENTLY = NMSConverter.registerMemoryType("has_helped_family_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_HEALED_GOLEM_RECENTLY = NMSConverter.registerMemoryType("has_healed_golem_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_FISHED_RECENTLY = NMSConverter.registerMemoryType("has_fished_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_TAMED_RECENTLY = NMSConverter.registerMemoryType("has_tamed_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> HAS_LOOTED_RECENTLY = NMSConverter.registerMemoryType("has_looted_recently", Codec.BOOL);
+    public static final MemoryModuleType<Boolean> CELEBRATE_VICTORY = NMSConverter.registerMemoryType("celebrate_victory", Codec.BOOL);
+    public static final MemoryModuleType<GlobalPos> STAY_PLACE = NMSConverter.registerMemoryType("stay_place", GlobalPos.CODEC);
+    public static final MemoryModuleType<Long> HEARD_HORN_TIME = NMSConverter.registerMemoryType("heard_horn_time");
+    public static final MemoryModuleType<Player> PLAYER_HORN = NMSConverter.registerMemoryType("player_horn");
+    public static final MemoryModuleType<TargetReason> TARGET_REASON = NMSConverter.registerMemoryType("target_reason");
+    public static final MemoryModuleType<ItemEntity> NEAREST_WANTED_ITEM = NMSConverter.registerMemoryType("nearest_wanted_item");
+    public static final MemoryModuleType<PrimedTnt> NEAREST_PRIMED_TNT = NMSConverter.registerMemoryType("nearest_primed_tnt");
+
+    public static final Activity STAY = NMSConverter.registerActivity("stay");
+
+    private static final ImmutableList<MemoryModuleType<?>> MEMORIES;
+    @SuppressWarnings("DataFlowIssue")
+    private static final ImmutableList<MemoryModuleType<?>> OUR_MEMORIES = ImmutableList.of(
+            HAS_HELPED_FAMILY_RECENTLY,
+            HAS_HEALED_GOLEM_RECENTLY,
+            HAS_FISHED_RECENTLY,
+            HAS_TAMED_RECENTLY,
+            HAS_LOOTED_RECENTLY,
+            CELEBRATE_VICTORY,
+            STAY_PLACE,
+            HEARD_HORN_TIME,
+            PLAYER_HORN,
+            TARGET_REASON,
+            NEAREST_WANTED_ITEM,
+            NEAREST_PRIMED_TNT);
+
+    static {
+        List<MemoryModuleType<?>> memories = new ArrayList<>();
+        memories.addAll(List.of(
+                MemoryModuleType.HOME,
+                MemoryModuleType.JOB_SITE,
+                MemoryModuleType.POTENTIAL_JOB_SITE,
+                MemoryModuleType.MEETING_POINT,
+                MemoryModuleType.NEAREST_LIVING_ENTITIES,
+                MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
+                MemoryModuleType.VISIBLE_VILLAGER_BABIES,
+                MemoryModuleType.NEAREST_PLAYERS,
+                MemoryModuleType.NEAREST_VISIBLE_PLAYER,
+                MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
+                MemoryModuleType.WALK_TARGET,
+                MemoryModuleType.LOOK_TARGET,
+                MemoryModuleType.INTERACTION_TARGET,
+                MemoryModuleType.BREED_TARGET,
+                MemoryModuleType.PATH,
+                MemoryModuleType.DOORS_TO_CLOSE,
+                MemoryModuleType.NEAREST_BED,
+                MemoryModuleType.HURT_BY,
+                MemoryModuleType.HURT_BY_ENTITY,
+                MemoryModuleType.NEAREST_HOSTILE,
+                MemoryModuleType.SECONDARY_JOB_SITE,
+                MemoryModuleType.HIDING_PLACE,
+                MemoryModuleType.HEARD_BELL_TIME,
+                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
+                MemoryModuleType.LAST_SLEPT,
+                MemoryModuleType.LAST_WOKEN,
+                MemoryModuleType.LAST_WORKED_AT_POI,
+                MemoryModuleType.GOLEM_DETECTED_RECENTLY,
+                MemoryModuleType.ATTACK_TARGET,
+                MemoryModuleType.ATTACK_COOLING_DOWN));
+        memories.addAll(OUR_MEMORIES);
+        MEMORIES = ImmutableList.copyOf(memories);
+    }
+
+    private static final SensorType<VillagerHostilesSensor> VILLAGER_HOSTILES = NMSConverter.registerSensor("rv_villager_hostiles", VillagerHostilesSensor::new);
+    private static final SensorType<NearestItemSensor> NEAREST_ITEMS = NMSConverter.registerSensor("rv_nearest_items", NearestItemSensor::new);
+    private static final SensorType<SecondaryPoiSensor> SECONDARY_POIS = NMSConverter.registerSensor("rv_secondary_pois", SecondaryPoiSensor::new);
+    private static final SensorType<NearestLivingEntitySensor> NEAREST_LIVING_ENTITIES = NMSConverter.registerSensor("rv_nearest_living_entities", NearestLivingEntitySensor::new);
+
+    private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSORS =
+            ImmutableList.of(
+                    SensorType.NEAREST_BED,
+                    SensorType.HURT_BY,
+                    SensorType.VILLAGER_BABIES,
+                    SensorType.GOLEM_DETECTED,
+                    SensorType.NEAREST_PLAYERS,
+                    NEAREST_LIVING_ENTITIES != null ? NEAREST_LIVING_ENTITIES : SensorType.NEAREST_LIVING_ENTITIES,
+                    VILLAGER_HOSTILES != null ? VILLAGER_HOSTILES : SensorType.VILLAGER_HOSTILES,
+                    NEAREST_ITEMS != null ? NEAREST_ITEMS : SensorType.NEAREST_ITEMS,
+                    SECONDARY_POIS != null ? SECONDARY_POIS : SensorType.SECONDARY_POIS);
+
+    public static final EnvironmentAttribute<Activity> VILLAGER_BABY = NMSConverter.registerEnvironmentAttribute("rv_villager_baby");
+    public static final EnvironmentAttribute<Activity> VILLAGER_DEFAULT = NMSConverter.registerEnvironmentAttribute("rv_villager_default");
+
+    public static final Supplier<Float> EAT_SPEED = Config.SPEED_MODIFIER_EAT::asFloat;
+    public static final Supplier<Float> WALK_SPEED = Config.SPEED_MODIFIER_WALK::asFloat;
+    public static final Supplier<Float> SPRINT_SPEED = Config.SPEED_MODIFIER_SPRINT::asFloat;
+    public static final Supplier<Float> SWIM_SPEED = Config.SPEED_MODIFIER_SWIM::asFloat;
+
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final int GOSSIP_DECAY_INTERVAL = 24000;
+    private static final Vec3i ITEM_PICKUP_REACH = new Vec3i(2, 2, 2);
+    private static final int[] ROTATION = {-1, -3 - 5, -7, -7, -6, -4, -2, 1, 3, 5, 7, 7, 6, 4, 2, 2, 0};
+    private static final Predicate<ItemStack> DO_NOT_SAVE = stack -> stack.is(ItemTags.SWORDS)
+            || stack.is(ItemTags.AXES)
+            || stack.is(ItemTags.EQUIPPABLE_ENCHANTABLE)
+            || stack.is(Items.TRIDENT)
+            || stack.is(Items.SHIELD)
+            || stack.is(Items.BOW)
+            || stack.is(Items.CROSSBOW);
+
+    private static final MethodHandle BEHAVIORS_FIELD = Reflection.getField(GateBehavior.class, ShufflingList.class, "e", true, "behaviors");
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID =
+            (EntityDataAccessor<Boolean>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "cf", true, "DATA_EFFECT_AMBIENCE_ID"));
+    private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID =
+            (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getField(LivingEntity.class, EntityDataAccessor.class, "ch", true, "DATA_STINGER_COUNT_ID"));
+
+    public VillagerNPC(EntityType<? extends Villager> type, Level level) {
+        this(type, level, VillagerType.PLAINS);
+    }
+
+    public VillagerNPC(EntityType<? extends Villager> type, Level level, ResourceKey<VillagerType> key) {
+        this(type, level, level.registryAccess().getOrThrow(key));
+    }
+
+    public VillagerNPC(EntityType<? extends Villager> type, Level level, Holder<VillagerType> holder) {
+        super(type, level, holder);
+
+        refreshBrain();
+
+        NMSConverter.registerAttribute(this, Attributes.ATTACK_DAMAGE, Config.ATTACK_DAMAGE.asDouble());
+        NMSConverter.registerAttribute(this, Attributes.MAX_HEALTH, Config.VILLAGER_MAX_HEALTH.asDouble());
+
+        setPersistenceRequired();
+        this.persist = true;
+
+        for (EquipmentSlot value : EquipmentSlot.values()) {
+            setDropChance(value, 0.0f);
+        }
+    }
+
+    @Override
+    protected Brain<?> makeBrain(Dynamic<?> dynamic) {
+        Brain<Villager> brain = brainProvider().makeBrain(dynamic);
+        registerBrainGoals(brain);
+        return brain;
+    }
+
+    @Override
+    protected Brain.Provider<Villager> brainProvider() {
+        return Brain.provider(MEMORIES, SENSORS);
+    }
+
+    @Override
+    public void refreshBrain(ServerLevel level) {
+        Brain<Villager> brain = getBrain();
+        brain.stopAll(level, this);
+        this.brain = brain.copyWithoutBehaviors();
+        this.brain.removeAllBehaviors();
+        registerBrainGoals(getBrain());
+    }
+
+    private void registerBrainGoals(Brain<Villager> brain) {
+        Holder<VillagerProfession> holder = getVillagerData().profession();
+
+        // We can use VillagerGoalPackages for PANIC, PLAY & PRE_RAID activities since we don't modify any behavior.
+        if (isBaby()) {
+            brain.setSchedule(VILLAGER_BABY);
+            brain.addActivity(Activity.PLAY, VillagerGoalPackages.getPlayPackage(VillagerNPC.WALK_SPEED.get()));
+        } else {
+            brain.setSchedule(VILLAGER_DEFAULT);
+            brain.addActivityWithConditions(
+                    Activity.WORK,
+                    VillagerNPCGoalPackages.getWorkPackage(getVillagerData().profession()),
+                    ImmutableSet.of(Pair.of(MemoryModuleType.JOB_SITE, MemoryStatus.VALUE_PRESENT)));
+        }
+
+        brain.addActivity(Activity.CORE, VillagerNPCGoalPackages.getCorePackage(getProfession()));
+        brain.addActivityWithConditions(
+                Activity.MEET,
+                VillagerNPCGoalPackages.getMeetPackage(),
+                ImmutableSet.of(Pair.of(MemoryModuleType.MEETING_POINT, MemoryStatus.VALUE_PRESENT)));
+        brain.addActivity(Activity.REST, VillagerNPCGoalPackages.getRestPackage());
+        brain.addActivity(Activity.IDLE, VillagerNPCGoalPackages.getIdlePackage());
+        brain.addActivity(Activity.PANIC, VillagerGoalPackages.getPanicPackage(holder, VillagerNPC.WALK_SPEED.get()));
+        brain.addActivity(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(holder, VillagerNPC.WALK_SPEED.get()));
+        brain.addActivity(Activity.RAID, VillagerNPCGoalPackages.getRaidPackage());
+        brain.addActivity(Activity.HIDE, VillagerNPCGoalPackages.getHidePackage());
+        brain.addActivity(Activity.FIGHT, VillagerNPCGoalPackages.getFightPackage());
+        brain.addActivity(STAY, VillagerNPCGoalPackages.getStayPackage());
+        brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
+        brain.setDefaultActivity(Activity.IDLE);
+        brain.setActiveActivityIfPossible(Activity.IDLE);
+        updateActivityFromSchedule(brain);
+    }
+
+    public void updateActivityFromSchedule() {
+        updateActivityFromSchedule(getBrain());
+    }
+
+    public void updateActivityFromSchedule(Brain<Villager> brain) {
+        //if (!(plugin.getConverter() instanceof NMSConverter converter)) return;
+        if (level() instanceof ServerLevel level) {
+            brain.updateActivityFromSchedule(
+                    //converter.createSystemForWorld(level),
+                    NMSConverter.ENVIRONMENT_CACHE.get(level.uuid),
+                    level.getGameTime(),
+                    position());
+        }
+    }
+
+    @Override
+    public CustomGossipContainer getGossips() {
+        return gossips;
+    }
+
+    @Override
+    public int getPlayerReputation(@NotNull Player player) {
+        return gossips.getReputation(player.getUUID(), (type) -> true);
+    }
+
+    @Override
+    public void setGossips(GossipContainer container) {
+        this.gossips.putAll(container);
+    }
+
+    @Override
+    protected void addAdditionalSaveData(ValueOutput output) {
+        // Remove our memories BEFORE the brain is saved (we don't need them to be persistent anyways).
+        // Fix: Trying to access unbound value.
+        OUR_MEMORIES.forEach(brain::eraseMemory);
+
+        super.addAdditionalSaveData(output);
+
+        // After addAdditionalSaveData() is called, CraftEntity#storeBukkitValues() will save the values inside the container.
+        // For now, we'll use the default inventory / InventoryCarrier#writeInventoryToTag() (until we find a clever way of saving/reading the whole inventory).
+        if (getOffline() instanceof OfflineVillagerNPC offline) {
+            CraftVillager bukkit = getBukkitEntity();
+            CraftPersistentDataContainer container = bukkit.getPersistentDataContainer();
+
+            container.remove(plugin.getLegacyNpcValuesKey()); // Remove previous data.
+
+            container.set(plugin.getNpcValuesKey(), RealisticVillagers.VILLAGER_DATA, offline.toOfflineDataWrapper()); // Save data using the new system.
+            container.set(plugin.getInventoryKey(), DataType.ITEM_STACK_ARRAY, bukkit.getInventory().getContents()); // Save inventory.
+        }
+
+        output.putLong("LastGossipDecay", lastGossipDecayTime);
+
+        // Save the previous (vanilla) custom name.
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, getCustomName(true));
+
+        stopAllInteractions();
+    }
+
+    @Override
+    public void load(ValueInput input) {
+        super.load(input);
+
+        // We use load() instead of readAdditionalSaveData() because CraftEntity#readBukkitValues is called AFTER readAdditionalSaveData(),
+        // so our data won't be present at that time.
+
+        CraftVillager bukkit = getBukkitEntity();
+        CraftPersistentDataContainer container = bukkit.getPersistentDataContainer();
+
+        // Load data.
+        OfflineDataWrapper wrapper = RealisticVillagers.villagerDataFromPDC(plugin, container);
+        OfflineVillagerNPC offline = OfflineVillagerNPC.fromOfflineDataWrapper(wrapper) instanceof OfflineVillagerNPC temp ? temp : null;
+        loadFromOffline(offline);
+
+        // Load inventory.
+        org.bukkit.inventory.ItemStack[] contents = container.get(plugin.getInventoryKey(), DataType.ITEM_STACK_ARRAY);
+        if (contents != null) bukkit.getInventory().setContents(contents);
+
+        // Previous versions of this plugin used setCustomName() before.
+        Component customName = getCustomName(true);
+        if (customName != null && villagerName.equals(customName.getString())) {
+            setCustomName(null);
+        }
+    }
+
+    public void loadFromOffline(@Nullable OfflineVillagerNPC offline) {
+        VillagerTracker tracker = plugin.getTracker();
+
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getUniqueId, this::setUUID);
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getVillagerName, this::setVillagerName, "");
+        OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getSex, this::setSex, "");
+        if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
+        if (tracker.shouldRename(villagerName)) {
+            setVillagerName(tracker.getRandomNameBySex(sex));
+        }
+        isPartnerVillager = offline != null && offline.isPartnerVillager();
+        partner = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getPartner);
+        if (offline != null) partners.addAll(offline.getPartners());
+        if (partner != null && isPartnerVillager && tracker.getOffline(partner.getUniqueId()) == null) {
+            partners.add(partner);
+            setPartner(null, false);
+        }
+        lastProcreation = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getLastProcreation, 0L);
+        skinTextureId = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getSkinTextureId, -1);
+        kidSkinTextureId = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getKidSkinTextureId, -1);
+        isFatherVillager = offline != null && offline.isFatherVillager();
+        father = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getFather);
+        mother = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getMother);
+        wasInfected = offline != null && offline.isWasInfected();
+        equipped = offline != null && offline.isEquipped();
+        shoulderEntityLeft = offline != null && offline.validShoulderEntityLeft() ?
+                (CompoundTag) offline.getShoulderEntityLeft() :
+                new CompoundTag();
+        shoulderEntityRight = offline != null && offline.validShoulderEntityRight() ?
+                (CompoundTag) offline.getShoulderEntityRight() :
+                new CompoundTag();
+
+        if (offline == null) return;
+
+        gossips.clear();
+        gossips.putAll(offline.getGosssips());
+        childrens.addAll(offline.getChildrens());
+        targetEntities.addAll(offline.getTargetEntities());
+        players.addAll(offline.getPlayers());
+        UUID uuid = offline.getBedHomeWorld();
+        BlockPos pos = offline.getBedHome();
+        if (uuid != null && pos != null) loadBedHomePosition(uuid, pos);
+        foodData.setFoodLevel(offline.getFoodLevel());
+        foodData.setTickTimer(offline.getTickTimer());
+        foodData.setSaturationLevel(offline.getSaturationLevel());
+        foodData.setExhaustionLevel(offline.getExhaustionLevel());
+    }
+
+    @Override
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+
+        // Load gossips from vanilla. If our custom gossips isn't in our custom tag, we use vanilla ones.
+        gossips.clear();
+        input.read("Gossips", GossipContainer.CODEC).ifPresent(gossips::putAll);
+
+        lastGossipDecayTime = input.getLongOr("LastGossipDecay", 0L);
+
+        // For now, we'll use the default inventory / InventoryCarrier#readInventoryFromTag() (until we find a clever way of saving/reading the whole inventory).
+    }
+
+    @Override
+    public float getAgeScale() {
+        // Since 1.20.5, we don't want to modify the scale from here.
+        return super.getAgeScale();
+    }
+
+    @Override
+    public boolean hasFarmSeeds() {
+        return getInventory().hasAnyMatching((stack) -> stack.is(ItemTags.VILLAGER_PLANTABLE_SEEDS) || stack.is(Items.PUMPKIN_SEEDS) || stack.is(Items.MELON_SEEDS));
+    }
+
+    private void loadBedHomePosition(UUID uuid, BlockPos blockPos) {
+        World world = Bukkit.getServer().getWorld(uuid);
+        if (world == null) return;
+
+        double x = blockPos.getX();
+        double y = blockPos.getY();
+        double z = blockPos.getZ();
+
+        ServerLevel level = ((CraftWorld) world).getHandle();
+        if (!level.getChunkSource().isChunkLoaded((int) x, (int) z)
+                || level.getChunkIfLoaded((int) x, (int) z) == null) return;
+
+        GlobalPos pos = GlobalPos.of(level().dimension(), BlockPos.containing(x, y, z));
+
+        BlockState state = level().getBlockState(pos.pos());
+        if (!state.is(BlockTags.BEDS) || state.getValue(BedBlock.OCCUPIED)) return;
+
+        Predicate<Holder<PoiType>> predicate = holder -> holder.is(PoiTypes.HOME);
+        if (!level.getPoiManager().exists(pos.pos(), predicate)) return;
+
+        Optional<BlockPos> temp = level.getPoiManager().find(predicate, found -> found.equals(pos.pos()), pos.pos(), 1, PoiManager.Occupancy.ANY);
+        if (temp.isEmpty() || !temp.get().equals(pos.pos())) return;
+
+        getBrain().setMemory(MemoryModuleType.HOME, pos);
+        bedHome = pos.pos();
+        bedHomeWorld = world.getUID();
+    }
+
+    @Override
+    public void releasePoi(@NotNull MemoryModuleType<GlobalPos> memory) {
+        Optional<GlobalPos> pos;
+        if (memory.equals(MemoryModuleType.HOME)
+                && (pos = getBrain().getMemory(memory)).isPresent()
+                && pos.get().pos().equals(bedHome)) {
+            bedHome = null;
+            bedHomeWorld = null;
+        }
+        super.releasePoi(memory);
+    }
+
+    @Override
+    public CraftVillager getBukkitEntity() {
+        return (CraftVillager) super.getBukkitEntity();
+    }
+
+    @Override
+    public boolean hasPartner() {
+        return partner != null;
+    }
+
+    @Override
+    public boolean isConversating() {
+        return isInteracting() && interactType.isGUI();
+    }
+
+    @Override
+    public boolean isFollowing() {
+        return isInteracting() && interactType.isFollowMe();
+    }
+
+    @Override
+    public void stopInteracting() {
+        setInteractingWithAndType(null, null);
+    }
+
+    public void stopAllInteractions() {
+        stopExchangeables();
+        stopInteracting();
+        stopStayingInPlace();
+        stopExpecting();
+    }
+
+    @Override
+    public void setInteractingWithAndType(UUID interactingWith, InteractType interactType) {
+        this.interactingWith = interactingWith;
+        this.interactType = interactType;
+    }
+
+    @Override
+    public boolean canAttack() {
+        return isHoldingWeapon();
+    }
+
+    @SafeVarargs
+    public final boolean is(@NotNull ResourceKey<VillagerProfession>... professions) {
+        for (ResourceKey<VillagerProfession> profession : professions) {
+            if (getVillagerData().profession().is(profession)) return true;
+        }
+        return false;
+    }
+
+    public boolean isHoldingWeapon() {
+        return isHoldingMeleeWeapon() || isHoldingRangeWeapon();
+    }
+
+    public boolean isHoldingMeleeWeapon() {
+        return isHolding(stack -> stack.is(ItemTags.SWORDS) || stack.is(ItemTags.AXES) || stack.is(Items.TRIDENT));
+    }
+
+    public boolean isHoldingRangeWeapon() {
+        return isHolding(stack -> stack.getItem() instanceof ProjectileWeaponItem weapon && canFireProjectileWeapon(weapon));
+    }
+
+    @Override
+    public void setChargingCrossbow(boolean flag) {
+
+    }
+
+    @Override
+    public ItemStack getProjectile(@NotNull ItemStack stack) {
+        if (stack.getItem() instanceof ProjectileWeaponItem item) {
+            return getProjectile(item);
+        }
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public void onCrossbowAttackPerformed() {
+        noActionTime = 0;
+    }
+
+    @SuppressWarnings("unused")
+    public void shootCrossbowProjectile(LivingEntity target, ItemStack bow, Projectile projectile, float force) {
+        shootCrossbowProjectile(this, target, projectile, force, Config.RANGE_WEAPON_POWER.asFloat());
+    }
+
+    private void shootCrossbowProjectile(@NotNull LivingEntity shooter, @NotNull LivingEntity target, @NotNull Projectile projectile, float accuracy, float velocity) {
+        double deltaX = target.getX() - shooter.getX();
+        double deltaZ = target.getZ() - shooter.getZ();
+        double horizontalDistance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        double deltaY = target.getY(0.3333333333333333d) - projectile.getY() + horizontalDistance * 0.20000000298023224d;
+
+        Vector3f shotVector = this.getProjectileShotVector(shooter, new Vec3(deltaX, deltaY, deltaZ), accuracy);
+        projectile.shoot(shotVector.x(), shotVector.y(), shotVector.z(), velocity, (float) (14 - shooter.level().getDifficulty().getId() * 4));
+
+        shooter.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0f, 1.0f / (shooter.getRandom().nextFloat() * 0.4f + 0.8f));
+    }
+
+    private Vector3f getProjectileShotVector(LivingEntity shooter, @NotNull Vec3 direction, float accuracy) {
+        Vector3f normalizedDirection = direction.toVector3f().normalize();
+        Vector3f perpendicularVector = (new Vector3f(normalizedDirection)).cross(new Vector3f(0.0f, 1.0f, 0.0f));
+
+        if ((double) perpendicularVector.lengthSquared() <= 1.0E-7) {
+            Vec3 upVector = shooter.getUpVector(1.0f);
+            perpendicularVector = (new Vector3f(normalizedDirection)).cross(upVector.toVector3f());
+        }
+
+        Vector3f adjustedVector = (new Vector3f(normalizedDirection)).rotateAxis(1.5707964f, perpendicularVector.x, perpendicularVector.y, perpendicularVector.z);
+        return new Vector3f(normalizedDirection).rotateAxis(accuracy * 0.017453292f, adjustedVector.x, adjustedVector.y, adjustedVector.z);
+    }
+
+    @Override
+    public void performRangedAttack(LivingEntity target, float force) {
+        if (!isHoldingRangeWeapon()) {
+            onCrossbowAttackPerformed();
+            return;
+        }
+
+        boolean isBow = isHolding(Items.BOW);
+        InteractionHand hand = ProjectileUtil.getWeaponHoldingHand(this, getMainHandItem().getItem());
+
+        ItemStack weapon = getItemInHand(hand);
+        ItemStack arrow = getProjectile((ProjectileWeaponItem) weapon.getItem());
+
+        boolean isRocket = arrow.is(Items.FIREWORK_ROCKET);
+
+        Projectile projectile;
+        if (isBow) {
+            projectile = ProjectileUtil.getMobArrow(this, arrow, force, weapon);
+        } else if (isRocket) {
+            projectile = new FireworkRocketEntity(level(), arrow, this, getX(), getEyeY() - 0.15000000596046448d, getZ(), true);
+        } else {
+            projectile = ((ArrowItem) arrow.getItem()).createArrow(level(), arrow, this, weapon);
+        }
+
+        setupProjectile(weapon, projectile, isBow);
+
+        if (isBow) {
+            shootBow(target, projectile);
+        } else {
+            shootCrossbowProjectile(target, weapon, projectile, isRocket ? 1.6f : force);
+        }
+
+        weapon.hurtAndBreak(arrow.is(Items.FIREWORK_ROCKET) ? 3 : 1, this, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+
+        EntityShootBowEvent event = CraftEventFactory.callEntityShootBowEvent(
+                this,
+                weapon,
+                arrow,
+                projectile,
+                getUsedItemHand(),
+                force,
+                true);
+
+        if (event.isCancelled()) {
+            event.getProjectile().remove();
+            return;
+        }
+
+        if (event.getProjectile() == projectile.getBukkitEntity() && !level().addFreshEntity(projectile)) {
+            plugin.getLogger().info("Can't add projectile to world!");
+            return;
+        }
+
+        onCrossbowAttackPerformed();
+    }
+
+    private void setupProjectile(ItemStack weapon, Projectile projectile, boolean isBow) {
+        if (!(projectile instanceof AbstractArrow arrow)) return;
+
+        PickupStatus status = PluginUtils.getOrDefault(PickupStatus.class, Config.ARROW_STATUS.asString().toUpperCase(Locale.ROOT), PickupStatus.ALLOWED);
+        arrow.pickup = AbstractArrow.Pickup.byOrdinal(status.ordinal());
+
+        if (isBow && BowItem.getPowerForTime(BowItem.MAX_DRAW_DURATION) != 1.0f) {
+            return;
+        }
+
+        arrow.setCritArrow(true);
+
+        if (isBow) return;
+
+        arrow.setSoundEvent(SoundEvents.CROSSBOW_HIT);
+
+        int piercing = EnchantmentHelper.getItemEnchantmentLevel(CraftEnchantment.bukkitToMinecraftHolder(Enchantment.PIERCING), weapon);
+        if (piercing > 0) arrow.setPierceLevel((byte) piercing);
+    }
+
+    private void shootBow(@NotNull LivingEntity target, @NotNull Projectile projectile) {
+        double deltaX = target.getX() - getX();
+        double deltaY = target.getY(0.3333333333333333d) - projectile.getY();
+        double deltaZ = target.getZ() - getZ();
+
+        double horizontalMagnitude = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+
+        projectile.shoot(
+                deltaX,
+                deltaY + horizontalMagnitude * 0.20000000298023224d,
+                deltaZ,
+                Config.RANGE_WEAPON_POWER.asFloat(),
+                (float) (14 - level().getDifficulty().getId() * 4));
+
+        playSound(SoundEvents.ARROW_SHOOT, 1.0f, 1.0f / (random.nextFloat() * 0.4f + 0.8f));
+    }
+
+    public boolean canFireProjectileWeapon(ProjectileWeaponItem item) {
+        return !getProjectile(item).isEmpty();
+    }
+
+    public ItemStack getProjectile(@NotNull ProjectileWeaponItem item) {
+        ItemStack held = ProjectileWeaponItem.getHeldProjectile(this, item.getSupportedHeldProjectiles());
+        if (!held.isEmpty()) return held;
+
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (item.getAllSupportedProjectiles().test(stack)) return stack;
+        }
+
+        return ItemStack.EMPTY;
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+
+        tellFamilyThatIWasMurdered(source);
+
+        // Stop all behaviors.
+        for (BehaviorControl<? super Villager> behavior : getBrain().getRunningBehaviors()) {
+            if (behavior instanceof LootChest) {
+                behavior.doStop((ServerLevel) level(), this, level().getGameTime());
+            }
+        }
+
+        announceDeath();
+
+        if (!isRemoved()) removeEntitiesOnShoulder();
+    }
+
+    private void announceDeath() {
+        // Partner & father.
+        announceDeath(partner, isPartnerVillager);
+        announceDeath(father, isFatherVillager);
+
+        // Grandfathers.
+        IVillagerNPC father = this.father;
+        while (father != null) {
+            boolean isFatherVillager = father.isFatherVillager();
+            announceDeath(father = father.getFather(), isFatherVillager);
+        }
+    }
+
+    private void announceDeath(IVillagerNPC who, boolean isVillager) {
+        if (who == null || isVillager) return;
+
+        if (level().getPlayerByUUID(who.getUniqueId()) instanceof ServerPlayer player) {
+            player.sendSystemMessage(getCombatTracker().getDeathMessage());
+        }
+    }
+
+    private void tellFamilyThatIWasMurdered(DamageSource source) {
+        if (isInsideRaid()) return;
+
+        Entity entity = source.getEntity();
+        if (!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)) return;
+
+        Optional<NearestVisibleLivingEntities> optional = getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+        if (optional.isEmpty()) return;
+
+        optional.get()
+                .findAll(living -> living instanceof VillagerNPC npc && npc.canAttack() && npc.isFamily(getUUID(), true))
+                .forEach(living -> VillagerPanicTrigger.handleFightReaction(
+                        ((Villager) living).getBrain(),
+                        (LivingEntity) entity,
+                        TargetReason.DEFEND));
+    }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData groupData) {
+        if (!wasInfected
+                && !equipped
+                && !isBaby()
+                && reason != EntitySpawnReason.BREEDING
+                && (reason != EntitySpawnReason.COMMAND || equipByCommand())) {
+            plugin.equipVillager(getBukkitEntity(), true);
+        }
+
+        if (wasInfected) wasInfected = false;
+
+        if (getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+            LocalDate now = LocalDate.now();
+            int day = now.getDayOfMonth();
+            int month = now.getMonth().getValue();
+            if (month == 10 && day == 31 && random.nextFloat() < Config.CHANCE_OF_WEARING_HALLOWEEN_MASK.asFloat()) {
+                setItemSlot(
+                        EquipmentSlot.HEAD,
+                        new ItemStack(random.nextFloat() < 0.1f ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN));
+                setDropChance(EquipmentSlot.HEAD, 0.0f);
+            }
+        }
+
+        return super.finalizeSpawn(level, difficulty, reason, groupData);
+    }
+
+    private boolean equipByCommand() {
+        for (StackTraceElement stacktrace : new Throwable().getStackTrace()) {
+            String method = stacktrace.getMethodName(), clazz = stacktrace.getClassName();
+            if (method.equals("addEntity") && clazz.equals(CraftRegionAccessor.class.getName())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean canPickUpLoot() {
+        return true;
+    }
+
+    @Override
+    protected Vec3i getPickupReach() {
+        return ITEM_PICKUP_REACH;
+    }
+
+    @Override
+    public void onReputationEventFrom(ReputationEventType type, Entity entity) {
+        boolean raidCheck = Config.VILLAGER_ATTACK_PLAYER_DURING_RAID.asBool() || !isInsideRaid();
+
+        DamageSource lastDamage = getLastDamageSource();
+        boolean thornsCheck = lastDamage == null || !lastDamage.is(DamageTypes.THORNS);
+
+        if ((type != ReputationEventType.VILLAGER_HURT && type != ReputationEventType.VILLAGER_KILLED)
+                || (EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)
+                && raidCheck
+                && thornsCheck)) {
+            if (type == ReputationEventType.ZOMBIE_VILLAGER_CURED) {
+                gossips.add(entity.getUUID(), GossipType.MAJOR_POSITIVE, 20);
+                gossips.add(entity.getUUID(), GossipType.MINOR_POSITIVE, 25);
+            } else if (type == ReputationEventType.TRADE) {
+                gossips.add(entity.getUUID(), GossipType.TRADING, 2);
+            } else if (type == ReputationEventType.VILLAGER_HURT) {
+                gossips.add(entity.getUUID(), GossipType.MINOR_NEGATIVE, 25);
+            } else if (type == ReputationEventType.VILLAGER_KILLED) {
+                gossips.add(entity.getUUID(), GossipType.MAJOR_NEGATIVE, 25);
+            }
+        }
+
+        if (!isPartner(entity.getUUID()) || !(entity instanceof ServerPlayer player)) return;
+
+        if (getPlayerReputation(player) < Config.DIVORCE_IF_REPUTATION_IS_LESS_THAN.asInt()) {
+            plugin.getMessages().send(player.getBukkitEntity(), this, Messages.Message.MARRY_END);
+
+            divorceAndDropRing(player);
+        }
+    }
+
+    public void divorceAndDropRing(@Nullable Player player) {
+        org.bukkit.inventory.ItemStack ring = plugin.getRing().getResult();
+        getBukkitEntity().getInventory().removeItem(ring);
+        drop(CraftItemStack.asNMSCopy(ring));
+
+        setPartner(null, false);
+
+        if (player != null) {
+            // Remove data and add to old partners.
+            player.getBukkitEntity().getPersistentDataContainer().remove(plugin.getMarriedWith());
+            partners.add(dummyPlayerOffline(player.getUUID()));
+        }
+    }
+
+    @Override
+    public boolean isPartner(UUID uuid) {
+        return partner != null && partner.getUniqueId().equals(uuid);
+    }
+
+    @Override
+    public boolean isFather(UUID uuid) {
+        return father != null && father.getUniqueId().equals(uuid);
+    }
+
+    @Override
+    public String getActivityName(String none) {
+        return getBrain().getActiveNonCoreActivity().map(Activity::getName).orElse(none);
+    }
+
+    @Override
+    public void addTarget(org.bukkit.entity.EntityType type) {
+        ifTargetPresent(type, entityType -> targetEntities.add(entityType));
+    }
+
+    @Override
+    public void removeTarget(org.bukkit.entity.EntityType type) {
+        ifTargetPresent(type, entityType -> targetEntities.remove(entityType));
+    }
+
+    private void ifTargetPresent(@NotNull org.bukkit.entity.EntityType type, Consumer<EntityType<?>> consumer) {
+        EntityType.byString(type.name().toLowerCase(Locale.ROOT)).ifPresent(consumer);
+    }
+
+    private @NotNull Set<EntityType<?>> getDefaultTargets() {
+        Set<EntityType<?>> types = new HashSet<>();
+
+        for (String entity : plugin.getDefaultTargets()) {
+            Optional<EntityType<?>> type = EntityType.byString(entity.toLowerCase(Locale.ROOT));
+            if (type.isEmpty()) continue;
+            types.add(type.get());
+        }
+        return types;
+    }
+
+    @Override
+    public boolean isTarget(org.bukkit.entity.EntityType type) {
+        for (EntityType<?> entityType : targetEntities) {
+            if (entityType.toShortString().equalsIgnoreCase(type.name())) return true;
+        }
+        return false;
+    }
+
+    public final void eat(Level level, ItemStack item) {
+        foodData.eat(item);
+
+        if (!useVillagerSounds()) {
+            level.playSound(
+                    null,
+                    getX(),
+                    getY(),
+                    getZ(),
+                    SoundEvents.PLAYER_BURP,
+                    SoundSource.PLAYERS,
+                    0.5f,
+                    Mth.randomBetween(random, 0.9f, 1.0f));
+        }
+
+        Consumable consumable = item.get(DataComponents.CONSUMABLE);
+        if (consumable == null) return;
+
+        level.playSound(
+                null,
+                getX(),
+                getY(),
+                getZ(),
+                consumable.sound().value(),
+                SoundSource.NEUTRAL,
+                1.0f,
+                level.random.triangle(1.0f, 0.4f));
+
+        consumable.onConsume(level, this, item);
+    }
+
+    public boolean isHurt() {
+        return getHealth() > 0.0f && getHealth() < getMaxHealth();
+    }
+
+    @Override
+    public void causeFoodExhaustion(float exhaustion, VillagerExhaustionEvent.ExhaustionReason reason) {
+        VillagerExhaustionEvent event = new VillagerExhaustionEvent(this, reason, exhaustion);
+        if (!event.isCancelled()) foodData.addExhaustion(event.getExhaustion());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void stopExchangeables() {
+        Preconditions.checkNotNull(BEHAVIORS_FIELD);
+
+        for (BehaviorControl<? super Villager> behavior : getBrain().getRunningBehaviors()) {
+            long time = level().getGameTime();
+
+            if (!(behavior instanceof GateBehavior<? super Villager> gate)) {
+                stopExchangeable(time, behavior);
+                continue;
+            }
+
+            try {
+                for (BehaviorControl<? super Villager> next : (ShufflingList<BehaviorControl<? super Villager>>) BEHAVIORS_FIELD.invoke(gate)) {
+                    stopExchangeable(time, next);
+                }
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void refreshBrain() {
+        refreshBrain((ServerLevel) level());
+    }
+
+    private void stopExchangeable(long time, BehaviorControl<? super Villager> behavior) {
+        if (!(behavior instanceof Exchangeable exchangeable)) return;
+        if (exchangeable.getPreviousItem() != null) behavior.doStop((ServerLevel) level(), this, time);
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        return useVillagerSounds() ? super.getNotifyTradeSound() : null;
+    }
+
+    @Override
+    public void notifyTradeUpdated(ItemStack item) {
+        if (ambientSoundTime <= -getAmbientSoundInterval() + 20) return;
+
+        ambientSoundTime = -getAmbientSoundInterval();
+
+        SoundEvent tradeSound = getTradeUpdatedSound(!item.isEmpty());
+        if (tradeSound != null) playSound(tradeSound, getSoundVolume(), getVoicePitch());
+    }
+
+    @Override
+    public boolean startRiding(Entity entity, boolean force, boolean emitEvent) {
+        if (!Config.DISABLE_VILLAGER_RIDING_NEARBY_BOAT.asBool()) return super.startRiding(entity, force, emitEvent);
+
+        for (StackTraceElement stacktrace : new Throwable().getStackTrace()) {
+            String clazz = stacktrace.getClassName();
+            if (clazz.equals(Boat.class.getName())) return false;
+        }
+
+        return super.startRiding(entity, force, emitEvent);
+    }
+
+    @Override
+    protected SoundEvent getTradeUpdatedSound(boolean success) {
+        return useVillagerSounds() ? super.getTradeUpdatedSound(success) : null;
+    }
+
+    @Override
+    public void playCelebrateSound() {
+        if (useVillagerSounds()) super.playCelebrateSound();
+    }
+
+    @Override
+    public void setUnhappy() {
+        setUnhappyCounter(40);
+        if (!level().isClientSide() && useVillagerSounds()) {
+            playSound(SoundEvents.VILLAGER_NO, getSoundVolume(), getVoicePitch());
+        }
+    }
+
+    @Override
+    public void setUnhappyCounter(int ticks) {
+        if (Config.DISABLE_SKINS.asBool()) super.setUnhappyCounter(ticks);
+    }
+
+    @Override
+    public void shakeHead(org.bukkit.entity.Player at) {
+        if (shakingHead) return;
+
+        shakingHeadAt = ((CraftPlayer) at).getHandle();
+        getLookControl().setLookAt(shakingHeadAt);
+
+        new BukkitRunnable() {
+            int current;
+            int turns;
+
+            @Override
+            public void run() {
+                if (!getBukkitEntity().isValid()) {
+                    cancel();
+                    return;
+                }
+
+                if (current == ROTATION.length) {
+                    current = 0;
+                    turns++;
+                }
+
+                if (turns == 2) {
+                    shakingHead = false;
+
+                    if (shakingHeadAt.getBukkitEntity().isOnline()) {
+                        getLookControl().setLookAt(shakingHeadAt);
+                    }
+
+                    shakingHeadAt = null;
+                    cancel();
+                    return;
+                }
+
+                yHeadRot += ROTATION[current] * 3;
+                current++;
+            }
+        }.runTaskTimer(plugin, 4L, 1L);
+
+        shakingHead = true;
+    }
+
+    @Override
+    public IVillagerNPC getOffline() {
+        return new OfflineVillagerNPC(
+                uuid,
+                villagerName,
+                sex,
+                partner,
+                isPartnerVillager,
+                lastProcreation,
+                skinTextureId,
+                kidSkinTextureId,
+                father,
+                mother,
+                isFatherVillager,
+                getLastKnownPosition(),
+                partners,
+                childrens,
+                targetEntities,
+                players,
+                gossips.unpack().toList(),
+                shoulderEntityLeft,
+                shoulderEntityRight,
+                bedHomeWorld,
+                bedHome,
+                wasInfected,
+                equipped,
+                foodData.getFoodLevel(),
+                foodData.getTickTimer(),
+                foodData.getSaturationLevel(),
+                foodData.getExhaustionLevel());
+    }
+
+    @Override
+    public LastKnownPosition getLastKnownPosition() {
+        return new LastKnownPosition(level().getWorld().getName(), getX(), getY(), getZ());
+    }
+
+    @Override
+    protected @Nullable SoundEvent getAmbientSound() {
+        return useVillagerSounds() ? super.getAmbientSound() : null;
+    }
+
+    @Override
+    protected SoundEvent getHurtSound(DamageSource source) {
+        if (useVillagerSounds()) return super.getHurtSound(source);
+        return switch (source.getMsgId()) {
+            case "onFire" -> SoundEvents.PLAYER_HURT_ON_FIRE;
+            case "drown" -> SoundEvents.PLAYER_HURT_DROWN;
+            case "sweetBerryBush" -> SoundEvents.PLAYER_HURT_SWEET_BERRY_BUSH;
+            case "freeze" -> SoundEvents.PLAYER_HURT_FREEZE;
+            default -> SoundEvents.PLAYER_HURT;
+        };
+    }
+
+    @Override
+    protected SoundEvent getDeathSound() {
+        return useVillagerSounds() ? super.getDeathSound() : SoundEvents.PLAYER_DEATH;
+    }
+
+    @Override
+    public SoundEvent getSwimSound() {
+        return useVillagerSounds() ? super.getSwimSound() : SoundEvents.PLAYER_SWIM;
+    }
+
+    @Override
+    public SoundEvent getSwimSplashSound() {
+        return useVillagerSounds() ? super.getSwimSplashSound() : SoundEvents.PLAYER_SPLASH;
+    }
+
+    @Override
+    public SoundEvent getSwimHighSpeedSplashSound() {
+        return useVillagerSounds() ? super.getSwimHighSpeedSplashSound() : SoundEvents.PLAYER_SPLASH_HIGH_SPEED;
+    }
+
+    @Override
+    public SoundSource getSoundSource() {
+        return useVillagerSounds() ? super.getSoundSource() : SoundSource.PLAYERS;
+    }
+
+    @Override
+    public Fallsounds getFallSounds() {
+        return useVillagerSounds() ? super.getFallSounds() : new Fallsounds(SoundEvents.PLAYER_SMALL_FALL, SoundEvents.PLAYER_BIG_FALL);
+    }
+
+    private boolean useVillagerSounds() {
+        return Config.USE_VILLAGER_SOUNDS.asBool();
+    }
+
+    @Override
+    public SimpleContainer getInventory() {
+        return inventory;
+    }
+
+    @Override
+    public void setPartner(@Nullable UUID partner, boolean isPartnerVillager) {
+        setRelationship(partner,
+                isPartnerVillager,
+                this::getPartner,
+                this::isPartnerVillager,
+                this::setPartner,
+                this::setPartnerVillager);
+    }
+
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
+        setRelationship(father,
+                isFatherVillager,
+                this::getFather,
+                this::isFatherVillager,
+                this::setFather,
+                this::setFatherVillager);
+    }
+
+    private void setRelationship(@Nullable UUID who,
+                                 boolean villager,
+                                 @NotNull Supplier<IVillagerNPC> getter,
+                                 Supplier<Boolean> getterVillager,
+                                 Consumer<IVillagerNPC> setter,
+                                 Consumer<Boolean> setterVillager) {
+        org.bukkit.entity.Player oldMember;
+        if (getter.get() != null && !getterVillager.get()) {
+            oldMember = Bukkit.getPlayer(getter.get().getUniqueId());
+        } else oldMember = null;
+
+        setterVillager.accept(villager);
+
+        if (who == null) {
+            setter.accept(null);
+        } else if (villager) {
+            IVillagerNPC npc = plugin.getTracker().getOffline(who);
+            if (npc != null) setter.accept(npc);
+        } else {
+            setter.accept(dummyPlayerOffline(who));
+        }
+
+        // Reset nametags.
+        if (oldMember != null) resetNametagsFor(plugin, oldMember);
+        if (who != null && !villager) {
+            org.bukkit.entity.Player newMember = Bukkit.getPlayer(who);
+            if (newMember != null) resetNametagsFor(plugin, newMember);
+        }
+    }
+
+    public static @NotNull OfflineVillagerNPC dummyPlayerOffline(UUID uuid) {
+        String name = Bukkit.getOfflinePlayer(uuid).getName();
+        return OfflineVillagerNPC.dummy(uuid, name != null ? name : "???");
+    }
+
+    @Override
+    public int getFoodLevel() {
+        return foodData.getFoodLevel();
+    }
+
+    public void setFoodLevel(int foodLevel) {
+        foodData.setFoodLevel(foodLevel);
+    }
+
+    @Override
+    public boolean isFishing() {
+        return fishing != null;
+    }
+
+    @Override
+    public void toggleFishing() {
+        if (fishing != null) {
+            int damage = fishing.retrieve(getMainHandItem());
+            getMainHandItem().hurtAndBreak(damage, this, EquipmentSlot.MAINHAND);
+
+            level().playSound(null,
+                    positionAsBlock(),
+                    SoundEvents.FISHING_BOBBER_RETRIEVE,
+                    SoundSource.NEUTRAL,
+                    0.5f, 0.4f / (random.nextFloat() * 0.4f + 0.8f));
+            gameEvent(GameEvent.ITEM_INTERACT_FINISH);
+            return;
+        }
+        int luck = EnchantmentHelper.getFishingLuckBonus((ServerLevel) level(), getMainHandItem(), this);
+        int lureSpeed = (int) EnchantmentHelper.getFishingTimeReduction((ServerLevel) level(), getMainHandItem(), this);
+
+        DummyFishingHook hook = new DummyFishingHook(this, level(), luck, lureSpeed);
+
+        VillagerFishEvent fishEvent = new VillagerFishEvent(this, null, (FishHook) hook.getBukkitEntity(), VillagerFishEvent.State.FISHING);
+        plugin.getServer().getPluginManager().callEvent(fishEvent);
+        if (fishEvent.isCancelled()) {
+            fishing = null;
+            return;
+        }
+
+        level().playSound(
+                null,
+                positionAsBlock(),
+                SoundEvents.FISHING_BOBBER_THROW,
+                SoundSource.NEUTRAL,
+                0.5f, 0.4f / (random.nextFloat() * 0.4f + 0.8f));
+        level().addFreshEntity(hook);
+
+        gameEvent(GameEvent.ITEM_INTERACT_START);
+    }
+
+    @Override
+    public void sendSpawnPacket() {
+        sendPacket(new ClientboundAddEntityPacket(this, 0, positionAsBlock()));
+        sendPacket(new ClientboundSetEntityDataPacket(getId(), getEntityData().getNonDefaultValues()));
+    }
+
+    @Override
+    public void sendDestroyPacket() {
+        sendPacket(new ClientboundRemoveEntitiesPacket(getId()));
+    }
+
+    private void sendPacket(Packet<?> packet) {
+        for (ServerPlayer player : ((ServerLevel) level()).players()) {
+            player.connection.send(packet);
+        }
+    }
+
+    @SuppressWarnings("WhileLoopReplaceableByForEach")
+    private void updateSpecialPrices(Player player) {
+        if (Config.DISABLE_SPECIAL_PRICES.asBool() || (Config.DISABLE_SPECIAL_PRICES_IF_ALLOWED_TO_MODIFY_INVENTORY.asBool()
+                && plugin.getInventoryListeners().canModifyInventory(this, (org.bukkit.entity.Player) player.getBukkitEntity()))) {
+            return;
+        }
+
+        int reputation = getPlayerReputation(player);
+        if (reputation != 0) {
+            Iterator<MerchantOffer> offers = getOffers().iterator();
+            while (offers.hasNext()) {
+                MerchantOffer offer = offers.next();
+                offer.addToSpecialPriceDiff(-Mth.floor((float) reputation * offer.getPriceMultiplier()));
+            }
+        }
+
+        MobEffectInstance heroEffect = player.getEffect(MobEffects.HERO_OF_THE_VILLAGE);
+        if (heroEffect == null) return;
+
+        int amplifier = heroEffect.getAmplifier();
+        Iterator<MerchantOffer> offers = getOffers().iterator();
+
+        while (offers.hasNext()) {
+            MerchantOffer offer = offers.next();
+            int discount = (int) Math.floor((0.3d + 0.0625d * (double) amplifier) * (double) offer.getBaseCostA().getCount());
+            offer.addToSpecialPriceDiff(-Math.max(discount, 1));
+        }
+    }
+
+    @Override
+    public boolean isFemale() {
+        return sex.equalsIgnoreCase("female");
+    }
+
+    @Override
+    public boolean isMale() {
+        return sex.equalsIgnoreCase("male");
+    }
+
+    @Override
+    public boolean is(@NotNull org.bukkit.entity.Villager.Profession... professions) {
+        for (org.bukkit.entity.Villager.Profession profession : professions) {
+            Holder<VillagerProfession> holder = CraftVillager.CraftProfession.bukkitToMinecraftHolder(profession);
+            if (holder.is(getVillagerData().profession())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public SlotAccess getSlot(int slot) {
+        int finalSlot = slot - 300;
+        return finalSlot >= 0 && finalSlot < inventory.getContainerSize() ?
+                forContainer(inventory, finalSlot) :
+                super.getSlot(slot);
+    }
+
+    @Contract(value = "_, _, _ -> new", pure = true)
+    static @NotNull SlotAccess forContainer(Container container, int slot, Predicate<ItemStack> condition) {
+        return new SlotAccess() {
+            public ItemStack get() {
+                return container.getItem(slot);
+            }
+
+            public boolean set(ItemStack item) {
+                if (!condition.test(item)) return false;
+                container.setItem(slot, item);
+                return true;
+            }
+        };
+    }
+
+    @Contract(value = "_, _ -> new", pure = true)
+    static @NotNull SlotAccess forContainer(Container container, int slot) {
+        return forContainer(container, slot, (var0x) -> true);
+    }
+
+    public BlockPos positionAsBlock() {
+        return BlockPos.containing(position());
+    }
+
+    @Override
+    public void increaseMerchantCareer(ServerLevel level) {
+        super.increaseMerchantCareer(level);
+
+        if (!useVillagerSounds()) {
+            level.playSound(null, positionAsBlock(), SoundEvents.PLAYER_LEVELUP, getSoundSource(), 1.0f, 1.0f);
+        }
+    }
+
+    @Override
+    public void pickUpItem(ServerLevel level, @NotNull ItemEntity entity) {
+        ItemStack stack = entity.getItem();
+        if (!wantsToPickUp(level, stack)) return;
+
+        if (entity.getBukkitEntity().getPersistentDataContainer().has(plugin.getIgnoreItemKey(), PersistentDataType.INTEGER)) {
+            return;
+        }
+
+        SimpleContainer container = getInventory();
+        if (!container.canAddItem(stack)) return;
+
+        ItemStack fakeRemaining = new SimpleContainer(container).addItem(stack);
+
+        UUID thrower = getThrower(stack);
+        boolean wasFromGift = isExpectingGiftFrom(thrower);
+
+        EntityPickupItemEvent event = CraftEventFactory.callEntityPickupItemEvent(this, entity, fakeRemaining.getCount(), false);
+
+        stack = CraftItemStack.asNMSCopy(event.getItem().getItemStack());
+
+        onItemPickup(entity);
+        take(entity, stack.getCount() - fakeRemaining.getCount());
+
+        if (DO_NOT_SAVE.test(stack)) {
+            handleRemaining(stack, fakeRemaining, entity);
+            if (!wasFromGift) {
+                ItemStackUtils.setBetterWeaponInMaindHand(getBukkitEntity(), event.getItem().getItemStack(), true, true);
+                ItemStackUtils.setArmorItem(getBukkitEntity(), event.getItem().getItemStack());
+            }
+        }
+
+        ItemStack remaining = container.addItem(stack);
+        handleRemaining(stack, remaining, entity);
+    }
+
+    public boolean isDoingNothing(boolean checkAllChangeItemType) {
+        return isDoingNothing(checkAllChangeItemType ? ChangeItemType.NONE : null);
+    }
+
+    public boolean isDoingNothing(@Nullable ChangeItemType type) {
+        return !isFighting()
+                && !isExpecting()
+                && !isInteracting()
+                && !isTrading()
+                && !isProcreating()
+                && !isFishing()
+                && (type == null || !isChangingItem(type));
+    }
+
+    public boolean isDoingNothing(@NotNull ChangeItemType... types) {
+        for (ChangeItemType type : types) {
+            ChangeItemType changing = getChangingItem(type);
+            if (changing != null && !ArrayUtils.contains(types, changing)) {
+                return false;
+            }
+        }
+
+        return isDoingNothing((ChangeItemType) null);
+    }
+
+    public boolean isChangingItem(ChangeItemType ignore) {
+        return getChangingItem(ignore) != null;
+    }
+
+    private @Nullable ChangeItemType getChangingItem(@NotNull ChangeItemType ignore) {
+        if (ignore.isEating(isEating)) return ChangeItemType.EATING;
+        if (ignore.isShowingTrades(showingTrades)) return ChangeItemType.SHOWING_TRADES;
+        if (ignore.isTaming(isTaming)) return ChangeItemType.TAMING;
+        if (ignore.isHealingGolem(isHealingGolem)) return ChangeItemType.HEALING_GOLEM;
+        if (ignore.isHelpingFamily(isHelpingFamily)) return ChangeItemType.HELPING_FAMILY;
+        if (ignore.isUsingBoneMeal(isUsingBoneMeal)) return ChangeItemType.USING_BONE_MEAL;
+        if (ignore.isUsingHoe(isUsingHoe)) return ChangeItemType.USING_HOE;
+        if (ignore.isUsingFishingRod(isUsingFishingRod)) return ChangeItemType.USING_FISHING_ROD;
+        if (ignore.isLooting(isLooting)) return ChangeItemType.LOOTING;
+        return null;
+    }
+
+    private void handleRemaining(ItemStack original, @NotNull ItemStack remaining, ItemEntity itemEntity) {
+        if (remaining.isEmpty()) itemEntity.discard();
+        else original.setCount(remaining.getCount());
+    }
+
+    @Override
+    public VillagerNPC getBreedOffspring(ServerLevel level, AgeableMob breedWith) {
+        double chance = this.random.nextDouble();
+        Holder<VillagerType> holder;
+        if (chance < (double) 0.5F) {
+            holder = level.registryAccess().getOrThrow(VillagerType.byBiome(level.getBiome(this.blockPosition())));
+        } else if (chance < (double) 0.75F) {
+            holder = this.getVillagerData().type();
+        } else {
+            holder = ((Villager) breedWith).getVillagerData().type();
+        }
+
+        VillagerNPC baby = new VillagerNPC(EntityType.VILLAGER, level, holder);
+        baby.finalizeSpawn(level, level.getCurrentDifficultyAt(baby.blockPosition()), EntitySpawnReason.BREEDING, null);
+        return baby;
+    }
+
+    @Override
+    public boolean wantsToPickUp(ServerLevel level, ItemStack stack) {
+        if (!getInventory().canAddItem(stack)) return false;
+
+        UUID thrower = getThrower(stack);
+        if (isExpectingGiftFrom(thrower)) return true;
+        if (fished(stack)) return true;
+
+        return thrower == null && plugin.getWantedItem(this, CraftItemStack.asBukkitCopy(stack), true) != null;
+    }
+
+    public boolean fished(ItemStack item) {
+        ItemMeta meta = CraftItemStack.asBukkitCopy(item).getItemMeta();
+        return meta != null && stringUUID.equals(meta.getPersistentDataContainer().get(plugin.getFishedKey(), PersistentDataType.STRING));
+    }
+
+    private @Nullable UUID getThrower(ItemStack stack) {
+        ItemMeta meta = CraftItemStack.asBukkitCopy(stack).getItemMeta();
+        if (meta == null) return null;
+
+        String uuidString = meta.getPersistentDataContainer().get(plugin.getGiftKey(), PersistentDataType.STRING);
+        return uuidString != null ? UUID.fromString(uuidString) : null;
+    }
+
+    public VillagerProfession getProfession() {
+        return getVillagerData().profession().value();
+    }
+
+    @Override
+    public void startSleeping(BlockPos pos) {
+        super.startSleeping(pos);
+        collides = false;
+    }
+
+    @Override
+    public void stopSleeping() {
+        super.stopSleeping();
+        collides = true;
+    }
+
+    @Override
+    public <T extends Mob> T convertTo(EntityType<T> to, ConversionParams params, EntitySpawnReason reason, ConversionParams.AfterConversion<T> after, EntityTransformEvent.TransformReason transformReason, CreatureSpawnEvent.SpawnReason spawnReason) {
+        return Config.ZOMBIE_INFECTION.asBool() ? super.convertTo(to, params, reason, after, transformReason, spawnReason) : null;
+    }
+
+    @Override
+    public void thunderHit(ServerLevel level, LightningBolt lightning) {
+        if (Config.WITCH_CONVERTION.asBool()
+                && fromTrident(lightning)
+                && !lightning.getBukkitEntity().hasMetadata("FromMonument")) {
+            super.thunderHit(level, lightning);
+        }
+    }
+
+    private boolean fromTrident(@NotNull LightningBolt lightning) {
+        // If the cause is a player, then it's from a player trident.
+        if (lightning.getCause() != null) return true;
+
+        for (MetadataValue meta : lightning.getBukkitEntity().getMetadata("Cause")) {
+            if (!plugin.equals(meta.getOwningPlugin())) continue;
+            if (!(meta.value() instanceof LightningStrikeEvent.Cause cause)) continue;
+
+            // 100% chance that this lightning is from a trident thrown by a villager.
+            if (cause == LightningStrikeEvent.Cause.TRIDENT) {
+                return Config.WITCH_CONVERTION_FROM_VILLAGER_TRIDENT.asBool();
+            }
+        }
+
+        // Probably it's natural lightning.
+        return true;
+    }
+
+    @Override
+    protected AABB getAttackBoundingBox(double range) {
+        return super.getAttackBoundingBox(Config.MELEE_ATTACK_RANGE.asDouble() / 2.5d);
+    }
+
+    public int getMeleeAttackRangeSqr() {
+        return (int) Config.MELEE_ATTACK_RANGE.asDouble();
+    }
+
+    public void startAutoSpinAttack(int autoSpinAttackTicks) {
+        this.autoSpinAttackTicks = autoSpinAttackTicks;
+        removeEntitiesOnShoulder();
+        setLivingEntityFlag(4, true);
+        setPose(Pose.SPIN_ATTACK);
+    }
+
+    @Override
+    public void checkAutoSpinAttack(@NotNull AABB first, AABB second) {
+        List<Entity> list = level().getEntities(
+                this,
+                first.minmax(second),
+                entity -> entity instanceof LivingEntity living && !(living instanceof VillagerNPC));
+
+        if (!list.isEmpty()) {
+            for (Entity entity : list) {
+                doAutoAttackOnTouch((LivingEntity) entity);
+                autoSpinAttackTicks = 0;
+                setDeltaMovement(getDeltaMovement().scale(-0.2d));
+                break;
+            }
+        } else if (horizontalCollision) {
+            autoSpinAttackTicks = 0;
+        }
+
+        if (autoSpinAttackTicks <= 0) {
+            setLivingEntityFlag(4, false);
+        }
+
+        if (!isAutoSpinAttack()) {
+            setPose(Pose.STANDING);
+        }
+    }
+
+    @Override
+    protected void doAutoAttackOnTouch(LivingEntity living) {
+        if (level() instanceof ServerLevel level) doHurtTarget(level, living);
+    }
+
+    @Override
+    public void onRemoval(RemovalReason reason) {
+        super.onRemoval(reason);
+
+        RealisticRemoveEvent removeEvent = new RealisticRemoveEvent(this, RealisticRemoveEvent.RemovalReason.values()[reason.ordinal()]);
+        plugin.getServer().getPluginManager().callEvent(removeEvent);
+    }
+
+    @Override
+    public void spawnGolemIfNeeded(ServerLevel level, long time, int villagersRequried) {
+        if (!Config.VILLAGER_SPAWN_IRON_GOLEM.asBool()) return;
+        super.spawnGolemIfNeeded(level, time, villagersRequried);
+    }
+
+    @Override
+    protected void hurtArmor(DamageSource source, float damage) {
+        doHurtEquipment(source, damage, EquipmentSlot.values());
+    }
+
+    @Override
+    protected void hurtHelmet(DamageSource source, float damage) {
+        doHurtEquipment(source, damage, EquipmentSlot.HEAD);
+    }
+
+    @Override
+    protected void blockUsingItem(ServerLevel level, LivingEntity living) {
+        super.blockUsingItem(level, living);
+        ItemStack blocking = getItemBlockingWith();
+        BlocksAttacks attacks = blocking != null ? blocking.get(DataComponents.BLOCKS_ATTACKS) : null;
+        float seconds = living.getSecondsToDisableBlocking();
+        if (seconds > 0.0f && attacks != null) {
+            attacks.disable(level, this, seconds, blocking);
+        }
+    }
+
+    @Override
+    public @Nullable Component getCustomName() {
+        return getCustomName(plugin.getTracker().isInvalid(getBukkitEntity(), true));
+    }
+
+    private @Nullable Component getCustomName(boolean vanilla) {
+        return vanilla ? super.getCustomName() : villagerName != null ? Component.literal(villagerName) : null;
+    }
+
+    public boolean canBreedWith(@NotNull VillagerNPC other) {
+        return (Config.IGNORE_SEX_WHEN_PROCREATING.asBool() || (other.getSex() != null && !other.getSex().equalsIgnoreCase(sex)))
+                && canBreed()
+                && other.canBreed()
+                && canCheatWith(other)
+                && other.canCheatWith(this)
+                && (Config.ALLOW_PROCREATION_BETWEEN_FAMILY_MEMBERS.asBool() || (!isFamily(other.getUUID()) && !other.isFamily(getUUID())));
+    }
+
+    public boolean canCheatWith(VillagerNPC other) {
+        // If this villager is not married, then this villager can "cheat".
+        if (!hasPartner()) return true;
+
+        // If this villager is married but the other villager is its partner, then this villager can "cheat".
+        if (isPartner(other.getUUID())) {
+            return true;
+        }
+
+        return Config.ALLOW_PARTNER_CHEATING.asBool() && (isPartnerVillager || Config.ALLOW_PARTNER_CHEATING_FOR_ALL.asBool());
+    }
+
+    @Override
+    public void gossip(ServerLevel level, Villager with, long time) {
+        if (!(with instanceof VillagerNPC npc)) return;
+        if ((time >= lastGossipTime && time < lastGossipTime + 1200L)) return;
+        if ((time >= npc.getLastGossipTime() && time < npc.getLastGossipTime() + 1200L)) return;
+
+        getGossips().transferFrom(npc.getGossips(), random, Config.MAX_GOSSIP_TOPICS.asInt());
+        lastGossipTime = time;
+        npc.setLastGossipTime(time);
+        spawnGolemIfNeeded(level, time, 5);
+    }
+
+    @Override
+    public boolean isFamily(UUID otherUUID, boolean checkPartner) {
+        return (checkPartner && isPartner(otherUUID))
+                || isChildren(otherUUID)
+                || isFather(otherUUID)
+                || (mother != null && mother.getUniqueId().equals(otherUUID));
+    }
+
+    private boolean isChildren(UUID uuid) {
+        for (IVillagerNPC npc : childrens) {
+            if (npc.getUniqueId().equals(uuid)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+
+        if (isAlive() && thrownTrident != null && thrownTrident.getBukkitEntity().isValid()) {
+            AABB box;
+            Entity vehicle = getVehicle();
+            if (vehicle != null && !vehicle.isRemoved()) {
+                box = getBoundingBox().minmax(vehicle.getBoundingBox()).inflate(1.0d, 0.0d, 1.0d);
+            } else {
+                box = getBoundingBox().inflate(1.0d, 0.5d, 1.0d);
+            }
+
+            for (Entity entity : level().getEntities(this, box)) {
+                if (entity.isRemoved() || !(entity instanceof ThrownTrident trident)) continue;
+                if (trident.shakeTime > 0 || (!trident.onGround && !trident.isNoPhysics())) continue;
+
+                ItemStack tridentItem = trident.pickupItemStack;
+                if (!tridentItem.isEmpty()
+                        && is(trident.getOwner())
+                        && getInventory().canAddItem(tridentItem)) {
+                    getInventory().addItem(tridentItem);
+                    take(trident, 1);
+                    trident.discard();
+                }
+            }
+        }
+
+        playShoulderEntityAmbientSound(shoulderEntityLeft);
+        playShoulderEntityAmbientSound(shoulderEntityRight);
+
+        if ((fallDistance > 0.5f || isInWater()) || isSleeping() || isInPowderSnow) {
+            removeEntitiesOnShoulder();
+        }
+
+        if (level().getDifficulty() != Difficulty.PEACEFUL
+                || (level() instanceof ServerLevel level && !level.getGameRules().get(GameRules.NATURAL_HEALTH_REGENERATION))) {
+            return;
+        }
+
+        if (getHealth() < getMaxHealth() && tickCount % 20 == 0) {
+            heal(1.0f, EntityRegainHealthEvent.RegainReason.REGEN);
+        }
+
+        if (foodData.needsFood() && tickCount % 10 == 0) {
+            foodData.setFoodLevel(foodData.getFoodLevel() + 1);
+        }
+    }
+
+    @Override
+    public boolean isReviving() {
+        return revivingTicks > 0;
+    }
+
+    @Override
+    public byte getHandData() {
+        return entityData.get(DATA_LIVING_ENTITY_FLAGS);
+    }
+
+    @Override
+    public int getEffectColor() {
+        return 0;
+    }
+
+    @Override
+    public boolean getEffectAmbience() {
+        return entityData.get(DATA_EFFECT_AMBIENCE_ID);
+    }
+
+    @Override
+    public int getBeeStingers() {
+        return entityData.get(DATA_STINGER_COUNT_ID);
+    }
+
+    @Override
+    public void attack(org.bukkit.entity.LivingEntity entity) {
+        // Maybe we should check if the NPC can attack and the target isn't a family member.
+        VillagerPanicTrigger.handleFightReaction(getBrain(), ((CraftLivingEntity) entity).getHandle(), TargetReason.DEFEND);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        cooldowns.tick();
+        foodData.tick();
+
+        maybeDecayGossip();
+
+        if (isSwimming()
+                || isVisuallySwimming()
+                || isInWater()
+                || isUnderWater()
+                || getFluidHeight(FluidTags.WATER) > getFluidJumpThreshold()
+                || isInLava()) {
+            setSpeed((float) (SWIM_SPEED.get() * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+        } else if (isEating()) {
+            setSpeed((float) (EAT_SPEED.get() * getAttributeValue(Attributes.MOVEMENT_SPEED)));
+        }
+
+        if (!collides && !isSleeping()) collides = true;
+
+        if (revivingTicks > 0) {
+            revivingTicks--;
+        }
+
+        if (expectingTicks > 0) {
+            if (isExpectingBed() || !giftDropped) expectingTicks--;
+        } else if (expectingFrom != null) {
+            plugin.getExpectingManager().remove(expectingFrom);
+
+            Player player = level().getPlayerByUUID(expectingFrom);
+            if (player instanceof ServerPlayer serverPlayer) {
+                if (expectingType.isGift()) {
+                    plugin.getMessages().send(serverPlayer.getBukkitEntity(), this, Messages.Message.GIFT_EXPECTING_FAIL);
+                } else {
+                    plugin.getMessages().send(serverPlayer.getBukkitEntity(), this, Messages.Message.SET_HOME_FAIL);
+                }
+            }
+
+            stopExpecting();
+        }
+    }
+
+    private void maybeDecayGossip() {
+        long time = level().getGameTime();
+        if (lastGossipDecayTime == 0L) {
+            lastGossipDecayTime = time;
+        } else if (time >= lastGossipDecayTime + GOSSIP_DECAY_INTERVAL) {
+            gossips.decay();
+            lastGossipDecayTime = time;
+        }
+    }
+
+    @Override
+    public boolean isDamageSourceBlocked() {
+        // Handled in #VillagerListeners.
+        return false;
+    }
+
+    public boolean setEntityOnShoulder(CompoundTag tag) {
+        if (isPassenger() || !onGround || isInWater() || isInPowderSnow) return false;
+
+        boolean leftEmpty = shoulderEntityLeft.isEmpty();
+        if (!leftEmpty && !shoulderEntityRight.isEmpty()) return false;
+
+        if (leftEmpty) {
+            setShoulderEntityLeft(tag);
+        } else {
+            setShoulderEntityRight(tag);
+        }
+
+        updateNPC();
+
+        timeEntitySatOnShoulder = level().getGameTime();
+        return true;
+    }
+
+    private void playShoulderEntityAmbientSound(@Nullable CompoundTag tag) {
+        RandomSource random = level().random;
+
+        if (tag == null
+                || tag.isEmpty()
+                || tag.getBooleanOr("Silent", false)
+                || random.nextInt(200) != 0) return;
+
+        EntityType<?> type = tag.read("id", EntityType.CODEC).orElse(null);
+        if (type != EntityType.PARROT || Parrot.imitateNearbyMobs(level(), this)) return;
+
+        level().playSound(null,
+                getX(),
+                getY(),
+                getZ(),
+                Parrot.getAmbient(level(), random),
+                getSoundSource(),
+                1.0f,
+                Parrot.getPitch(random));
+    }
+
+    private void removeEntitiesOnShoulder() {
+        if (timeEntitySatOnShoulder + 20L >= level().getGameTime()) return;
+        if (shoulderEntityLeft.isEmpty() && shoulderEntityRight.isEmpty()) return;
+
+        if (spawnEntityFromShoulder(shoulderEntityLeft)) {
+            setShoulderEntityLeft(new CompoundTag());
+        }
+
+        if (spawnEntityFromShoulder(shoulderEntityRight)) {
+            setShoulderEntityRight(new CompoundTag());
+        }
+
+        updateNPC();
+    }
+
+    private void updateNPC() {
+        Optional<NPC> npc = plugin.getTracker().getNPC(getId());
+        if (npc.isEmpty()) return;
+
+        npc.get().metadata().updateShoulderEntities();
+    }
+
+    private boolean spawnEntityFromShoulder(CompoundTag tag) {
+        if (!(level() instanceof ServerLevel level) || tag.isEmpty()) return true;
+        try (ProblemReporter.ScopedCollector collector = new ProblemReporter.ScopedCollector(problemPath(), LOGGER)) {
+            return EntityType.create(
+                    TagValueInput.create(
+                            collector.forChild(() -> ".shoulder"),
+                            level.registryAccess(),
+                            tag),
+                    level,
+                    EntitySpawnReason.LOAD).map((entity) -> {
+                if (entity instanceof TamableAnimal animal) {
+                    animal.setOwner(this);
+                }
+
+                entity.setPos(getX(), getY() + (double) 0.7f, getZ());
+
+                return level.addWithUUID(entity, CreatureSpawnEvent.SpawnReason.SHOULDER_ENTITY);
+            }).orElse(true);
+        }
+    }
+
+    @Override
+    public boolean validShoulderEntityLeft() {
+        return getShoulderEntityLeft() != null;
+    }
+
+    @Override
+    public Object getShoulderEntityLeft() {
+        return NMSConverter.extractParrotVariant(shoulderEntityLeft);
+    }
+
+    @Override
+    public boolean validShoulderEntityRight() {
+        return getShoulderEntityRight() != null;
+    }
+
+    @Override
+    public Object getShoulderEntityRight() {
+        return NMSConverter.extractParrotVariant(shoulderEntityRight);
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        boolean damaged = super.hurtServer(level, source, damage);
+        if (damaged) removeEntitiesOnShoulder();
+        return damaged;
+    }
+
+    @Override
+    public @Nullable LivingEntity getTarget() {
+        return brain.getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+    }
+
+    public void startExpectingFrom(ExpectingType expectingType, UUID expectingGiftFrom, int expectingGiftTicks) {
+        setExpectingType(expectingType);
+        setExpectingFrom(expectingGiftFrom);
+        setExpectingTicks(expectingGiftTicks);
+    }
+
+    @Override
+    public void divorceAndDropRing(@Nullable org.bukkit.entity.Player player) {
+        divorceAndDropRing(player != null ? ((CraftPlayer) player).getHandle() : null);
+    }
+
+    @Override
+    public void drop(org.bukkit.inventory.ItemStack item) {
+        drop(CraftItemStack.asNMSCopy(item));
+    }
+
+    @Override
+    public void startTrading(org.bukkit.entity.Player player) {
+        ServerPlayer handle = ((CraftPlayer) player).getHandle();
+        updateSpecialPrices(handle);
+        setTradingPlayer(handle);
+        openTradingScreen(handle, getDisplayName(), getVillagerData().level());
+    }
+
+    public boolean isExpectingGift() {
+        return isExpecting() && expectingType.isGift();
+    }
+
+    public boolean isExpectingBed() {
+        return isExpecting() && expectingType.isBed();
+    }
+
+    public boolean isExpecting() {
+        return expectingTicks > 0 && expectingFrom != null;
+    }
+
+    public void stopExpecting() {
+        startExpectingFrom(null, null, 0);
+        giftDropped = false;
+    }
+
+    public boolean isStayingInPlace() {
+        return checkCurrentActivity(STAY) && isInteracting() && interactType.isStayHere();
+    }
+
+    public boolean checkCurrentActivity(Activity checkActivity) {
+        Optional<Activity> active = getBrain().getActiveNonCoreActivity();
+        return active.isPresent() && active.get().equals(checkActivity);
+    }
+
+    public boolean checkCurrentActivity(@NotNull Activity... checkActivities) {
+        for (Activity checkActivity : checkActivities) {
+            if (checkCurrentActivity(checkActivity)) return true;
+        }
+        return false;
+    }
+
+    public void drop(@NotNull ItemStack item) {
+        drop(item, null);
+    }
+
+    public void drop(@NotNull ItemStack item, @Nullable NamespacedKey identifier) {
+        if (item.isEmpty()) return;
+        swing(InteractionHand.MAIN_HAND);
+
+        ItemEntity itemEntity = new ItemEntity(level(), getX(), getEyeY() - 0.30000001192092896d, getZ(), item);
+        itemEntity.setPickUpDelay(40);
+        itemEntity.setThrower(this);
+
+        float xRotSin = Mth.sin(getXRot() * 0.017453292f);
+        float xRotCos = Mth.cos(getXRot() * 0.017453292f);
+
+        float yRotSin = Mth.sin(getYRot() * 0.017453292f);
+        float yRotCos = Mth.cos(getYRot() * 0.017453292f);
+
+        float f5 = random.nextFloat() * 6.2831855f;
+        float f6 = random.nextFloat() * 0.02f;
+
+        itemEntity.setDeltaMovement(
+                (double) (-yRotSin * xRotCos * 0.3f) + Math.cos(f5) * (double) f6,
+                -xRotSin * 0.3f + 0.1f + (random.nextFloat() - random.nextFloat()) * 0.1f,
+                (double) (yRotCos * xRotCos * 0.3f) + Math.sin(f5) * (double) f6);
+
+        if (identifier != null) {
+            CraftPersistentDataContainer container = itemEntity.getBukkitEntity().getPersistentDataContainer();
+            container.set(identifier, PersistentDataType.INTEGER, 1);
+        }
+
+        level().addFreshEntity(itemEntity);
+    }
+
+    @Override
+    public UUID getUniqueId() {
+        return uuid;
+    }
+
+    @Override
+    public int getReputation(UUID uuid) {
+        return getGossips().getReputation(uuid, (type) -> true);
+    }
+
+    @Override
+    public org.bukkit.entity.LivingEntity bukkit() {
+        return getBukkitEntity();
+    }
+
+    @Override
+    public void addMinorPositive(UUID uuid, int amount) {
+        getGossips().add(uuid, GossipType.MINOR_POSITIVE, amount);
+    }
+
+    @Override
+    public void addMinorNegative(UUID uuid, int amount) {
+        getGossips().add(uuid, GossipType.MINOR_NEGATIVE, amount);
+    }
+
+    @Override
+    public void jumpIfPossible() {
+        if (onGround()) getJumpControl().jump();
+    }
+
+    @Override
+    public HandleHomeResult handleBedHome(@NotNull Block block) {
+        BlockPos bedPosition = new BlockPos(block.getX(), block.getY(), block.getZ());
+
+        Predicate<Holder<PoiType>> predicate = holder -> holder.is(PoiTypes.HOME);
+
+        // Add POI if it doesn't exist.
+        PoiManager poiManager = ((ServerLevel) level()).getPoiManager();
+        if (!poiManager.exists(bedPosition, predicate)) {
+            Optional<Holder<PoiType>> poi = PoiTypes.forState(level().getBlockState(bedPosition));
+            if (poi.isEmpty()) {
+                plugin.getLogger().warning("An error occurred when trying to acquire a POI at " + bedPosition + ".");
+                return HandleHomeResult.INVALID;
+            }
+            poiManager.add(bedPosition, poi.get());
+        }
+
+        // Bed already established in the same position, we release it, so we can take it again.
+        Optional<BlockPos> previousHome = getBrain().getMemory(MemoryModuleType.HOME).map(GlobalPos::pos), temp;
+        if (previousHome.isPresent()
+                && (temp = poiManager.find(predicate, pos -> pos.equals(bedPosition), bedPosition, 1, PoiManager.Occupancy.ANY)).isPresent()
+                && temp.get().equals(previousHome.get())) {
+            releasePoi(MemoryModuleType.HOME);
+        }
+
+        Optional<BlockPos> takePos = poiManager.take(predicate, (holder, pos) -> pos.equals(bedPosition), bedPosition, 1);
+        if (takePos.isEmpty()) {
+            if (poiManager
+                    .getInRange(predicate, bedPosition, 1, PoiManager.Occupancy.IS_OCCUPIED)
+                    .anyMatch((record) -> record.getPos().equals(bedPosition))) return HandleHomeResult.OCCUPIED;
+            plugin.getLogger().warning("An error occurred when trying to acquire a POI at " + bedPosition + ".");
+            return HandleHomeResult.INVALID;
+        }
+
+        // Release previous POI.
+        releasePoi(MemoryModuleType.HOME);
+
+        GlobalPos bedHome = GlobalPos.of(level().dimension(), bedPosition);
+        getBrain().setMemory(MemoryModuleType.HOME, bedHome);
+
+        setBedHomeWorld(block.getWorld().getUID());
+        setBedHome(bedHome.pos());
+
+        level().broadcastEntityEvent(this, (byte) 14);
+        ((ServerLevel) level()).debugSynchronizers().updatePoi(bedPosition);
+        return HandleHomeResult.SUCCESS;
+    }
+
+    @Override
+    public void stayInPlace() {
+        stayInPlace(blockPosition());
+    }
+
+    private void stayInPlace(BlockPos pos) {
+        Brain<Villager> brain = getBrain();
+        brain.setMemory(STAY_PLACE, GlobalPos.of(level().dimension(), pos));
+        brain.setDefaultActivity(STAY);
+        brain.setActiveActivityIfPossible(STAY);
+    }
+
+    public void stopStayingInPlace() {
+        Brain<Villager> brain = getBrain();
+        if (!brain.hasMemoryValue(STAY_PLACE) || !checkCurrentActivity(STAY)) return;
+
+        brain.eraseMemory(STAY_PLACE);
+        brain.setDefaultActivity(Activity.IDLE);
+        updateActivityFromSchedule();
+    }
+
+    @Override
+    public void reactToSeekHorn(org.bukkit.entity.Player player) {
+        Brain<Villager> brain = getBrain();
+        brain.setMemory(HEARD_HORN_TIME, level().getGameTime());
+        brain.setMemory(PLAYER_HORN, ((CraftPlayer) player).getHandle());
+    }
+
+    @Override
+    public boolean isInsideRaid() {
+        return ((ServerLevel) level()).getRaidAt(blockPosition()) != null;
+    }
+
+    @Override
+    public boolean isFighting() {
+        return getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET);
+    }
+
+    @Override
+    public boolean isProcreating() {
+        return procreatingWith != null;
+    }
+
+    @Override
+    public boolean isExpectingGiftFrom(UUID uuid) {
+        return isExpectingGift() && expectingFrom.equals(uuid);
+    }
+
+    @Override
+    public boolean isExpectingBedFrom(UUID uuid) {
+        return isExpectingBed() && expectingFrom.equals(uuid);
+    }
+
+    @Override
+    public boolean isInteracting() {
+        return interactingWith != null && interactType != null;
+    }
+}

@@ -1,13 +1,16 @@
 package me.matsubara.realisticvillagers.nms;
 
 import com.mojang.authlib.GameProfile;
+import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Raid;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.Optional;
@@ -44,4 +47,12 @@ public interface INMSConverter {
     void spawnFromTag(Location location, String tag);
 
     void addGameRuleListener(World world);
+
+    static void printRuleWarning(@NotNull RealisticVillagers plugin,
+                                 @NotNull World world,
+                                 @NotNull GameRule<?> rule) {
+        String warning = "The rule {" + rule.getName() + "} has been disabled in the world {" + world.getName()
+                + "}, this will not allow villagers to pick up items.";
+        plugin.getLogger().warning(warning);
+    }
 }

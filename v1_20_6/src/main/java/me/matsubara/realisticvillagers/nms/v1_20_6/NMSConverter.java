@@ -408,16 +408,15 @@ public class NMSConverter implements INMSConverter {
 
     @Override
     public void addGameRuleListener(World world) {
+        // There's no need to add a hacky listener if we can use the Paper event.
+        if (plugin.getTracker().getPaperListeners().isRuleRegistered()) return;
+
         Preconditions.checkArgument(RULE_TYPE != null && RULE_CALLBACK != null);
         try {
             GameRules.Key<GameRules.BooleanValue> rule = GameRules.RULE_MOBGRIEFING;
 
-            String warn = "The rule {" + rule.getId() + "} has been disabled in the world {" + world.getName() + "}, this will not allow villagers to pick up items.";
-
             GameRules.BooleanValue nmsRule = ((CraftWorld) world).getHandle().getGameRules().getRule(rule);
-            if (!nmsRule.get()) {
-                plugin.getLogger().warning(warn);
-            }
+            if (!nmsRule.get()) INMSConverter.printRuleWarning(plugin, world, GameRule.MOB_GRIEFING);
 
             Object type = RULE_TYPE.invoke(nmsRule);
 
@@ -425,8 +424,7 @@ public class NMSConverter implements INMSConverter {
                     RULE_CALLBACK,
                     type,
                     (BiConsumer<ServerLevel, GameRules.BooleanValue>) (level, value) -> {
-                        if (value.get()) return;
-                        plugin.getLogger().warning(warn);
+                        if (!value.get()) INMSConverter.printRuleWarning(plugin, world, GameRule.MOB_GRIEFING);
                     }
             );
         } catch (Throwable exception) {
