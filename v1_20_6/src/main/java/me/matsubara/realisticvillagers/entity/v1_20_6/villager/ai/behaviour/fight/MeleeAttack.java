@@ -13,13 +13,16 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 public class MeleeAttack extends Behavior<Villager> {
 
     public MeleeAttack() {
         super(ImmutableMap.of(
                 MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_PRESENT,
-                MemoryModuleType.ATTACK_COOLING_DOWN, MemoryStatus.VALUE_ABSENT));
+                MemoryModuleType.ATTACK_COOLING_DOWN, MemoryStatus.REGISTERED));
     }
 
     @Override
@@ -28,9 +31,32 @@ public class MeleeAttack extends Behavior<Villager> {
     }
 
     @Override
+    public boolean canStillUse(ServerLevel level, Villager villager, long time) {
+        return canAttack(villager, true);
+    }
+
+    @Override
     public void start(ServerLevel level, Villager villager, long time) {
+        performAttack(villager);
+    }
+
+    @Override
+    public void tick(ServerLevel level, Villager villager, long time) {
+        if (!villager.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_COOLING_DOWN)) {
+            if (canAttack(villager, false)) {
+                performAttack(villager);
+            }
+        }
+    }
+
+    private void performAttack(Villager villager) {
         LivingEntity target = getAttackTarget(villager);
+        if (target == null || target.isDeadOrDying()) return;
+
         BehaviorUtils.lookAtEntity(villager, target);
+
+        // Final check before hitting - prevents air hits if target just moved away.
+        if (villager.distanceToSqr(target) > 25.0) return;
 
         // Random jump to be more "realistic".
         if (villager.getRandom().nextFloat() < Config.MELEE_ATTACK_JUMP_CHANCE.asFloat()) {
@@ -46,12 +72,14 @@ public class MeleeAttack extends Behavior<Villager> {
 
     public static boolean canAttack(Villager villager, boolean ignoreRange) {
         LivingEntity target = getAttackTarget(villager);
+        if (target == null) return false;
+        
         return villager instanceof VillagerNPC npc
                 && !npc.isAttackingWithTrident()
                 && npc.isHoldingMeleeWeapon()
                 && BlockAttackWithShield.notUsingShield(npc)
                 && BehaviorUtils.canSee(npc, target)
-                && (ignoreRange || BehaviorUtils.isWithinAttackRange(npc, target, 0));
+                && (ignoreRange || npc.distanceToSqr(target) <= 20.25); // Max 4.5 blocks
     }
 
     public static void setAttackCooldown(@NotNull Villager villager) {
@@ -59,9 +87,8 @@ public class MeleeAttack extends Behavior<Villager> {
         villager.getBrain().setMemoryWithExpiry(MemoryModuleType.ATTACK_COOLING_DOWN, true, cooldown);
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private static @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
-        // Can't be null since the value should be present in the constructor.
-        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+    private static @Nullable LivingEntity getAttackTarget(@NotNull Villager villager) {
+        Optional<LivingEntity> target = villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET);
+        return target.orElse(null);
     }
 }

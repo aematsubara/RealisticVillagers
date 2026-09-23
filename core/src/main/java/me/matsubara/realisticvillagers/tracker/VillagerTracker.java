@@ -104,6 +104,58 @@ public final class VillagerTracker implements Listener {
         PacketEvents.getAPI().getEventManager().registerListener(handler = new VillagerHandler(plugin));
     }
 
+    public RealisticVillagers getPlugin() {
+        return plugin;
+    }
+
+    public NPCPool getPool() {
+        return pool;
+    }
+
+    public PaperListeners getPaperListeners() {
+        return paperListeners;
+    }
+
+    public BukkitSpawnListeners getSpawnListeners() {
+        return spawnListeners;
+    }
+
+    public Map<UUID, String> getTransformations() {
+        return transformations;
+    }
+
+    public Map<UUID, Integer> getPortalTransform() {
+        return portalTransform;
+    }
+
+    public Set<IVillagerNPC> getOfflineVillagers() {
+        return offlineVillagers;
+    }
+
+    public Map<String, Pair<File, FileConfiguration>> getFiles() {
+        return files;
+    }
+
+    public Map<UUID, String> getSelectedProfession() {
+        return selectedProfession;
+    }
+
+    public Map<UUID, PreviewTask> getPreviews() {
+        return previews;
+    }
+
+    public VillagerHandler getHandler() {
+        return handler;
+    }
+
+    public MineskinClient getMineskinClient() {
+        return mineskinClient;
+    }
+
+    public Random getRandom() {
+        return random;
+    }
+
     public void updateMineskinApiKey() {
         String apiKey = Config.MINESKIN_API_KEY.asString();
         mineskinClient.setApiKey(apiKey.isEmpty() ? null : apiKey);
@@ -321,8 +373,16 @@ public final class VillagerTracker implements Listener {
         selectedProfession.remove(uniqueId);
     }
 
+    // Her figure is worn rather than carried, so it goes when she does with no entity left hanging
+    // in the air. Only the note of who was shown it outlives her, and that is dropped here.
     public void removeNPC(int entityId) {
-        getNPC(entityId).ifPresent(npc -> pool.removeNPC(npc.getEntityId()));
+        getNPC(entityId).ifPresent(npc -> {
+            pool.removeNPC(npc.getEntityId());
+
+            var shapes = plugin.getShapeEquipment();
+            var bukkit = npc.getNpc().bukkit();
+            if (shapes != null && bukkit != null) shapes.forget(bukkit.getUniqueId());
+        });
     }
 
     public boolean hasNPC(int entityId) {
@@ -367,6 +427,15 @@ public final class VillagerTracker implements Listener {
 
         String name;
         if (Config.DISABLE_NAMETAGS.asBool()
+                // Names on look only: the profile must not carry one either.
+                //
+                // A villager with a skin is a player as far as the client is concerned, and a
+                // client draws a player's name above its head off the profile by itself — no
+                // packet from us is involved, so nothing on the plugin's side can take it back
+                // per player. That is the name that survived every attempt to hide it. Spawning
+                // the profile nameless leaves the text display as the only thing writing a name,
+                // and that one is already sent to one player at a time.
+                || Config.NAMETAGS_ONLY_WHEN_LOOKING.asBool(false)
                 || defaultName.equals(HIDE_NAMETAG_NAME)
                 || isInvalidNametag(defaultName)) {
             name = HIDE_NAMETAG_NAME;
@@ -450,8 +519,30 @@ public final class VillagerTracker implements Listener {
                     profession.equals("none") ? "true" : "false"));
         }
 
+        String resolvedProfession = differentProfession != null ? differentProfession : profession;
         Set<String> originalIds = section.getKeys(false);
-        int which = getSkinId(npc, originalIds, getModifiedKeys(config, living, originalIds), random);
+        Set<String> candidateIds = getModifiedKeys(config, living, originalIds);
+
+        // Regional skin filter: if a skins/regions/<type>/male.yml (or female) exists and has
+        // a list for this profession, narrow the candidate pool to only those IDs.
+        // The regional file never adds new skins — it just restricts which global IDs are picked
+        // for this villager type, so getTextures() continues to read from the global file safely.
+        if (living instanceof Villager villager && Config.REGIONALITY_ENABLED.asBool()) {
+            String regionKey = villager.getVillagerType().name().toLowerCase(Locale.ROOT);
+            Pair<File, FileConfiguration> regionalPair = getFile(sex + "_" + regionKey + ".yml");
+            if (regionalPair != null) {
+                List<?> allowed = regionalPair.getValue().getList(resolvedProfession);
+                if (allowed != null && !allowed.isEmpty()) {
+                    Set<String> allowedIds = new LinkedHashSet<>();
+                    for (Object o : allowed) allowedIds.add(String.valueOf(o));
+                    Set<String> filtered = new LinkedHashSet<>(candidateIds);
+                    filtered.retainAll(allowedIds);
+                    if (!filtered.isEmpty()) candidateIds = filtered;
+                }
+            }
+        }
+
+        int which = getSkinId(npc, originalIds, candidateIds, random);
         return new SkinRelatedData(sex, profession, which, config, section, null);
     }
 
@@ -499,7 +590,7 @@ public final class VillagerTracker implements Listener {
 
         if (!random) return -1;
 
-        int newId = Integer.parseInt(new ArrayList<>(ids).get(this.random.nextInt(0, ids.size())));
+        int newId = Integer.parseInt(new ArrayList<>(ids).get(this.random.nextInt(ids.size())));
         npc.setSkinTextureId(newId);
         if (kidId == -1) npc.setKidSkinTextureId(newId);
 
@@ -511,19 +602,51 @@ public final class VillagerTracker implements Listener {
     }
 
     public String getRandomNameBySex(String sex) {
-        Pair<File, FileConfiguration> pair = getFile("names.yml");
-        FileConfiguration config = pair.getValue();
+        return getRandomNameBySex(sex, null);
+    }
 
-        List<String> names = config.getStringList(sex);
+    public String getRandomNameBySex(String sex, @Nullable String regionKey) {
+        if (regionKey != null && me.matsubara.realisticvillagers.files.Config.REGIONALITY_ENABLED.asBool()) {
+            // 1. Try regional names file (e.g., names_desert.yml).
+            String name = pickNameFromFile("names_" + regionKey + ".yml", sex);
+            if (name != null) return name;
+        }
 
+        // 2. Try global default pool (configs/names/default.yml → key "names_default.yml").
+        String defaultName = pickNameFromFile("names_default.yml", sex);
+        if (defaultName != null) return defaultName;
+
+        // 3. Aggregate from ALL loaded regional name files as last resort.
+        List<String> allNames = new ArrayList<>();
+        for (Map.Entry<String, Pair<File, FileConfiguration>> entry : files.entrySet()) {
+            if (!entry.getKey().startsWith("names_") || entry.getKey().equals("names_default.yml")) continue;
+            allNames.addAll(entry.getValue().getValue().getStringList(sex));
+        }
+        if (!allNames.isEmpty()) {
+            String name = "";
+            do {
+                if (allNames.isEmpty()) break;
+                int index = random.nextInt(allNames.size());
+                name = allNames.remove(index);
+            } while (name.length() < 3);
+            if (name.length() >= 3) return name;
+        }
+
+        return HIDE_NAMETAG_NAME;
+    }
+
+    private @Nullable String pickNameFromFile(String fileKey, String sex) {
+        Pair<File, FileConfiguration> pair = getFile(fileKey);
+        if (pair == null) return null;
+        List<String> names = new ArrayList<>(pair.getValue().getStringList(sex));
+        if (names.isEmpty()) return null;
         String name = "";
         do {
             if (names.isEmpty()) break;
             int index = random.nextInt(names.size());
             name = names.remove(index);
         } while (name.length() < 3);
-
-        return name.length() >= 3 ? name : HIDE_NAMETAG_NAME;
+        return name.length() >= 3 ? name : null;
     }
 
     @Contract(pure = true)
@@ -546,7 +669,7 @@ public final class VillagerTracker implements Listener {
                 Set<String> keys = section.getKeys(false);
                 int size = keys.size();
                 do {
-                    key = random.nextInt(1, (size == 0 ? 1 : size) * 2 + 1);
+                    key = random.nextInt((size == 0 ? 1 : size) * 2) + 1;
                 } while (key == -1 || keys.contains(String.valueOf(key)));
             }
 

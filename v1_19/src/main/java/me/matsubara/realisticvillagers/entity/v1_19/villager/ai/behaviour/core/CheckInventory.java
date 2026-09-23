@@ -31,7 +31,7 @@ public class CheckInventory extends Behavior<Villager> {
         }
 
         return villager instanceof VillagerNPC npc
-                && !npc.is(VillagerProfession.FISHERMAN)
+                && !npc.isProfession(VillagerProfession.FISHERMAN)
                 && !npc.isSleeping()
                 && !npc.checkCurrentActivity(Activity.WORK)
                 && (!npc.isHoldingWeapon() || needsArmor(npc))

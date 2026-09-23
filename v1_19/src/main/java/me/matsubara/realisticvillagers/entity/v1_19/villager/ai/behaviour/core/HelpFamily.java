@@ -29,7 +29,12 @@ import java.util.Optional;
 public class HelpFamily extends Behavior<Villager> implements Exchangeable {
 
     private final float speedModifier;
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
     private ItemStack food;
     private Player target;
     private Consume.ConsumeType type;

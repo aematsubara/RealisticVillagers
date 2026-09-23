@@ -534,6 +534,7 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
                 null,
                 false,
                 false,
+                false,
                 0,
                 0,
                 0.0f,
@@ -617,6 +618,26 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC,
 
     @Override
     public void setEquipped(boolean equipped) {
+
+    }
+
+    @Override
+    public boolean isGenderLocked() {
+        return false;
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
 
     }
 

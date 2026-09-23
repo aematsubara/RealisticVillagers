@@ -41,7 +41,12 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
 
     private ConsumeType type;
     private ItemStack food;
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
     private int duration;
 
     public static final Set<MobEffect> HEALTH_EFFECTS = ImmutableSet.of(

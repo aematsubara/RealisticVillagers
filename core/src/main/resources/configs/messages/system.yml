@@ -1,0 +1,184 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║   RealisticVillagers — System Messages                                   ║
+# ║                                                                          ║
+# ║   This file contains ONLY system/admin messages (feedback to players,    ║
+# ║   command responses, error notices, etc.).                               ║
+# ║                                                                          ║
+# ║   Villager DIALOGUE is configured per-region in:                         ║
+# ║     configs/messages/default.yml  (global fallback)                      ║
+# ║     configs/messages/desert.yml   (desert region)                        ║
+# ║     configs/messages/plains.yml   ... etc.                               ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+# Don't touch this!
+config-version: 1
+
+interact-fail:
+  fighting-or-raid: "&cYou can't interact with this villager right now."
+  procreating: "&cThis villager is procreating!"
+  expecting-gift-from-you: "&cThis villager is expecting a gift from you!"
+  expecting-gift-from-someone: "&cThis villager is expecting a gift from someone!"
+  expecting-bed-from-you: "&cThis villager is expecting a bed from you!"
+  expecting-bed-from-someone: "&cThis villager is expecting a bed from someone!"
+  interacting: "&cThis villager is already interacting with another player."
+  trading: "&cThis villager is trading with another player."
+  other-expecting-gift: "&cAnother villager is expecting a gift from you!"
+  other-expecting-bed: "&cAnother villager is expecting a bed from you!"
+  in-cooldown: "&cYou can't interact that fast!"
+  not-allowed:
+    not-married: "&cYou must be married to this villager to do this!"
+    not-family: "&cYou must be part of this villager's family to do this!"
+    not-a-kid: "&cThis action can only be used with a kid!"
+    not-an-adult: "&cThis action can only be used with an adult!"
+    only-partner-or-non-family-adult: "&cThis action can only be used with your partner or a non-family adult!"
+    none: "&cThis action is not allowed by the server!"
+  rename-not-allowed: "&cYou're not allowed to change the name of this villager!"
+  already-alive: "&cThis villager is already alive!"
+
+reloading: "&6The plugin is being reloaded in another thread, wait a few seconds..."
+reload: "&6The plugin has been reloaded!"
+no-permission: "&cYou don't have permission to execute this command!"
+invalid-command: "&cThat command doesn't exist or was used incorrectly! Do /rv to see all commands."
+no-mineskin-api-key: "&cIn order to add new skins you must define a mineskin api-key!"
+no-skin-cached: "&cNo skins have been cached yet, this may take a few seconds..."
+unknown-player: "&cThat player doesn't exist!"
+only-from-player: "&cThis command must be used by players!"
+only-from-console: "&cThis command must be used in the console!"
+invalid-number: "&cThat's not a valid number!"
+# %player-name% - the name of the player involved (@not-married & @divorced).
+not-married: "&cThe player %player-name% isn't married!"
+divorced: "&6The player %player-name% has been divorced!"
+
+# %villager-name% - the name of the villager involved (@whistle-teleported & @whistle-error).
+whistle-teleported: "&a%villager-name% has been teleported."
+whistle-error: "&cIt wasn't possible to teleport %villager-name%."
+whistle-no-family: "&cYou should get a family first!"
+
+players-gui:
+  has-never-played-before: "&cThis player has never played before."
+  player-is-family-member: "&cThis player is a member of the villager's family!"
+  not-yourself: "&cYou cannot add yourself!"
+  invalid-name: "&cInvalid name!"
+  already-added: "&cThis player is already on the list."
+  # %player-name% - the name of the player involved (@added & @removed).
+  added: "&aThe player %player-name% has been added to the list of players!"
+  removed: "&cThe player %player-name% has been removed from the list of players!"
+
+skin:
+  cleared: "&6The skin has been cleaned!"
+  not-cleared: "&cThe current skin couldn't be cleaned!"
+  at-least-one: "&cAt least one skin must be left by default!"
+  removed: "&cThe skin has been removed!"
+  wait-while-creating: "&6The skin is being created, wait a moment..."
+  not-found: "&cCouldn't find that player on the minecraft servers!"
+  texture-not-found: "&cThe desired skin doesn't exist!"
+  invalid-sex: "&cInvalid sex! Must be male or female."
+  invalid-age-stage: "&cInvalid age stage! Must be adult or kid."
+  # %sex% - the sex that the villager must be to change his skin (@different-sex).
+  different-sex: "&cThe villager must be a %sex% to use this skin!"
+  # %age-stage% - the age stage that the villager must be to change his skin (@different-age-stage).
+  different-age-stage: "&cThe villager must be a(n) %age-stage% to use this skin!"
+  # %id%, %profession%, %sex% - properties of the newly added skin.
+  added: "&6Added a new skin with id of %id% and profession of %profession% (%sex%/%age-stage%)!"
+  error: "&cAn error has occurred... check the console for more information."
+  villager-same-skin: "&cThe villager already has this skin!"
+  # %id%, %profession%, %sex%, %age-stage% - properties of the disguised skin.
+  disguised: "&6Disguised to %id%/%sex%/%profession%/%age-stage%!"
+
+# %time% - how long it will take for the baby to grow (@baby-grow).
+baby-grow: "&aThis baby will grow up in %time%!"
+baby-can-not-spawn: "&cThe spawn place is obstructed, there must be at least 2 free blocks!"
+# %countdown% - the number of times you must click to spawn the baby (@baby-countdown).
+baby-countdown: "&6This baby is ready to be born, click %countdown% times to spawn your baby!"
+# %baby-name% - baby's name (@baby-spawned).
+baby-spawned: "&6Baby %baby-name% is born!"
+
+# %time% - The maximum time the villager will wait for a gift/bed (@right-click-gift, @throw-gift & @select-bed).
+right-click-gift:
+  - "&aYou have %time% seconds to right-click on the villager with the gift in hand."
+  - "&cShift + right click to cancel this action!"
+throw-gift:
+  - "&aYou have %time% seconds to throw the gift to the villager."
+  - "&cShift + right click to cancel this action!"
+select-bed:
+  - "&cHold a bed in your hand and click Set Home again!"
+
+bed-occupied: "&cThis bed is occupied!"
+bed-established: "&aBed established!"
+bed-invalid: "&cInvalid bed!"
+bed-marked: "&aYour bed has been marked for &e%villager-name%&a! Place it anywhere to assign it as their home."
+
+gender:
+  changed: "&aChanged &e%villager-name%&a's gender to &e%gender%&a!"
+  locked: "&c%villager-name%&c's gender is locked and cannot be changed again."
+  no-villager: "&cYou must be looking at a villager to use this command."
+  invalid: "&cInvalid gender! Use &emale &cor &efemale&c."
+
+player-gender:
+  set: "&aYour gender has been set to &e%gender%&a!"
+  already: "&eYour gender is already set to &e%gender%&e."
+  reminder: "&cYou must select a gender to play! Use the command: &e/gender <male/female>"
+
+# %time% - the waiting time to have another baby (@cooldown).
+procreate:
+  cooldown: "&cYou must wait %time% to have another baby."
+
+# ── Settlement system ──────────────────────────────────────────────────────
+# Shown only when the settlement system is on (village.enabled in config.yml).
+village:
+  vote-cast: "&aYour vote has been counted."
+  already-voted: "&cYou have already cast your vote."
+  vote-failed: "&cYour vote could not be counted."
+  election-ended: "&cThat election has already ended."
+  # Shown when someone tries to break a village bell while its election is running.
+  bell-locked: "&cYou can't break this bell while an election is being held here."
+
+  # Text on a villager's headstone. Use \n for a line break.
+  # %name% the villager, %parents% "Child of X & Y" (empty when unknown), %cause% how it died.
+  # A line whose placeholder comes out empty is dropped rather than left blank.
+  grave: "&f%name%\n&7%parents%\n&8%cause%"
+
+  # Clearing a grave: sneak and right-click the headstone.
+  grave-remove-hint: "&7Sneak and right-click to clear this grave."
+  grave-removed: "&7The grave has been cleared."
+  grave-denied: "&cThis is not your grave to clear."
+
+  # Boss bar shown for a few seconds when crossing a settlement's edge.
+  # %village% is the settlement's name. Leave a line empty to switch that bar off.
+  entered: "&aEntering &f%village%"
+  left: "&7Leaving &f%village%"
+  # Boss bar shown to everyone inside the settlement when its mayor dies.
+  mayor-died: "&cThe mayor of &f%village% &chas died."
+  # Boss bar shown to everyone inside the settlement when voting opens.
+  election-started: "&e&lELECTION &fopened in &e%village%&f — click the bell to vote."
+
+  # ── Building commissions ─────────────────────────────────────────────────
+  # Shown while lining up a building. %building% is its name.
+  preview-help: "&eLining up &f%building%&e — &escroll&e to move it out, &aright-click or swap hands (F)&e to place, &asneak + right-click&e to turn, &cleft-click&e to cancel."
+  # Shown after the first right-click, once the ghost has stopped following the player.
+  commission-pinned: "&ePlaced. &aRight-click or swap hands&e to build it, &asneak + right-click&e to turn it, &eleft-click&e to move it again."
+  commission-unpinned: "&7Loose again — it follows you."
+
+  # ── Recording a village you have found ───────────────────────────────────
+  # %count% buildings saved, %region% the kind of country they were found in.
+  recorded: "&aRecorded &f%count% &abuilding(s) for &f%region% &avillages."
+  recorded-none: "&7Nothing here was worth recording — the buildings are too small, or already saved."
+  borders-on: "&aThe settlement's border is now visible."
+  borders-off: "&7Border hidden."
+  commission-started: "&aThe settlement has started building."
+  commission-cancelled: "&7Building cancelled."
+  commission-short: "&cThe settlement's stores are short."
+  commission-denied: "&cThe mayor won't take your plans."
+  already-building: "&cThis settlement is already building something."
+  # Shown when the ghost is red: it would touch or overlap an existing building.
+  commission-blocked: "&cIt won't fit there — too close to another building, or outside the village."
+  # Shown when walking into a village whose buildings you have not seen before.
+  discovered: "&aYou have learned &f%count% &abuilding(s) from &f%village%&a."
+  blueprint-shared: "&7This building came with the server, so its name is not yours to change."
+  blueprint-renamed: "&aRenamed."
+  blueprint-rename-failed: "&cThat name won't do, or is already taken."
+
+  # Moving goods in and out of the settlement's stores.
+  storage-deposited: "&aGiven to the settlement's stores."
+  storage-taken: "&aTaken from the settlement's stores."
+  storage-denied: "&cYou need standing with the mayor to take from the stores."

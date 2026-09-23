@@ -85,8 +85,12 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
         if (index == skin && data.getType() != EntityDataTypes.BYTE) return true;
 
         // 18, ignore villager data (to prevent crashes).
-        // 19 & 20 only exists for players, they shouldn't collide with anything.
-        return data.getType() == EntityDataTypes.VILLAGER_DATA;
+        if (data.getType() == EntityDataTypes.VILLAGER_DATA) return true;
+
+        // Plugin's VillagerNPC adds custom data accessors starting at index 19.
+        // Player entity uses index 19/20 for shoulder entities (OptionalInt), so any
+        // villager custom field forwarded there causes a type-mismatch crash on the client.
+        return index >= 19;
     };
 
     private static final Set<PacketType.Play.Server> MOVEMENT_PACKETS = Sets.newHashSet(
@@ -191,12 +195,22 @@ public class VillagerHandler extends SimplePacketListenerAbstract {
 
             try {
                 List<EntityData<?>> metadata = metadataWrapper.readEntityMetadata();
-                if (!metadata.removeIf(REMOVE_METADATA)) return;
+                boolean removed = metadata.removeIf(REMOVE_METADATA);
+                // Pass through if nothing was removed AND the list is non-empty.
+                // The non-empty check covers the case where MC 26.x entity data format
+                // can't be parsed, causing readEntityMetadata() to return an empty list
+                // instead of throwing. Without this, the raw packet (containing the
+                // type-mismatched Boolean at index 20) would reach the client uncancelled.
+                if (!removed && !metadata.isEmpty()) return;
 
                 event.setCancelled(true);
+                if (metadata.isEmpty()) return;
 
-                // Cancel the packet and send a new one.
-                WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(id, metadata);
+                // Cancel the packet and send a new one using the FAKE NPC ID.
+                // This ensures the client applies metadata (like trade level-up or potion effects)
+                // to the NPC model it actually sees, preventing the "poof" desync bug.
+                int fakeId = npc.map(NPC::getEntityId).orElse(id);
+                WrapperPlayServerEntityMetadata wrapper = new WrapperPlayServerEntityMetadata(fakeId, metadata);
                 Object channel = SpigotReflectionUtil.getChannel(player);
                 PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);
 

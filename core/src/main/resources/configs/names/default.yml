@@ -1,3 +1,35 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names  (Global Fallback)
+#
+# HOW THE SYSTEM WORKS
+# ---------------------------------------------------------------------------
+# When a villager needs a name, the plugin uses this fallback chain:
+#
+#   1. configs/names/<biome>.yml   (desert / plains / snow / savanna /
+#                                   jungle / swamp / taiga)
+#      Used only when regionality-enabled: true in config.yml AND the
+#      villager biome type matches the file name.
+#
+#   2. THIS FILE  (configs/names/default.yml)
+#      Used when no regional match is found, or regionality is disabled.
+#
+#   3. All regional files combined
+#      Absolute last resort if this file is also empty.
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - John
+#   - William
+# female:
+#   - Mary
+#   - Elizabeth
+#
+# - Add as many names as you like. Duplicates increase pick chance.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
 male:
   - Liam
   - Noah

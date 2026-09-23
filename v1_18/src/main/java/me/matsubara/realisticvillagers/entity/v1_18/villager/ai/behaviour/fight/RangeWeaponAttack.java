@@ -39,10 +39,13 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         LivingEntity target = getAttackTarget(villager);
+        double distSq = villager.distanceToSqr(target);
+        double maxDist = isCrossbow ? 144.0 : 225.0; // 12 blocks for crossbow, 15 for bow
+
         return isHoldingUsableProjectileWeapon(villager)
                 && BlockAttackWithShield.notUsingShield(villager)
                 && BehaviorUtils.canSee(villager, target)
-                && BehaviorUtils.isWithinAttackRange(villager, target, 0);
+                && distSq <= maxDist;
     }
 
     private boolean isHoldingUsableProjectileWeapon(@NotNull Villager villager) {
@@ -71,6 +74,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     public void tick(ServerLevel level, Villager villager, long time) {
         LivingEntity target = getAttackTarget(villager);
         lookAtTarget(villager, target);
+
         crossbowAttack((VillagerNPC) villager, target);
     }
 

@@ -39,8 +39,15 @@ public class PetParrot extends Parrot implements Pet {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Getter
-    private @Setter boolean tamedByVillager;
+    private boolean tamedByVillager;
+
+    public boolean isTamedByVillager() {
+        return tamedByVillager;
+    }
+
+    public void setTamedByVillager(boolean tamedByVillager) {
+        this.tamedByVillager = tamedByVillager;
+    }
 
     public PetParrot(EntityType<? extends Parrot> type, Level level) {
         super(type, level);

@@ -35,7 +35,12 @@ public class UseBonemeal extends Behavior<Villager> implements Exchangeable {
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private Optional<BlockPos> cropPos = Optional.empty();
 
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
 
     private static final int BONEMEALING_DURATION = 80;
 

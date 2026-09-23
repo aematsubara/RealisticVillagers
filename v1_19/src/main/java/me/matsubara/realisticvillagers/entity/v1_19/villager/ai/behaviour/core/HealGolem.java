@@ -30,7 +30,12 @@ import java.util.Set;
 public class HealGolem extends Behavior<Villager> implements Exchangeable {
 
     private final float speedModifier;
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
 
     private static final int DISTANCE_TO_HEAL = 2;
     private static final int IRON_INGOT_HEAL_AMOUNT = 25;

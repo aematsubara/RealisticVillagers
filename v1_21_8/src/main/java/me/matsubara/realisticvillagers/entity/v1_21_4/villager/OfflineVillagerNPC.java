@@ -62,6 +62,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     private final BlockPos bedHome;
     private final boolean wasInfected;
     private final boolean equipped;
+    private final boolean genderLocked;
     private final int foodLevel;
     private final int tickTimer;
     private final float saturationLevel;
@@ -86,6 +87,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     public static final String BED_HOME_WORLD = "BedHomeWorld";
     public static final String BED_HOME_POS = "BedHomePos";
     public static final String EQUIPPED = "Equipped";
+    public static final String GENDER_LOCKED = "GenderLocked";
     public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIP_ENTRIES = "GossipsEntries";
@@ -123,6 +125,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
                               BlockPos bedHome,
                               boolean wasInfected,
                               boolean equipped,
+                              boolean genderLocked,
                               int foodLevel,
                               int tickTimer,
                               float saturationLevel,
@@ -145,6 +148,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
         this.bedHome = bedHome;
         this.wasInfected = wasInfected;
         this.equipped = equipped;
+        this.genderLocked = genderLocked;
         this.foodLevel = foodLevel;
         this.tickTimer = tickTimer;
         this.saturationLevel = saturationLevel;
@@ -522,6 +526,26 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
     }
 
     @Override
+    public boolean isGenderLocked() {
+        return genderLocked;
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
+
+    }
+
+    @Override
     public boolean validShoulderEntityLeft() {
         return shoulderEntityLeft != null && !shoulderEntityLeft.isEmpty();
     }
@@ -615,6 +639,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
         if (bedHome != null) result.put(BED_HOME_POS, new Vector(bedHome.getX(), bedHome.getY(), bedHome.getZ()));
         result.put(WAS_INFECTED, wasInfected);
         result.put(EQUIPPED, equipped);
+        result.put(GENDER_LOCKED, genderLocked);
         result.put(FOOD_LEVEL, foodLevel);
         result.put(FOOD_TICK_TIMER, tickTimer);
         result.put(FOOD_SATURATION_LEVEL, saturationLevel);
@@ -670,6 +695,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
         Vector bedHome = PluginUtils.getOrDefault(args, BED_HOME_POS, Vector.class, new Vector(0, 0, 0));
         boolean wasInfected = PluginUtils.getOrDefault(args, WAS_INFECTED, Boolean.class);
         boolean equipped = PluginUtils.getOrDefault(args, EQUIPPED, Boolean.class);
+        boolean genderLocked = PluginUtils.getOrDefault(args, GENDER_LOCKED, Boolean.class);
         int foodLevel = PluginUtils.getOrDefault(args, FOOD_LEVEL, Integer.class, 20);
         int tickTimer = PluginUtils.getOrDefault(args, FOOD_TICK_TIMER, Integer.class);
         float saturationLevel = PluginUtils.getOrDefault(args, FOOD_SATURATION_LEVEL, Float.class, 5.0f);
@@ -700,6 +726,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
                 new BlockPos(bedHome.getBlockX(), bedHome.getBlockY(), bedHome.getBlockZ()),
                 wasInfected,
                 equipped,
+                genderLocked,
                 foodLevel,
                 tickTimer,
                 saturationLevel,
@@ -730,6 +757,7 @@ public class OfflineVillagerNPC implements IVillagerNPC, ConfigurationSerializab
                 Collections.emptyList(), Collections.emptyList(), Collections.emptySet(), Collections.emptySet(), Collections.emptyList(),
                 null, null,
                 null, null,
+                false,
                 false,
                 false,
                 20, 0, 5.0f, 0.0f,

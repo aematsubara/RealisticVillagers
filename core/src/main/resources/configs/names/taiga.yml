@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Taiga  (Finnish / Scandinavian)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is TAIGA.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/taiga.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Finn
+  - Mikael
+  - Kristoffer
+  - Torbjorn
+  - Sigmund
+  - Einar
+  - Olav
+  - Birger
+  - Hjalmar
+  - Ragnvald
+  - Pekka
+  - Matti
+  - Jari
+  - Erkki
+  - Paavo
+  - Tapio
+  - Eino
+  - Urho
+  - Seppo
+  - Markku
+  - Aaro
+  - Veikko
+  - Pentti
+  - Kauko
+  - Unto
+  - Gunnar
+  - Bertil
+  - Stellan
+  - Ingvar
+  - Kjell
+  - Rune
+  - Arne
+  - Torsten
+  - Bengt
+  - Roland
+  - Ulf
+  - Bosse
+  - Lennart
+  - Kent
+  - Goran
+
+female:
+  - Astrid
+  - Sigrid
+  - Ragnhild
+  - Gudrun
+  - Hildur
+  - Vigdis
+  - Ragna
+  - Herdis
+  - Turid
+  - Birgit
+  - Aino
+  - Siiri
+  - Helvi
+  - Eila
+  - Kirsti
+  - Tuulikki
+  - Rauha
+  - Aili
+  - Tyyne
+  - Hilma
+  - Birgitta
+  - Margareta
+  - Elisabet
+  - Kristina
+  - Annika
+  - Britta
+  - Karin
+  - Lena
+  - Eva
+  - Helena
+  - Maja
+  - Elsa
+  - Ida
+  - Johanna
+  - Sara
+  - Anna
+  - Maria
+  - Sofia
+  - Emma
+  - Lisa

@@ -1,0 +1,328 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Savanna  (African / Savanna)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for SAVANNA villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/savanna.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "Eish, you again?"
+  - "What now, eh?"
+  - "Even the elephants give me more peace."
+  - "I was minding my own business!"
+  - "Brother, please. Not right now."
+  - "The sun is hot and so is my patience."
+  - "Go bother someone else."
+
+reaction:
+  on-hit:
+    - "Aiya! What was that?!"
+    - "Eish, that hurt!"
+    - "Why did you do that, brother?"
+    - "Ouch! Are you serious right now?!"
+    - "That is not how we treat each other here!"
+
+marry:
+  success:
+    - "Yes! My heart is so full!"
+    - "I am the happiest person in the savanna!"
+    - "Together we will be stronger than the baobab tree!"
+    - "I have waited for this moment!"
+    - "My ancestors are smiling today!"
+  fail:
+    married-to-giver:
+      - "We are already married, did you forget?"
+      - "Eish, we are already wed!"
+    married-to-other:
+      - "I am sorry, my heart belongs to another."
+      - "I am already spoken for."
+    player-married:
+      - "But you already have a partner! I can see it!"
+      - "This is not right, you are already married!"
+    low-reputation:
+      - "I do not know you well enough."
+      - "Walk with me longer before you ask that."
+  end:
+    - "You have hurt me for the last time. I am going."
+    - "Like the dry season, this love is over."
+    - "I must leave. Do not follow me."
+
+divorce:
+  normal:
+    - "You have shamed me!"
+    - "I am done, finished!"
+    - "Go! I do not want to see you!"
+  papers:
+    - "So this is how it ends..."
+
+follow-me:
+  start:
+    - "I will walk with you."
+    - "Lead on, I am right behind you."
+  stop:
+    - "Go well, friend."
+    - "Until the next time."
+  low-reputation:
+    - "I do not walk with strangers."
+    - "Earn my trust first."
+
+stay-here:
+  start:
+    - "I will wait here like the baobab."
+    - "I stay."
+  stop:
+    - "Good. Let us move."
+    - "I was wondering when we would leave."
+  low-reputation:
+    - "Who are you to tell me what to do?"
+    - "Show me you are worthy first."
+
+no-trades:
+  - "Nothing for you today."
+  - "Come back another time."
+
+chat:
+  adult:
+    success:
+      - "Hello %player-name%, I see you!"
+      - "The savanna is beautiful in the morning, is it not?"
+      - "My grandmother knew every animal in these lands."
+      - "The rains came late this year, but they came."
+      - "Together we are like the herd — stronger."
+    fail:
+      - "Hmm. Interesting."
+      - "I do not think that is how things are."
+      - "Strange."
+      - "Whatever you say."
+  child:
+    success:
+      - "Have you ever seen a real lion?"
+      - "I chased a zebra this morning! Almost caught it!"
+      - "Can you show me how to track animals?"
+    fail:
+      - "That sounds boring."
+      - "My mama says be careful with outsiders."
+      - "You are strange."
+  child-offspring:
+    success:
+      - "Can we go watch the elephants today?"
+      - "Tell me stories about the great hunters!"
+      - "I want to be strong like you!"
+    fail:
+      - "It's too hot today."
+      - "I want to stay in the shade."
+  partner:
+    success:
+      - "I prepared the fire. Come eat with me."
+      - "The sunset tonight is like fire across the sky."
+      - "You are my greatest blessing."
+    fail:
+      - "You were away too long."
+      - "We must talk."
+      - "I was worried about you."
+
+joke:
+  adult:
+    success:
+      - "Haha! That is a good one!"
+      - "I am telling that at the next gathering!"
+      - "You have made my day, friend!"
+    fail:
+      - "That is not funny."
+      - "My uncle tells better jokes."
+      - "I do not understand."
+  child:
+    success:
+      - "Hahaha! Tell me another!"
+      - "You are so funny!"
+    fail:
+      - "That's weird."
+      - "I don't get it."
+  child-offspring:
+    success:
+      - "*Laughs* Again!"
+      - "Tell me another one!"
+    fail:
+      - "That wasn't funny."
+      - "I've heard better."
+  partner:
+    success:
+      - "You always make me smile, my love."
+      - "That is why I chose you!"
+    fail:
+      - "You are not funny, dear."
+      - "Leave jokes to the griots."
+
+story:
+  adult:
+    success:
+      - "Wah! What a story!"
+      - "The elders would love to hear that."
+      - "You are as brave as a lion!"
+      - "That will be told for generations!"
+    fail:
+      - "I do not believe all of that."
+      - "Outsiders always exaggerate."
+      - "This is not how things work here."
+  child:
+    success:
+      - "Wow! Are you a warrior?"
+      - "I want adventures like that!"
+    fail:
+      - "That sounds dangerous."
+      - "Mama would not approve."
+  child-offspring:
+    success:
+      - "Tell me more! What happened next?"
+      - "You are the bravest person I know!"
+    fail:
+      - "That story is scary."
+      - "I don't like it."
+  partner:
+    success:
+      - "Every evening with you is a blessing."
+      - "Your stories fill my heart."
+    fail:
+      - "Please be more careful, my love."
+      - "I worry when I hear things like that."
+
+gift:
+  expecting:
+    - "A gift? For me? Thank you, friend!"
+    - "What did you bring from your journey?"
+    - "Oh! Something for me?"
+  expecting-fail:
+    - "I thought you had something for me?"
+    - "You said you would bring a gift..."
+  loved:
+    - "This is wonderful! Thank you so much!"
+    - "My ancestors are smiling! I love this!"
+    - "I will treasure this always."
+  neutral:
+    - "Thank you, this is appreciated."
+    - "Kind of you, friend."
+  disliked:
+    - "Hmm... I suppose it will do."
+    - "Thank you, I think."
+  bad:
+    - "This is not a good gift, friend."
+    - "No thank you, keep it."
+  cooldown:
+    - "Enough! You are too generous."
+    - "No more gifts today, thank you."
+  adult:
+    success:
+      good:
+        - "Thank you, this is kind."
+        - "I appreciate this."
+      better:
+        - "This is fine quality! Well chosen."
+        - "I really needed this, thank you."
+      best:
+        - "This is incredible! I am grateful."
+        - "There are no words. Thank you."
+    fail:
+      - "This is not what I needed."
+      - "Bring something useful next time."
+  child:
+    success:
+      good:
+        - "Oh! Is this for me? Thank you!"
+        - "Wow! Really?!"
+      better:
+        - "I love it! All my friends will be jealous!"
+        - "This is the best day ever!"
+      best:
+        - "You are the best!"
+        - "I will never forget this!"
+    fail:
+      - "I don't want this."
+      - "This is not a good gift."
+  child-offspring:
+    success:
+      good:
+        - "You got me something? Thank you!"
+        - "Oh wow!"
+      better:
+        - "I love it! Can I show my friends?"
+        - "This is so cool!"
+      best:
+        - "You are the best parent ever!"
+        - "I will keep this forever!"
+    fail:
+      - "I don't like this."
+      - "This is not a good gift."
+  partner:
+    success:
+      good:
+        - "You are so thoughtful, my love."
+        - "Thank you, dear."
+      better:
+        - "You remembered! I love it!"
+        - "This is exactly what I needed."
+      best:
+        - "You make my heart overflow!"
+        - "I love you more each day."
+    fail:
+      - "Oh honey... really?"
+      - "I thought you knew me better."

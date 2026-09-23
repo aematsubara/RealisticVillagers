@@ -22,9 +22,12 @@ import org.bukkit.entity.Villager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
@@ -33,32 +36,98 @@ public final class Messages {
 
     private final RealisticVillagers plugin;
 
-    private @Setter FileConfiguration configuration;
+    /** System/admin messages (configs/messages/system.yml) — command feedback, error notices, etc. */
+    private @Setter @Getter FileConfiguration configuration;
 
+    /** Global fallback dialogue (configs/messages/default.yml) — used when regional file has no entry. */
+    private FileConfiguration defaultDialogueConfig;
+
+    /** Per-region dialogue overrides keyed by biome type name (e.g., "desert", "plains"). */
+    private final Map<String, FileConfiguration> regionalConfigs = new HashMap<>();
+
+    private static final String[] VILLAGER_TYPES = {"desert", "plains", "snow", "savanna", "jungle", "swamp", "taiga"};
     private static final double NEARBY_SEARCH_RANGE = 30.0d;
 
     public Messages(@NotNull RealisticVillagers plugin) {
         this.plugin = plugin;
-        this.plugin.saveResource("messages.yml");
+        this.plugin.saveResource("configs/messages/system.yml");
+        loadRegionalConfigs();
+    }
+
+    public void loadRegionalConfigs() {
+        regionalConfigs.clear();
+        File dataFolder = plugin.getDataFolder();
+
+        // Load global dialogue fallback.
+        plugin.saveResource("configs/messages/default.yml");
+        File defaultFile = new File(dataFolder, "configs/messages/default.yml");
+        if (defaultFile.exists()) {
+            defaultDialogueConfig = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(defaultFile);
+        }
+
+        // Load per-region dialogue files.
+        for (String type : VILLAGER_TYPES) {
+            String resourcePath = "configs/messages/" + type + ".yml";
+            plugin.saveResource(resourcePath);
+            File regionalFile = new File(dataFolder, resourcePath);
+            if (regionalFile.exists()) {
+                org.bukkit.configuration.file.YamlConfiguration cfg =
+                        org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(regionalFile);
+                regionalConfigs.put(type, cfg);
+            }
+        }
     }
 
     public void sendRandomGiftMessage(Player player, IVillagerNPC npc, @Nullable GiftCategory category) {
-        InteractionTargetType target = InteractionTargetType.getInteractionTarget(npc, player);
-        String type = category != null ? ".success." + category.name() : ".fail";
-        send(player, npc, getRandomMessage("gift." + target.getName() + type));
+        String path = category != null ? "gift." + category.lowerName() : "gift.bad";
+        send(player, npc, getRandomMessage(path, getRegionKey(npc)));
     }
 
-    public void sendRandomInteractionMessage(Player player, IVillagerNPC npc, @NotNull GUIInteractType interactType, boolean success) {
+    public String sendRandomInteractionMessage(Player player, IVillagerNPC npc, @NotNull GUIInteractType interactType, boolean success) {
         InteractionTargetType target = InteractionTargetType.getInteractionTarget(npc, player);
 
         boolean checkSuccess = !interactType.isGreet() && !interactType.isInsult() && !interactType.isBeProudOf();
         String path = interactType.getName() + "." + target.getName() + (checkSuccess ? "." + (success ? "success" : "fail") : "");
 
-        send(player, npc, getRandomMessage(path));
+        String rawMessage = getRandomMessage(path, getRegionKey(npc));
+        send(player, npc, rawMessage);
+        return rawMessage;
+    }
+
+    /** True if {@code type} is a server-defined custom chat/conversation (a top-level key in
+     *  default.yml or a regional dialogue file, e.g. added by a hologram custom menu item). */
+    public boolean isCustomChatType(@NotNull String type) {
+        if (defaultDialogueConfig != null && defaultDialogueConfig.contains(type)) return true;
+        for (FileConfiguration regional : regionalConfigs.values()) {
+            if (regional.contains(type)) return true;
+        }
+        return false;
+    }
+
+    /** Behaves like {@link #sendRandomInteractionMessage} but for a custom, config-only chat
+     *  type: always uses the "<type>.<target>.[success|fail]" path (like CHAT/STORY/JOKE do). */
+    public String sendRandomCustomChatMessage(Player player, IVillagerNPC npc, @NotNull String type, boolean success) {
+        InteractionTargetType target = InteractionTargetType.getInteractionTarget(npc, player);
+        String path = type + "." + target.getName() + "." + (success ? "success" : "fail");
+
+        String rawMessage = getRandomMessage(path, getRegionKey(npc));
+        send(player, npc, rawMessage);
+        return rawMessage;
+    }
+
+    /** Reputation delta for a chat interaction (built-in or custom). Reads an optional
+     *  "<type>.reputation.[success|fail]" override from default.yml; falls back to the
+     *  global chat-interact-reputation config value (applied symmetrically), matching the
+     *  behaviour every built-in chat type had before per-type overrides existed. */
+    public int getInteractionReputation(@NotNull String type, boolean success) {
+        int base = Config.CHAT_INTERACT_REPUTATION.asInt();
+        int fallback = base > 1 ? (success ? base : -base) : 0;
+        if (defaultDialogueConfig == null) return fallback;
+        return defaultDialogueConfig.getInt(type + ".reputation." + (success ? "success" : "fail"), fallback);
     }
 
     public void send(Player player, IVillagerNPC npc, @NotNull Message message) {
-        send(player, npc, getRandomMessage(message.getPath()));
+        send(player, npc, getRandomMessage(message.getPath(), getRegionKey(npc)));
     }
 
     public void send(Player player, IVillagerNPC npc, @NotNull String message) {
@@ -140,9 +209,50 @@ public final class Messages {
         return article + " " + plugin.getProfessionFormatted(profession, isMale);
     }
 
+    private @Nullable String getRegionKey(@Nullable IVillagerNPC npc) {
+        if (npc == null || !Config.REGIONALITY_ENABLED.asBool()) return null;
+        if (!(npc.bukkit() instanceof Villager villager)) return null;
+        return villager.getVillagerType().name().toLowerCase(Locale.ROOT);
+    }
+
     private String getRandomMessage(String path) {
-        List<String> messages = getMessages(path);
-        return messages.isEmpty() ? "" : messages.get(RandomUtils.nextInt(0, messages.size()));
+        return getRandomMessage(path, null);
+    }
+
+    private String getRandomMessage(String path, @Nullable String regionKey) {
+        // 1. Try the villager's regional dialogue file.
+        if (regionKey != null) {
+            FileConfiguration regional = regionalConfigs.get(regionKey);
+            if (regional != null) {
+                List<String> regionalMessages = getMessagesFrom(regional, path);
+                if (!regionalMessages.isEmpty()) {
+                    return regionalMessages.get(RandomUtils.nextInt(0, regionalMessages.size()));
+                }
+            }
+        }
+        // 2. Fall back to the global default dialogue (configs/messages/default.yml).
+        if (defaultDialogueConfig != null) {
+            List<String> defaultMessages = getMessagesFrom(defaultDialogueConfig, path);
+            if (!defaultMessages.isEmpty()) {
+                return defaultMessages.get(RandomUtils.nextInt(0, defaultMessages.size()));
+            }
+        }
+        return "";
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getMessagesFrom(@NotNull FileConfiguration config, String path) {
+        if (!config.contains(path, true)) return Collections.emptyList();
+        Object object = config.get(path);
+        if (object instanceof String string) {
+            return PluginUtils.translate(Lists.newArrayList(string));
+        } else if (object instanceof List<?> list) {
+            try {
+                return PluginUtils.translate(Lists.newArrayList((List<String>) list));
+            } catch (ClassCastException ignored) {
+            }
+        }
+        return Collections.emptyList();
     }
 
     @SuppressWarnings("unchecked")
@@ -193,6 +303,7 @@ public final class Messages {
         SET_HOME_FAIL("set-home.fail"),
         PROCREATE_FAIL_HAS_BABY("procreate.fail.has-baby"),
         PROCREATE_FAIL_LOW_REPUTATION("procreate.fail.low-reputation"),
+        PROCREATE_FAIL_SAME_SEX("procreate.fail.same-sex"),
         PROCREATE_COOLDOWN("procreate.cooldown"),
         BABY_GROW,
         BABY_CAN_NOT_SPAWN,
@@ -205,6 +316,14 @@ public final class Messages {
         BED_OCCUPIED,
         BED_ESTABLISHED,
         BED_INVALID,
+        BED_MARKED("bed-marked"),
+        GENDER_CHANGED("gender.changed"),
+        GENDER_LOCKED("gender.locked"),
+        GENDER_NO_VILLAGER("gender.no-villager"),
+        GENDER_INVALID("gender.invalid"),
+        PLAYER_GENDER_SET("player-gender.set"),
+        PLAYER_GENDER_ALREADY("player-gender.already"),
+        PLAYER_GENDER_REMINDER("player-gender.reminder"),
         INTERACT_FAIL_FIGHTING_OR_RAID("interact-fail.fighting-or-raid"),
         INTERACT_FAIL_PROCREATING("interact-fail.procreating"),
         INTERACT_FAIL_EXPECTING_GIFT_FROM_YOU("interact-fail.expecting-gift-from-you"),
@@ -226,6 +345,7 @@ public final class Messages {
         INTERACT_FAIL_ALREADY_ALIVE("interact-fail.already-alive"),
         GIFT_EXPECTING("gift.expecting"),
         GIFT_EXPECTING_FAIL("gift.expecting-fail"),
+        GIFT_COOLDOWN("gift.cooldown"),
         RIGHT_CLICK_GIFT,
         THROW_GIFT,
         SELECT_BED,

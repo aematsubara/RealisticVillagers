@@ -125,46 +125,45 @@ villager-defend-following-player: true
 # NOTE: At least one of the 3 previous options must be enabled.
 villager-defend-attack-players: false
 
-# Whether to disable player nametags.
-disable-nametags: false
 
-# Here you can modify the text displayed above the player.
-# NOTE: This function doesn't work in 1.18.2, 1.19.4 and 1.20.1 :(.
-custom-nametags:
-  # If true, a small block will be displayed above the text representing the villager's job block (except the unemployed and nitwits).
-  show-job-block: true
-  # Whether the text is displayed with shadow.
-  shadow: true
-  # Whether the text be visible through blocks.
-  see-through: false
-  # Alpha value of rendered text, from -128 to 127.
-  # Default to -1, which is completely opaque.
-  text-opacity: -1
-  lines:
-    # %villager-name% - name of the villager.
-    # %level% - level of the villager (only for @villager).
-    # %profession% - profession of the villager (only for @villager).
-    villager:
-      - "&f%villager-name% &a(Lvl. %level%)"
-      - "&7%profession%"
-    wandering-trader:
-      - "&dWandering Trader"
-      - "&f%villager-name%"
-  # Here you can apply a special color to the villager's name if they have a family relationship with the player.
-  # At the moment, it is only evaluated if the player is the partner or father of a villager.
-  relationship-color:
-    # Color for partners.
-    partner: "&d"
-    # Color for childrens.
-    children: "&b"
+# Body traits: every villager her own height and build, women a figure drawn from their own skin.
+#
+# The shapes live in a resource pack the plugin writes and then hands to players itself, so there
+# is nothing to host and nothing to paste into server.properties. It is added alongside whatever
+# pack the server already sends, not in place of it, and arrives in the time it takes to download.
+appearance:
+  # Draw body shapes at all. Off leaves everyone the plain player model; heights still vary.
+  body-shapes: true
+  # Give women a bust. Villagers and players both, each drawn from her own skin.
+  bust: true
+  # Add weight to whoever carries it. This one is not about women: roughly two thirds of everyone,
+  # men included, is heavy enough for it to show, and it sits on the belly rather than the chest.
+  # Turn it off if you would rather nobody had a stomach.
+  build: true
+  # Whether players get a figure too, or only villagers.
+  players: true
 
-skin-preview:
-  # The seconds that the preview will last.
-  seconds: 10
-  # %remaining% - the remaining seconds of preview.
-  message: "Preview finishing in %remaining% seconds!"
-  # If true, the message will have a rainbow effect (similar to the jukebox effect when a record is playing).
-  rainbow-message: true
+  serve-pack: true
+  # Port the pack is served on. Must be reachable by players, like the game port itself.
+  pack-port: 25580
+  # Address players should fetch it from. "auto" uses the server's own, which is right on a home
+  # network and wrong behind a proxy or a host that gives you a different public address.
+  pack-host: auto
+
+# Villager name tags.
+nametags:
+  # Show a villager's name only to the player looking at it.
+  #
+  # A settlement of forty villagers is forty name tags in the air at once, drawn through walls
+  # and through each other - so the more alive a village is, the less of it you can see. This
+  # answers "who is this" at the moment the question is actually being asked.
+  #
+  # Off by default: always-visible name tags are what most servers expect, and this changes
+  # something players look at constantly.
+  only-when-looking: false
+  # How far away a villager can be and still have its name shown, in blocks.
+  look-range: 12.0
+
 
 # If true, arrows shot by villagers will pass through other villagers.
 # NOTE: This should always be true to prevent them from killing each other by accident.
@@ -184,6 +183,9 @@ villager-fix-iron-golem-cooldown: 600
 
 # Whether villagers can help family members (only players ATM).
 villager-help-family: true
+
+# Whether new villagers should automatically receive family relationships from nearby villagers on spawn.
+auto-assign-family: true
 
 # The waiting time to help a family member again (in ticks). Use 0 or lower to set no limit.
 villager-help-family-cooldown: 600
@@ -223,8 +225,367 @@ annoying-meter:
   reputation-loss: 2
   # Whether to spawn angry particles above the villager.
   angry-particles: true
-  # Si se desea o no que los familiares eviten este sistema.
-  family-bypass: true
+
+# Settlement system: groups villagers into villages that can have a mayor, hold shared
+# resources and commission buildings. Villages are detected automatically from the village
+# bell, and can be fine-tuned afterwards through the mayor's menu.
+village:
+  # Whether the settlement system is enabled at all.
+  enabled: true
+  # Default village radius in blocks, measured horizontally from the bell.
+  # A village covers the full height of its area, so basements and rooftops still count.
+  # The mayor's menu can override this per village.
+  default-radius: 64
+  # Divisor X in the mayor reputation formula: R_mayor = (sum of reputation with every
+  # resident) / X. Reputation with the mayor itself is excluded — you earn standing with
+  # the mayor by dealing well with ordinary residents, never by talking to the mayor.
+  # LOWER value = reputation grows FASTER. Note the sum scales with village size, so large
+  # settlements reach high mayor reputation more easily; raise X to compensate.
+  mayor-reputation-divisor: 10
+  # How often (in seconds) village data is written to villages.yml.
+  save-interval: 300
+
+  # ── Performance ──────────────────────────────────────────────────────────
+  # Finding a village's residents is an entity query, and menus, reputation maths and the
+  # election loop all need it. These two settings keep that cost under control.
+
+  # How far up and down from the bell to look for residents, in blocks. Villages are
+  # surface-level in practice; raising this a lot makes the query markedly more expensive.
+  vertical-range: 64
+
+  # How long (in milliseconds) a resident lookup is reused before querying the world again.
+  # Higher = cheaper but slower to notice a villager walking in or out. Lower it only if you
+  # need near-instant reactions and can spare the performance.
+  resident-cache-millis: 2000
+
+  # ── Building detection ───────────────────────────────────────────────────
+  # The radar finds buildings by ruling out nature: any solid block that isn't ordinary
+  # terrain counts as something a builder placed. That way igloos, datapack structures and
+  # anything else are all picked up without having to be listed anywhere.
+  #
+  # These two lists let you correct that judgement for blocks it gets wrong — most likely
+  # blocks added by a datapack or another plugin. Use Minecraft material names.
+  building-materials:
+    # Force these to count as part of a building, even if they look natural.
+    # Example: - SNOW_BLOCK
+    building: []
+    # Force these to count as terrain, so they never create a phantom building.
+    # Example: - PACKED_ICE
+    natural: []
+
+  mayor:
+    # Reputation with the mayor a player needs before it will accept a building
+    # commission. Remember this is the derived value from the formula above, not the
+    # reputation shown for an individual villager.
+    reputation-required-to-commission: 50
+    # Whether the player must also have a family (be partnered to one of this village's
+    # residents) before commissioning buildings.
+    require-family: true
+
+    # Block shown floating above the mayor's head, the way other villagers show their
+    # workstation. The mayor has no workstation of its own, so this stands in as its badge
+    # of office. Must be a placeable block; falls back to EMERALD_BLOCK if invalid.
+    head-block: EMERALD_BLOCK
+
+  # When a village has no mayor (it died, or none was ever elected), an election opens
+  # automatically. Candidates are drawn ONLY from unemployed residents, so no working
+  # villager loses their job to run for office.
+  election:
+    enabled: true
+    # How long voting stays open, in seconds.
+    duration: 300
+    # How many candidates stand. If fewer unemployed residents exist, all of them run.
+    candidates: 3
+    # Vote weights. A player's vote counts for more than a settler's, so players decide the
+    # outcome when they take part, while an empty server still elects someone on its own.
+    player-vote-weight: 5
+    villager-vote-weight: 1
+    # How often (in seconds) the plugin checks for vacant seats and finished elections.
+    check-interval: 10
+
+    # Texts for the ballot and the mayor's screen live in configs/gui.yml,
+    # the election countdown in configs/holograms.yml, and the chat messages
+    # in configs/messages/system.yml.
+
+  # ── Settlement economy ───────────────────────────────────────────────────
+  # Every villager with a trade also has a role in its settlement, and workers put what they
+  # produce into the village's shared storage — the pool the mayor's screen shows and that
+  # building will draw from. Which trade produces what is fixed in code:
+  #
+  #   Fletcher .................. logs, sticks
+  #   Mason, Armorer ............ cobblestone, stone, coal, raw iron
+  #   Toolsmith, Weaponsmith .... iron ingots, nuggets, coal
+  #   Farmer, Butcher ........... wheat, carrots, potatoes, bread
+  #   Fisherman ................. cod, salmon, string
+  #   Shepherd .................. wool, string
+  #   Leatherworker ............. leather, rabbit hide
+  #   Librarian, Cartographer ... paper, books, sugar cane
+  #   Cleric .................... redstone, glowstone dust, lapis
+  #
+  # A villager only produces while it is actually at work: it must have a workstation, be
+  # near it, and it must be daytime. The mayor governs instead of working a trade.
+  economy:
+    enabled: true
+    # How often (in seconds) a production round runs.
+    interval: 60
+    # Chance (0.0-1.0) that a given worker contributes in a given round. Below 1 so a large
+    # settlement's output stays uneven rather than arriving in one lump every minute.
+    chance: 0.5
+    # How much one contribution is worth.
+    min-amount: 1
+    max-amount: 3
+
+  # ── Settlement names ─────────────────────────────────────────────────────
+  # A settlement is named when it is first found, from the biome it stands in: one word
+  # from "first" joined to one from "second" — Sunreach, Frosthold, Mirewater. The name is
+  # then saved with the village, so editing these lists renames nothing that already
+  # exists; it only changes what future settlements are called. Any village can be renamed
+  # by hand at any time from the mayor's menu.
+  #
+  # Groups are matched against the biome name by substring, so variants a Minecraft update
+  # adds (snowy_taiga, windswept_savanna, sparse_jungle) fall into the right group on their
+  # own. Delete a group to fall back to the built-in words for it.
+  names:
+    desert:
+      first:  [Sun, Dust, Amber, Scorch, Mirage, Gold, Ash, Dune]
+      second: [reach, hollow, rest, gate, spire, crest, haven, watch]
+    snow:
+      first:  [Frost, White, Pale, Winter, Ice, Still, Hollow, North]
+      second: [hold, fell, reach, barrow, crown, watch, rest, mere]
+    savanna:
+      first:  [Acacia, Ember, Wide, Long, Bright, Dry, Sun, Red]
+      second: [plain, run, field, stead, ridge, reach, gate, vale]
+    taiga:
+      first:  [Pine, Elk, Deep, Green, Wolf, Moss, Fern, Grey]
+      second: [wood, hollow, lodge, fall, grove, hearth, marsh, burn]
+    jungle:
+      first:  [Vine, Emerald, Deep, Cloud, Parrot, Fern, Green, Rain]
+      second: [canopy, hollow, temple, reach, shade, spring, root, veil]
+    swamp:
+      first:  [Mire, Black, Willow, Fog, Reed, Damp, Toad, Murk]
+      second: [water, marsh, hollow, bank, fen, rest, crossing, bog]
+    # Anything that matches none of the above.
+    plains:
+      first:  [Green, Oak, Fair, Mill, Bright, Wheat, Stone, River]
+      second: [field, brook, stead, ford, meadow, hill, bridge, crossing]
+
+  # ── Graves ───────────────────────────────────────────────────────────────
+  # A villager that dies without a cross gets a headstone where it fell, carrying its name,
+  # its parents and what killed it. A cross means it can be revived, so those are skipped -
+  # a headstone over somebody who is coming back is a lie the world keeps telling.
+  #
+  # Headstones are display entities, not blocks: they can be removed cleanly, never get in
+  # anybody's way, and cost the world nothing. The text is in configs/messages/system.yml.
+  graves:
+    enabled: true
+
+  # ── Refining ─────────────────────────────────────────────────────────────
+  # Workers turn what they gather into what the settlement can build with.
+  #
+  # This is what makes building possible at all. Gathering alone produces logs, stone, sand
+  # and ore, while even the simplest blueprint wants planks, stairs, a door and glass — so
+  # without these recipes the stores fill with raw goods nobody can spend.
+  #
+  #   result       what comes out.
+  #   amount       how many, per run.
+  #   ingredients  what goes in, and how many of each.
+  #   role         which trade does the work. Omit it and any working villager will.
+  #                One of: lumberjack, miner, blacksmith, food-supplier, fisher,
+  #                weaver, tanner, scholar, apothecary.
+  #
+  # Each recipe runs at most ONCE per economy round, and only while the settlement holds at
+  # least three times an ingredient — so raw goods are refined steadily out of a surplus
+  # rather than the whole stock being converted the moment it crosses the line.
+  crafting:
+    recipes:
+      # Woodwork
+      - result: OAK_PLANKS
+        amount: 4
+        role: lumberjack
+        ingredients: {OAK_LOG: 1}
+      - result: OAK_STAIRS
+        amount: 4
+        role: lumberjack
+        ingredients: {OAK_PLANKS: 6}
+      - result: OAK_DOOR
+        amount: 3
+        role: lumberjack
+        ingredients: {OAK_PLANKS: 6}
+      - result: OAK_FENCE
+        amount: 3
+        role: lumberjack
+        ingredients: {OAK_PLANKS: 4, STICK: 2}
+
+      # Stonework
+      - result: STONE_BRICKS
+        amount: 4
+        role: miner
+        ingredients: {STONE: 4}
+      - result: COBBLESTONE_STAIRS
+        amount: 4
+        role: miner
+        ingredients: {COBBLESTONE: 6}
+      - result: COBBLESTONE_WALL
+        amount: 6
+        role: miner
+        ingredients: {COBBLESTONE: 6}
+      # Sand is fired into glass, so the miner needs fuel as well as sand.
+      - result: GLASS
+        amount: 1
+        role: miner
+        ingredients: {SAND: 1, COAL: 1}
+      - result: GLASS_PANE
+        amount: 16
+        role: miner
+        ingredients: {GLASS: 6}
+
+      # Metalwork and light
+      - result: IRON_INGOT
+        amount: 1
+        role: blacksmith
+        ingredients: {RAW_IRON: 1, COAL: 1}
+      - result: TORCH
+        amount: 4
+        role: blacksmith
+        ingredients: {COAL: 1, STICK: 1}
+
+  # ── Building commissions ─────────────────────────────────────────────────
+  # Buildings are defined in configs/blueprints.yml and paid for out of the settlement's
+  # stores. Players need standing with the mayor first — operators, and anyone with the
+  # permission realisticvillagers.village.bypass, do not.
+  build:
+    # Refuse to place a building on or beside one that already exists.
+    #
+    # Worth keeping on for more than tidiness: the scanner finds buildings by walking
+    # connected blocks, so two that share a wall are read as a single building from then
+    # on — by the map, by the settlement's own bounds, and by this check itself.
+    collision: true
+    # How much clear ground to insist on around a new building, in blocks. 1 stops walls
+    # touching; 2 leaves a gap you can walk down. 0 allows buildings to touch.
+    clearance: 2
+    # Empty chests, barrels and furnaces as the building goes up.
+    #
+    # A saved building carries whatever was in its containers, so without this a house recorded
+    # with a full chest is an item duplicator that runs as often as the settlement can pay for
+    # the walls. Turn it off only if your buildings' contents are part of how they work.
+    empty-containers: true
+    # Refuse to raise a building outside the settlement paying for it. The stores belong to the
+    # village, so what they buy should stand in it.
+    inside-village-only: true
+    # Each player only gets the buildings they discovered themselves.
+    #
+    # Finding a village is the interesting part, and a shared list hands everyone the reward
+    # for it the moment the first player walks in - on a busy server the list would be
+    # complete within a day and finding anything would stop mattering.
+    #
+    # It also settles who may rename what: you can rename what you found, because nobody else
+    # can see it, and you cannot rename what the server provides, because it is shared.
+    #
+    # Set to false for one shared list, recorded the first time anybody arrives.
+    personal-discovery: true
+    # How many buildings one village may contribute to your blueprints.
+    #
+    # A settlement has a handful of shapes and then repeats them, so past a few there is
+    # nothing new being learned - only more entries to scroll past. Walking into a village
+    # costs a full read of every block of each building saved, which is the other reason
+    # there is a number here at all.
+    #
+    # Raise it to take the whole village. The log says which buildings were left behind and
+    # why, so a village of seven that contributed six is never a mystery.
+    discovery-limit: 10
+    # How fast a building goes up, in blocks a second, before the mayor's programme is applied.
+    # A building's total time is its block count divided by this, so lowering it makes raising
+    # anything a job the settlement visibly labours over.
+    blocks-per-second: 4
+
+    # Buildings are drawn once and dressed in whatever the local land is built from, so an oak
+    # cottage comes out in sandstone in a desert and in spruce in a taiga. Only the materials
+    # change — the layout, the doors and the windows stay where the blueprint put them.
+    #
+    # The cost changes with them: a settlement asked for sandstone is charged for sandstone.
+    #
+    # Groups are the same ones village names use, matched against the biome by substring.
+    # Delete a group to have blueprints built exactly as they are written.
+    biome-styles:
+      desert:
+        OAK_PLANKS: SMOOTH_SANDSTONE
+        OAK_LOG: CUT_SANDSTONE
+        OAK_STAIRS: SANDSTONE_STAIRS
+        OAK_DOOR: ACACIA_DOOR
+        OAK_FENCE: ACACIA_FENCE
+        COBBLESTONE: SANDSTONE
+        COBBLESTONE_STAIRS: SANDSTONE_STAIRS
+        COBBLESTONE_WALL: SANDSTONE_WALL
+        STONE_BRICKS: CUT_SANDSTONE
+      savanna:
+        OAK_PLANKS: ACACIA_PLANKS
+        OAK_LOG: ACACIA_LOG
+        OAK_STAIRS: ACACIA_STAIRS
+        OAK_DOOR: ACACIA_DOOR
+        OAK_FENCE: ACACIA_FENCE
+      taiga:
+        OAK_PLANKS: SPRUCE_PLANKS
+        OAK_LOG: SPRUCE_LOG
+        OAK_STAIRS: SPRUCE_STAIRS
+        OAK_DOOR: SPRUCE_DOOR
+        OAK_FENCE: SPRUCE_FENCE
+      snow:
+        OAK_PLANKS: SPRUCE_PLANKS
+        OAK_LOG: SPRUCE_LOG
+        OAK_STAIRS: SPRUCE_STAIRS
+        OAK_DOOR: SPRUCE_DOOR
+        OAK_FENCE: SPRUCE_FENCE
+        COBBLESTONE: STONE_BRICKS
+      jungle:
+        OAK_PLANKS: JUNGLE_PLANKS
+        OAK_LOG: JUNGLE_LOG
+        OAK_STAIRS: JUNGLE_STAIRS
+        OAK_DOOR: JUNGLE_DOOR
+        OAK_FENCE: JUNGLE_FENCE
+      swamp:
+        OAK_PLANKS: MANGROVE_PLANKS
+        OAK_LOG: MANGROVE_LOG
+        OAK_STAIRS: MANGROVE_STAIRS
+        OAK_DOOR: MANGROVE_DOOR
+        OAK_FENCE: MANGROVE_FENCE
+
+  # ── Real harvesting ──────────────────────────────────────────────────────
+  # Unlike the economy above, this changes actual blocks in the world:
+  #
+  #   Fletchers (lumberjacks) fell a whole nearby tree and plant a sapling of the same
+  #   wood where the trunk stood, so the woods around a settlement thin out and grow back.
+  #
+  #   Farmers, butchers and fishermen cut the head off a nearby cactus and leave the stump
+  #   rooted, so it regrows on its own. Cactus is what camels are led with, so a desert
+  #   settlement would otherwise strip its own supply.
+  #
+  # Set enabled to false if you would rather villagers never touched the terrain.
+  harvest:
+    enabled: true
+    # How often (in seconds) a harvesting round runs. Kept slower than the economy round
+    # because each one can remove a whole tree.
+    interval: 45
+    # Keep felling and cactus-cutting inside the settlement's own radius (village.default-radius,
+    # or a mayor's override).
+    #
+    # A lumberjack or food supplier is only found near where it happens to be standing when its
+    # turn comes up, not sent looking for a tree — so without this, a resident that wanders (or
+    # is led) into a forest you planted well outside the village clears it exactly as readily as
+    # the trees actually around the settlement. Turn this off only if you want harvesting to
+    # follow residents wherever they roam.
+    limit-to-village: true
+    # Also require the tree or cactus to be within this many blocks of the worker's OWN
+    # workstation — a fletching table for a lumberjack, a smoker or a composter for a food
+    # supplier — not merely somewhere inside the settlement. A large village can easily hold a
+    # decorative forest nowhere near where any fletcher actually works; this is what keeps
+    # harvesting out of it without having to shrink the whole village's radius to do it.
+    #
+    # A worker with no workstation memorised right now (between jobs, or just hired) fells and
+    # cuts nothing at all rather than falling back to limit-to-village alone — a job with no
+    # bench is not a job yet.
+    #
+    # 0 turns this check off, leaving limit-to-village as the only boundary.
+    workstation-radius: 24
 
 # Here you can allow procreation between villagers of the same sex, procreation between family members and also allow "cheating" of villagers,
 # i.e., allow villagers to procreate with other villagers even if they are married.
@@ -250,29 +611,6 @@ divorce-reputation-loss: 50
 
 # The reputation that will be lost after divorce with divorce papers (given by clerics).  Minimum value: 2; use 1 or less to disable.
 divorce-reputation-loss-papers: 10
-
-# Variables:
-# %sex% - the sex of the newborn baby.
-input-gui:
-  combat-search:
-    title: "Search..."
-    text: "Search..."
-  baby:
-    title: "I'ts a %sex%!"
-    text: "Name..."
-    invalid-name: "Invalid name!"
-  whistle-search:
-    title: "Search..."
-    text: "Search..."
-  skin-search:
-    title: "Search..."
-    text: "Search..."
-  new-skin:
-    title: "Which player?"
-    text: "Write..."
-  players:
-    title: "Search..."
-    text: "Search..."
 
 # This only applies to villagers who haven't yet spawned.
 # If the villager has no weapon in hand, he'll flee from danger (only with monsters).
@@ -347,6 +685,9 @@ wedding-ring-reputation: 20
 # Amount of reputation when giving a cross. Minimum value: 2; use 1 or less to disable.
 cross-reputation: 10
 
+# Amount of reputation lost when giving a bad gift (item not in the gift list). Minimum value: 2; use 1 or less to disable.
+bad-gift-reputation: 5
+
 # Amount of reputation when having a baby.  Minimum value: 2; use 1 or less to disable.
 baby-reputation: 20
 
@@ -371,7 +712,7 @@ interact-cooldown:
   proud-of: 30
   insult: 2
   divorce-papers: 900
-  gift: 3
+  gift: 600
   bed: 3
 
 # Whether to display the title in the villager's chat messages.
@@ -386,664 +727,6 @@ villager-title-article:
 
 # The format of the chat when a villager speaks.
 villager-message-format: "%name%: %message%"
-
-# Texts that are used in some variables.
-variable-text:
-  acronym:
-    second: "s"
-    minute: "m"
-    hour: "h"
-    day: "d"
-  dead: "†"
-  infinite: "∞"
-  none: "None"
-  unknown: "Unknown"
-  villager: "Villager"
-  player: "Player"
-  console: "Console"
-  no-partners: "No partners(s)"
-  no-partner-currently: "Currently unmarried"
-  no-childrens: "No childrens"
-  no-effects: "No effects"
-  kid: "Kid"
-  adult: "Adult"
-  boy: "Boy"
-  girl: "Girl"
-  sex:
-    male: "Male"
-    female: "Female"
-  type:
-    desert: "Desert"
-    jungle: "Jungle"
-    plains: "Plains"
-    savanna: "Savanna"
-    snow: "Snow"
-    swamp: "Swamp"
-    taiga: "Taiga"
-  # For other languages, you can specify a different profession name per sex.
-  profession:
-    male:
-      none: "Unemployed"
-      armorer: "Armorer"
-      butcher: "Butcher"
-      cartographer: "Cartographer"
-      cleric: "Cleric"
-      farmer: "Farmer"
-      fisherman: "Fisherman"
-      fletcher: "Fletcher"
-      leatherworker: "Leatherworker"
-      librarian: "Librarian"
-      mason: "Mason"
-      nitwit: "Nitwit"
-      shepherd: "Shepherd"
-      toolsmith: "Toolsmith"
-      weaponsmith: "Weaponsmith"
-      wandering-trader: "Wandering Trader"
-    female:
-      none: "Unemployed"
-      armorer: "Armorer"
-      butcher: "Butcher"
-      cartographer: "Cartographer"
-      cleric: "Cleric"
-      farmer: "Farmer"
-      fisherman: "Fisherman"
-      fletcher: "Fletcher"
-      leatherworker: "Leatherworker"
-      librarian: "Librarian"
-      mason: "Mason"
-      nitwit: "Nitwit"
-      shepherd: "Shepherd"
-      toolsmith: "Toolsmith"
-      weaponsmith: "Weaponsmith"
-      wandering-trader: "Wandering Trader"
-  activity:
-    play: "Play"
-    work: "Work"
-    core: "Core"
-    meet: "Meet"
-    rest: "Rest"
-    idle: "Idle"
-    panic: "Panic"
-    pre_raid: "Pre-Raid"
-    raid: "Raid"
-    hide: "Hide"
-    fight: "Fight"
-    stay: "Stay"
-  entity:
-    allay: "Allay"
-    armadillo: "Armadillo"
-    axolotl: "Axolotl"
-    bat: "Bat"
-    bee: "Bee"
-    blaze: "Blaze"
-    bogged: "Bogged"
-    breeze: "Breeze"
-    camel: "Camel"
-    cat: "Cat"
-    cave-spider: "Cave Spider"
-    chicken: "Chicken"
-    cod: "Cod"
-    cow: "Cow"
-    creaking: "Creaking"
-    creeper: "Creeper"
-    dolphin: "Dolphin"
-    donkey: "Donkey"
-    drowned: "Drowned"
-    elder-guardian: "Elder Guardian"
-    enderman: "Enderman"
-    endermite: "Endermite"
-    ender-dragon: "Ender Dragon"
-    evoker: "Evoker"
-    fox: "Fox"
-    frog: "Frog"
-    ghast: "Ghast"
-    giant: "Giant"
-    glow-squid: "Glow Squid"
-    goat: "Goat"
-    guardian: "Guardian"
-    happy-ghast: "Happy Ghast"
-    hoglin: "Hoglin"
-    horse: "Horse"
-    husk: "Husk"
-    illusioner: "Illusioner"
-    llama: "Llama"
-    magma-cube: "Magma Cube"
-    mule: "Mule"
-    mushroom-cow: "Mushroom Cow"
-    ocelot: "Ocelot"
-    panda: "Panda"
-    parrot: "Parrot"
-    phantom: "Phantom"
-    pig: "Pig"
-    piglin: "Piglin"
-    piglin-brute: "Piglin Brute"
-    pillager: "Pillager"
-    polar-bear: "Polar Bear"
-    pufferfish: "Pufferfish"
-    rabbit: "Rabbit"
-    ravager: "Ravager"
-    salmon: "Salmon"
-    sheep: "Sheep"
-    shulker: "Shulker"
-    silverfish: "Silverfish"
-    skeleton: "Skeleton"
-    skeleton-horse: "Skeleton Horse"
-    slime: "Slime"
-    sniffer: "Sniffer"
-    spider: "Spider"
-    squid: "Squid"
-    stray: "Stray"
-    strider: "Strider"
-    tadpole: "Tadpole"
-    trader-llama: "Trader Llama"
-    tropical-fish: "Tropical Fish"
-    turtle: "Turtle"
-    vex: "Vex"
-    vindicator: "Vindicator"
-    warden: "Warden"
-    witch: "Witch"
-    wither: "Wither"
-    wither-skeleton: "Wither Skeleton"
-    wolf: "Wolf"
-    zoglin: "Zoglin"
-    zombie: "Zombie"
-    zombie-villager: "Zombie Villager"
-    zombified-piglin: "Zombified Piglin"
-  potion-effect-type:
-    speed: "Speed"
-    slowness: "Slowness"
-    haste: "Haste"
-    mining-fatigue: "Mining Fatigue"
-    strength: "Strength"
-    instant-health: "Instant Health"
-    instant-damage: "Instant Damage"
-    jump-boost: "Jump Boost"
-    nausea: "Nausea"
-    regeneration: "Regeneration"
-    resistance: "Resistance"
-    fire-resistance: "Fire Resistance"
-    water-breathing: "Water Breathing"
-    invisibility: "Invisibility"
-    blindness: "Blindness"
-    night-vision: "Night Vision"
-    hunger: "Hunger"
-    weakness: "Weakness"
-    poison: "Poison"
-    wither: "Wither"
-    health-boost: "Health Boost"
-    absorption: "Absorption"
-    saturation: "Saturation"
-    glowing: "Glowing"
-    levitation: "Levitation"
-    luck: "Luck"
-    unluck: "Unluck"
-    slow-falling: "Slow Falling"
-    conduit-power: "Conduit Power"
-    dolphins-grace: "Dolphins Grace"
-    bad-omen: "Bad Omen"
-    hero-of-the-village: "Hero Of The Village"
-    darkness: "Darkness"
-
-# Here you can modify the available GUIs.
-#
-# Global title variables:
-# %villager-name% - name of the villager (if a particular villager is involved).
-# %page% - current page (only for @combat/whistle.title).
-# %max-page% - amount of pages (only for @combat/whistle.title).
-# %sex% - the sex of the skin that'll be generated (only for @skins/new-skin.title).
-# %age-stage% the age stage of the skin that'll be generated (only for @skins/new-skin.title).
-#
-# NOTE: For the "main" inventory it's possible to choose the slot in which the item'll be positioned,
-# with the following format: slot: x, y; starting from the top left; being 1, 1.
-#
-# if this seems difficult for you, you can assign the slot of the inventory directly,
-# take a look at https://wiki.vg/Inventory#Large_chest.
-# For example: if you got a 6x9 chest, and you want to put an item on x = 1, y = 6, you'll need to use: slot: 45.
-#
-# All valid slots: https://filoghost.me/data/chest-commands/coordinates-table.png (credits to @filoghost)
-gui:
-  # Rainbow animation is applied to all GUI's.
-  rainbow-animation:
-    enabled: false
-    # The type of animation.
-    # 1 = All frames are changed to a random color.
-    # 2 = Each frame is changed to a different color.
-    type: 1
-    # Animation speed (in ticks).
-    delay: 10
-  main:
-    # The size of this inventory. Must be a multiple of 9; minimum 27, maximum 54.
-    size: 45
-    # %reputation% - player reputation with this villager (only for @main).
-    title: "%villager-name% (rep. %reputation%)"
-    frame:
-      enabled: true
-      material: GRAY_STAINED_GLASS_PANE
-      display-name: "&7"
-    items:
-      chat:
-        slot: 2, 2
-        material: PAPER
-        display-name: "&aChat"
-        lore:
-          - "&7Click to chat with this villager."
-      greet:
-        slot: 3, 2
-        material: PAPER
-        display-name: "&aGreet"
-        lore:
-          - "&7Click to greet this villager."
-      story:
-        slot: 4, 2
-        material: PAPER
-        display-name: "&aStory"
-        lore:
-          - "&7Click to tell a story to this villager."
-      joke:
-        slot: 5, 2
-        material: PAPER
-        display-name: "&aJoke"
-        lore:
-          - "&7Click to tell a joke to this villager."
-      insult:
-        slot: 6, 2
-        material: PAPER
-        display-name: "&aInsult"
-        lore:
-          - "&7Click to insult this villager."
-      flirt:
-        slot: 7, 2
-        material: PAPER
-        display-name: "&aFlirt"
-        lore:
-          - "&7Click to flirt with this villager."
-      proud-of:
-        slot: 8, 2
-        material: PAPER
-        display-name: "&aBe proud of"
-        lore:
-          - "&7Click to be proud of this villager"
-      follow-me:
-        slot: 2, 3
-        material: SADDLE
-        display-name: "&aFollow me"
-        lore:
-          - "&7Click to ask this villager to follow you."
-      stay-here:
-        slot: 3, 3
-        material: LEAD
-        display-name: "&aStay here"
-        lore:
-          - "&7Click to ask this villager to stay here."
-      inspect-inventory:
-        slot: 4, 3
-        material: CHEST
-        display-name: "&aInspect inventory"
-        lore:
-          - "&7Click to see the inventory of this villager."
-      gift:
-        slot: 5, 3
-        url: 5726d9d0632e40bda5bcf65839ba2cc98a87bd619c53adf00310d6fc71f042b5
-        material: PLAYER_HEAD
-        display-name: "&aGift"
-        lore:
-          - "&7Click to give a gift to this villager."
-      information:
-        slot: 6, 3
-        material: KNOWLEDGE_BOOK
-        display-name: "&aVillager information"
-        # %villager-name% - name of the villager.
-        # %id% - unique ID of the villager.
-        # %skin-id% - the id of the skin the villager is using.
-        # %experience% - the current villager's experience.
-        # %max-experience% - the experience that the villager must have to level up.
-        # %sex% - sex of the villager (MALE/FEMALE).
-        # %age-stage% - age stage of the villager (KID/DULT).
-        # %health% - current health of the villager (including absorption amount).
-        # %max-health% - maximum amount of health of the villager.
-        # %type% - biome of the villager.
-        # %profession% - profession of the villager.
-        # %level% - level of the villager.
-        # %activity% - the activity that this villager is performing (if any).
-        # %current-partner% - current partner of this villager (if any).
-        # %partners% - partners of this villager (one line).
-        # %partner% - partners of this villager (displayed one below the other).
-        # %father% - father of this villager.
-        # %mother% - mother of this villager.
-        # %childrens% - children of this villager (one line).
-        # %children% - children of this villager (displayed one below the other).
-        # %effect% - active potion effects.
-        # %reputation% - player reputation with this villager.
-        lore:
-          - "&7Name: &e%villager-name%"
-          - "&7ID: &e%id%"
-          - "&7Skin ID: &e%skin-id%"
-          - "&7Reputation: &e%reputation%"
-          - "&7Sex: &e%sex%"
-          - "&7Age stage: &e%age-stage%"
-          - "&7Health: &e%health%&7/&e%max-health%"
-          - "&7Food level: &e%food-level%&7/&e%max-food-level%"
-          - "&7Type: &e%type%"
-          - "&7Profession: &e%profession% (lvl. %level%)"
-          - "&7Experience: &e%experience%&7/&e%max-experience%"
-          - "&7Activity (non-core): &e%activity%"
-          - "&7Partner(s):"
-          - "&8* &e%partner%"
-          - "&7Father: &e%father%"
-          - "&7Mother: &e%mother%"
-          - "&7Childrens:"
-          - "&8* &e%children%"
-          - "&7Effects:"
-          - "&8* &e%effect%"
-      trade:
-        slot: 7, 3
-        material: EMERALD
-        display-name: "&aTrade"
-        lore:
-          - "&7Click to start trading with this villager."
-      no-trades:
-        slot: 7, 3
-        material: BARRIER
-        display-name: "&cEmpty trades"
-        lore:
-          - "&7This villager has nothing to trade."
-      divorce:
-        slot: 8, 3
-        material: WRITABLE_BOOK
-        display-name: "&cDivorce"
-        lore:
-          - "&7Divorce this villager."
-        only-if-married: false
-      divorce-papers:
-        slot: 8, 3
-        material: FILLED_MAP
-        display-name: "&aDivorce papers"
-        lore:
-          - "&7Ask for divorce papers."
-      set-home:
-        slot: 2, 4
-        material: RED_BED
-        display-name: "&aSet home"
-        lore:
-          - "&7Give this villager a bed."
-        only-if-allowed: false
-      procreate:
-        slot: 3, 4
-        material: EGG
-        display-name: "&aProcreate"
-        lore:
-          - "&7Click to start procreating."
-        only-if-married: false
-      combat:
-        slot: 4, 4
-        material: STONE_SWORD
-        display-name: "&cCombat"
-        lore:
-          - "&7Click to manage combat of this villager."
-        only-if-allowed: false
-        flags:
-          - HIDE_ATTRIBUTES
-  equipment:
-    title: "%villager-name%'s inventory"
-    items:
-      villager:
-        url: SELF
-        material: PLAYER_HEAD
-        display-name: "&a%villager-name%"
-      back:
-        material: BARRIER
-        display-name: "&cBack"
-        lore:
-          - "&7Click to go to the previous menu."
-  combat:
-    title: "Targets (%page%/%max-page%)"
-    # Whether to use spawn eggs instead of heads (only for 1.21.5+).
-    use-spawn-egg: false
-    items:
-      enabled:
-        material: LIME_DYE
-        display-name: "&aEnabled"
-      disabled:
-        material: GRAY_DYE
-        display-name: "&cDisabled"
-      entity:
-        material: PLAYER_HEAD
-        # *** The ones listed below are only applicable for @display-name. ***
-        # %entity-type% - the entity type (name).
-        display-name: "&a%entity-type%"
-      previous:
-        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
-        material: PLAYER_HEAD
-        display-name: "&aPrevious"
-        lore:
-          - "&7Click to go to the previous page."
-      search:
-        material: COMPASS
-        display-name: "&9Search"
-        lore:
-          - "&7Click to search for a specific entity."
-      clear-search:
-        material: COMPASS
-        # %keyword% - the current word used as a filter.
-        display-name: "&cClear search: &8&o%keyword%"
-        lore:
-          - "&7Click to clear the browser!"
-      back:
-        material: BARRIER
-        display-name: "&cBack"
-        lore:
-          - "&7Click to go to the previous menu."
-      next:
-        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
-        material: PLAYER_HEAD
-        display-name: "&aNext"
-        lore:
-          - "&7Click to go to the next page."
-  combat-settings:
-    title: "Combat | Settings"
-    items:
-      players:
-        material: PLAYER_HEAD
-        display-name: "&bPlayers"
-        lore:
-          - "&7Add the players that should be attacked."
-      animals:
-        material: PLAYER_HEAD
-        url: d6551840955f524367580f11b35228938b6786397a8f2e8c8cc6b0eb01b5db3d
-        display-name: "&aAnimals"
-        lore:
-          - "&7Choose the animals you want to be attacked."
-      monsters:
-        material: CREEPER_HEAD
-        display-name: "&cMonsters"
-        lore:
-          - "&7Choose the monsters you want to be attacked."
-      back:
-        material: BARRIER
-        display-name: "&cBack"
-        lore:
-          - "&7Click to go to the previous menu."
-  players:
-    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
-    size: 36
-    title: "Players (%page%/%max-page%)"
-    items:
-      back:
-        material: BARRIER
-        display-name: "&cBack"
-        lore:
-          - "&7Click to go to the previous menu."
-      previous:
-        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
-        material: PLAYER_HEAD
-        display-name: "&aPrevious"
-        lore:
-          - "&7Click to go to the previous page."
-      next:
-        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
-        material: PLAYER_HEAD
-        display-name: "&aNext"
-        lore:
-          - "&7Click to go to the next page."
-      search:
-        material: COMPASS
-        display-name: "&9Search"
-        lore:
-          - "&7Click to search for a specific player."
-      clear-search:
-        material: COMPASS
-        # %keyword% - the current word used as a filter.
-        display-name: "&cClear search: &8&o%keyword%"
-        lore:
-          - "&7Click to clear the browser!"
-      player:
-        material: PLAYER_HEAD
-        # %name% - name of the player.
-        display-name: "&a%name%"
-        lore:
-          - "&7This villager will attack this player."
-          - "&6Click to remove this player from this list."
-      add-new-player:
-        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
-        material: PLAYER_HEAD
-        display-name: "&bNew player"
-        lore:
-          - "&7Click to add a new player!"
-  whistle:
-    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
-    size: 36
-    title: "Family (%page%/%max-page%)"
-    items:
-      previous:
-        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
-        material: PLAYER_HEAD
-        display-name: "&aPrevious"
-        lore:
-          - "&7Click to go to the previous page."
-      next:
-        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
-        material: PLAYER_HEAD
-        display-name: "&aNext"
-        lore:
-          - "&7Click to go to the next page."
-      search:
-        material: COMPASS
-        display-name: "&9Search"
-        lore:
-          - "&7Click to search for a specific villager."
-      clear-search:
-        material: COMPASS
-        # %keyword% - the current word used as a filter.
-        display-name: "&cClear search: &8&o%keyword%"
-        lore:
-          - "&7Click to clear the browser!"
-      villager:
-        material: PLAYER_HEAD
-        # %villager-name% - name of the villager.
-        display-name: "&a%villager-name%"
-        lore:
-          - "&7Click to summon this villager."
-  skin:
-    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
-    size: 54
-    title: "Skins: %sex%/%age-stage% (%page%/%max-page%)"
-    items:
-      previous:
-        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
-        material: PLAYER_HEAD
-        display-name: "&aPrevious"
-        lore:
-          - "&7Click to go to the previous page."
-      next:
-        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
-        material: PLAYER_HEAD
-        display-name: "&aNext"
-        lore:
-          - "&7Click to go to the next page."
-      search:
-        material: COMPASS
-        display-name: "&9Search"
-        lore:
-          - "&7Click to search for a specific skin."
-      clear-search:
-        material: COMPASS
-        # %keyword% - the current word used as a filter.
-        display-name: "&cClear search: &8&o%keyword%"
-        lore:
-          - "&7Click to clear the browser!"
-      male:
-        url: e7fe6e2316ca384e0c85261b14fc066e231d6127e540dfeddb8b54d911b82831
-        material: PLAYER_HEAD
-        display-name: "&aSex: &bMale"
-        lore:
-          - "&7Click to toggle sex!"
-      female:
-        url: f6aac8c1c290be9d3bd495476aca42c68623b9cbefdd6ddbd6144855b9731c63
-        material: PLAYER_HEAD
-        display-name: "&aSex: &dFemale"
-        lore:
-          - "&7Click to toggle sex!"
-      adult:
-        material: WATER_BUCKET
-        display-name: "&aAdult"
-        lore:
-          - "&7Click to toggle age stage!"
-      kid:
-        material: BUCKET
-        display-name: "&aKid"
-        lore:
-          - "&7Click to toggle age stage!"
-      add-new-skin:
-        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
-        material: PLAYER_HEAD
-        display-name: "&bNew skin (BETA)"
-        lore:
-          - "&7Click to add a new skin!"
-      profession:
-        # %profession% - the name of the current profession.
-        display-name: "&a%profession%"
-        lore:
-          - "&7Click to toggle profession (left or right)!"
-      skin:
-        # %skin-id% - the id of the current skin.
-        display-name: "&a#%skin-id%"
-        # %added-by% - the player (or console) that added the skin.
-        # %when% - when was this skin added.
-        # %generated% - how many profession overlays were generated.
-        # %max-professions% - max amount of professions.
-        # %profession% - professions and their state (either added (GREEN) or not (RED), displayed one below the other).
-        lore:
-          - "&7Added by: &e%added-by%"
-          - "&7When: &e%when%"
-          - "&7"
-          - "&7Variants: &e%generated%&7/&e%max-professions%"
-          - "&8* %profession%"
-          - "&7"
-          - "&7Left click to preview this skin!"
-          - "&6Middle click to select kid skins!"
-          - "&cRight click to delete this skin!"
-  new-skin:
-    title: "New skin: %sex%/%age-stage%"
-    items:
-      from-player:
-        url: 185d9c3fbb63e8e8f1d3f250c1a8b408412ca82e9966b53b33159e766c1278b7
-        material: PLAYER_HEAD
-        display-name: "&aFrom a player"
-        lore:
-          - "&7Add a new skin from a player texture!"
-      from-console:
-        url: dcafbac5068197fda18636dfc4ce7f9df5af9b2a06e6f91e38ae35e4c435b2df
-        material: PLAYER_HEAD
-        display-name: "&aFrom console"
-        lore:
-          - "&7Add a new skin using texture values!"
-          - "&7To do this, you need to use the next command"
-          - "&7in console: &b/rv add-skin <sex> <texture> <signature>"
-      back:
-        material: BARRIER
-        display-name: "&cBack"
-        lore:
-          - "&7Click to go to the previous menu."
 
 # Here you can modify the items of the babies.
 #
@@ -1070,6 +753,7 @@ wedding-ring:
   lore:
     - "&7Give it to the love of your life."
   crafting:
+    enabled: true
     shaped: true
     ingredients:
       - DIAMOND, D
@@ -1086,6 +770,7 @@ whistle:
   lore:
     - "&7Use it to summon members of your family."
   crafting:
+    enabled: true
     shaped: true
     ingredients:
       - IRON_INGOT, I
@@ -1101,6 +786,7 @@ divorce-papers:
   display-name: "&aDivorce papers"
 
 # Cross item.
+# Give to a villager BEFORE death so they can be revived later.
 cross:
   url: 1b6f0156e28c2ca6c188b2248e72fdab874abaa8d00dba72718e4f8a04e44c27
   material: PLAYER_HEAD
@@ -1109,6 +795,7 @@ cross:
     - "&7Give this cross to a villager"
     - "&7to revive him later."
   crafting:
+    enabled: true
     shaped: true
     ingredients:
       - IRON_INGOT, I
@@ -1125,95 +812,19 @@ change-skin:
   lore:
     - "&7Right click on a villager to change his skin!"
 
-# The reputation that the player will receive when giving a bad gift. Minimum value: 2; use 1 or less to disable.
-bad-gift-reputation: 5
-
-# How to give a gift to a villager.
-# Valid modes (DROP/RIGHT_CLICK):
-# * DROP - the player must drop the item for the villager to pick up.
-# * RIGHT_CLICK - the player must right-click on the villager with the item in hand (only one unit will be taken).
-gift-mode: RIGHT_CLICK
-
-# The list of accepted items for each gift level.
-# Minimum reputation value: 2; use 1 or less to disable.
-#
-# For a list of tags, visit https://minecraft.fandom.com/wiki/Tag#List_of_tags
-# Tag format: ${tag-name}
-# Tag example: $LEATHER_ARMOR_PIECES
-#
-# Since 1.1.2 you can specify the profession required for the gift.
-# For example,
-# * Let's say you want ALL villagers to give 2 reputation ('good' category) when giving an ARROW.
-# * To do that, we just add ARROW in the list.
-# * Now, for FLETCHER villagers, you want to give 3 reputation ('better' category).
-# * To do that, simply add the condition with the following format: ?{PROFESSION}:{MATERIAL/TAG(MUST BEGIN WITH $)}
-# * In this case: ?FLETCHER:ARROW
-#
-# This plugin offers the following extra tags:
-# * LEATHER_ARMOR_PIECES,
-# * IRON_ARMOR_PIECES
-# * CHAINMAIL_ARMOR_PIECES
-# * GOLDEN_ARMOR_PIECES
-# * DIAMOND_ARMOR_PIECES
-# * NETHERITE_ARMOR_PIECES
-# * ARMOR_PIECES (includes all of the above)
-# * WOODEN_TOOLS
-# * STONE_TOOLS
-# * IRON_TOOLS
-# * GOLDEN_TOOLS
-# * DIAMOND_TOOLS
-# * NETHERITE_TOOLS
-# * TOOLS (includes all of the above)
-# * EDIBLES
-# * RECORDS
-# * POTIONS
-#
-# For a list of materials, visit https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
-gift:
-  good:
-    reputation: 2
-    items:
-      - GOLDEN_APPLE
-      - $EDIBLES
-      - $FLOWERS
-      - $RECORDS
-      - $LEATHER_ARMOR_PIECES
-      - $CHAINMAIL_ARMOR_PIECES
-      - $GOLDEN_ARMOR_PIECES
-      - $WOODEN_TOOLS
-      - $STONE_TOOLS
-      - $GOLDEN_TOOLS
-      - AMETHYST_SHARD
-      - $ARROWS
-      - BONE
-  better:
-    reputation: 3
-    items:
-      - $POTIONS
-      - $IRON_ARMOR_PIECES
-      - $IRON_TOOLS
-      - SHIELD
-      - ENDER_PEARL
-      - BOW
-      - CROSSBOW
-      - ?FLETCHER:$ARROWS
-      - ?FISHERMAN:FISHING_ROD
-  best:
-    reputation: 5
-    items:
-      - $BEACON_PAYMENT_ITEMS
-      - $DIAMOND_ARMOR_PIECES
-      - $NETHERITE_ARMOR_PIECES
-      - $DIAMOND_TOOLS
-      - $NETHERITE_TOOLS
-      - ENCHANTED_GOLDEN_APPLE
-      - TRIDENT
+# Gift items are now configured in configs/gifts.yml.
 
 # Waiting time to fish again (in ticks).
 fishing-cooldown: 600
 
 # The amount of damage caused by a villager (melee attack).
 attack-damage: 3.0
+
+# A list of custom/modded melee weapon material names that villagers should be able to use.
+# NOTE: Spears (*_SPEAR) and Mace are now automatically detected and don't need to be added here.
+# Use this list for other modded weapons like: KATANA, BATTLEAXE, etc.
+# The names must match exactly the Bukkit Material name (case-insensitive).
+custom-melee-weapons: []
 
 # The power of a ranged weapon (bow/crossbow).
 # NOTE: Don't change if you don't know what you're doing.
@@ -1236,9 +847,6 @@ worlds-filter:
     - world_name_1
     - world_name_2
     - world_name_3
-
-# The waiting time to try to tame again (in ticks). Use 0 or lower to set no limit.
-tame-cooldown: 600
 
 # Here you can choose the wanted items by the villagers.
 # They'll go to pick them up if they are nearby, or they are inside a chest, and villagers are allowed to loot (@loot-chest.enabled = true).
@@ -1269,14 +877,25 @@ default-wanted-items:
   - COD(2)*
   - SALMON($RANDOM)*
   - IRON_INGOT(2-6)*
+  - SADDLE
+  - CACTUS
+  - WHITE_CARPET
+  - ORANGE_CARPET
+  - MAGENTA_CARPET
+  - LIGHT_BLUE_CARPET
+  - YELLOW_CARPET
+  - LIME_CARPET
+  - PINK_CARPET
+  - GRAY_CARPET
+  - LIGHT_GRAY_CARPET
+  - CYAN_CARPET
+  - PURPLE_CARPET
+  - BLUE_CARPET
+  - BROWN_CARPET
+  - GREEN_CARPET
+  - RED_CARPET
+  - BLACK_CARPET
 
-# Chance of jumping when attacking with a sword/axe (just to give more "realism").
-# NOTE: It's recommended to leave it at 0.0 so that villagers are not attacked when jumping (or use a lower value).
-melee-attack-jump-chance: 0.0
-
-# Chance of jumping when attacking with a bow/crossbow and backing up (just to give more "realism").
-# NOTE: It's recommended to leave it at 0.0 so that villagers are not attacked when jumping (or use a lower value).
-back-up-jump-chance: 0.0
 
 # Who can modify the inventory of a villager (EVERYONE/FAMILY/PARTNER/NONE).
 # NOTE: Be careful with this.
@@ -1298,30 +917,9 @@ who-can-modify-villager-name: NONE
 # Whether special prices are disabled when modifying the villager's inventory.
 disable-special-prices-if-allowed-to-modify-inventory: true
 
-# Here you can change the melee attack range.
-# NOTE: Avoid setting values greater than 4.
-melee-attack-range: 3.375
 
 # Here you can choose whether villagers can ride a ship when they are near it.
 disable-villager-riding-nearby-boat: false
-
-# Here you can configure the looting of chests from villagers.
-# NOTE: The items that the villager will loot from the chests are those specified above in @default-wanted-items.
-loot-chest:
-  # Whether this behavior is enabled.
-  enabled: true
-  # The required text on some line of the sign that must be placed on the chest for the villagers to loot.
-  # If you want the villagers to be able to loot any chest, leave the text empty, like this: required-sign-line: "" (NOT RECOMMENDED)
-  required-sign-line: "[Villager]"
-  # If true, nitwit villagers will randomly order the chest after looting a chest.
-  nitwit-shuffle-inventory: false
-  # The time (in ticks) a villager must wait before being able to loot another chest.
-  cooldown: 2400
-  # The time (in millis) a villager must wait before being able to loot a specific chest.
-  # Once a villager loots a chest, this chest will receive a cooldown.
-  per-chest-cooldown: 3600000
-  # Whether villagers can loot chests.
-  allow-babies: false
 
 # Reputation required to ask the villager to follow you.
 reputation-required-to-ask-to-follow: 20
@@ -1344,157 +942,15 @@ stay-stroll-around: false
 # Minimum reputation value: 2; use 1 or less to disable.
 initial-reputation-at-birth: 50
 
-# Here you can modify the equipment a villager will receive when spawning.
-# @chance: the chance of receiving the item (from 0.0 to 1.0). If not stated, it'll be 1.0.
-# @only-for-range-weapon: the item will only be added to the inventory if the villager received a ranged weapon.
-# @only-for-bow: same as above, but only for bows.
-# @only-for-crossbow: same as above, but only for crossbows.
-# @off-hand-if-possible: the item will be added to the secondary hand if possible (only if the off-hand is not occupied).
-spawn-loot:
-  # If true, villagers who have spawned before will also be equipped.
-  force-equip: false
-  equipment:
-    hand:
-      '1':
-        chance: 0.5
-        material: BOW
-        damage: $RANDOM
-      '2':
-        chance: 0.625
-        material: STONE_SWORD
-        damage: $RANDOM
-      '3':
-        chance: 0.3
-        material: IRON_SWORD
-        damage: $RANDOM
-      '4':
-        chance: 0.4
-        material: CROSSBOW
-        damage: 45%
-      '5':
-        chance: 0.1
-        material: TRIDENT
-        damage: $RANDOM
-    off-hand:
-      '1':
-        chance: 0.225
-        material: SHIELD
-      '2':
-        chance: 0.1
-        material: TOTEM_OF_UNDYING
-    head:
-      '1':
-        chance: 0.45
-        material: LEATHER_HELMET
-        enchantments:
-          - PROTECTION, 1
-          - UNBREAKING, 1-2
-        leather-color: $RANDOM
-    chest:
-      '1':
-        chance: 0.4
-        material: LEATHER_CHESTPLATE
-      '2':
-        chance: 0.25
-        material: IRON_CHESTPLATE
-        enchantments:
-          - PROTECTION, 1
-      '3':
-        chance: 0.01
-        material: DIAMOND_CHESTPLATE
-        damage: 50%
-        enchantments:
-          - UNBREAKING, 1-2
-    legs:
-      '1':
-        chance: 0.4
-        material: LEATHER_LEGGINGS
-        damage: 25%
-    feet:
-      '1':
-        chance: 0.4
-        material: LEATHER_BOOTS
-        enchantments:
-          - PROTECTION
-  inventory-items:
-    '1':
-      chance: 0.4
-      material: GOLDEN_APPLE
-    '2':
-      chance: 0.6
-      material: BREAD
-      amount: 4-8
-    '3':
-      material: ARROW
-      amount: 16-48
-      only-for-range-weapon: true
-    '4':
-      chance: 0.7
-      material: TIPPED_ARROW
-      amount: 8-16
-      only-for-bow: true
-      tipped: $RANDOM
-    '5':
-      chance: 0.7
-      material: FIREWORK_ROCKET
-      amount: 6-12
-      only-for-crossbow: true
-      off-hand-if-possible: true
-      firework:
-        power: 12-18
-        firework-effects:
-          '1':
-            type: CREEPER
-            flicker: true
-            trail: true
-            colors:
-              - RED
-              - WHITE
-            fade-colors:
-              - $RANDOM
-    '6':
-      chance: 0.3
-      material: IRON_INGOT
-      amount: 6-9
-    '7':
-      chance: 0.55
-      material: BONE
-      amount: 1-3
-    '8':
-      chance: 0.1
-      material: MILK_BUCKET
-      amount: 1
-
 # Whether a villager can adopt an abandoned pet. A pet is considered abandoned when its owner (must be a villager) dies.
 villager-adopts-abandoned-pet: true
 
 # Whether the explosion of a firework launched from a villager's crossbow harms other villagers.
 villager-crossbow-firework-damages-other-villagers: false
 
-# Here you can modify automatic greetings from villagers.
-greet-messages:
-  # Whether this behavior is enabled.
-  enabled: true
-  # The distance the player must be from the villagers.
-  range: 5.0
-  # The waiting time (in millis) between greetings.
-  cooldown: 60000
-  # The waiting time (in millis) between each type of greetings the player can receive.
-  # Those types are: ADULT, CHILD, CHILD_OFFSPRING, PARTNER.
-  per-type-cooldown: 300000
-  # The required reputation to receive a greeting from a villager.
-  required-reputation: 5
-
-# Only throw trident when the villager is in water or when exposed to rain.
-riptide-only-in-water-or-rain: true
-
 # Here you can modify the different movement speeds.
-# NOTE: Swim should be the highest speed of these 4 as it's usually slower than the others.
-speed-modifier:
-  eat: 0.25
-  walk: 0.5
-  sprint: 0.75
-  swim: 1.0
+# NOTE: The speed-modifier values are multipliers applied to the base MOVEMENT_SPEED attribute (0.1).
+# See the full speed-modifier block below for configurable values.
 
 # Since baby villagers are smaller, they look a bit higher than adults; here you can set the offset so that they look at the same height as adults.
 # NOTE 1: For some reason, it's not necessary to add an offset in 1.19.4, at least in some paper builds.
@@ -1502,27 +958,7 @@ speed-modifier:
 # NOTE 3: This is only necessary when skins are enabled, that means, {@disable-skins = false}.
 baby-look-height-offset: 0.0
 
-# Here you can modify the schedule of the villagers and their respective activities whether they're babies or adults.
-# For more information, take a look at: https://minecraft.fandom.com/wiki/Villager#Schedules
-#
-# NOTE: Don't touch this if you don't know what you're doing!
-# Available activities: IDLE, PLAY, WORK, MEET, REST.
-schedules:
-  baby:
-    10: IDLE
-    3000: PLAY
-    6000: IDLE
-    10000: PLAY
-    12000: REST
-  default:
-    10: IDLE
-    2000: WORK
-    9000: MEET
-    11000: IDLE
-    12000: REST
-
 # Here you can configure the revival of villagers.
-# NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
 revive:
   # Whether villagers can be revived.
   enabled: true
@@ -1564,12 +1000,67 @@ revive:
       - CREATE_FOG
       - DARKEN_SKY
 
-# If true, villagers will be able to feed, tame and ride horses, donkeys and mules.
-# NOTE: This is an experimental feature, it may be removed in the future either for good or to fix bugs.
-tame-horses: false
+# If true, villagers will be able to feed, tame and ride horses, donkeys, mules and camels (1.20+).
+# - Horses/donkeys/mules: require saddle in inventory, fed with wheat/apple/sugar/hay/golden-carrot/golden-apple.
+# - Camels: require saddle in inventory, tamed with multiple attempts (like horses), fed with cactus/wheat/apple/bread/hay/etc.
+tame-horses: true
+
+# The waiting time to try to tame again (in ticks). Use 0 or lower to set no limit.
+tame-cooldown: 600
 
 # If true, the scale of baby villagers will change to the scale of adult villagers, meaning that their hitboxes will be larger;
 # hence, baby villagers will no longer pass through 1x1 holes.
 # If false, the baby villagers will have their hitbox reduced (vanilla) but can be seen passing through 1x1 blocks, looking glitchy.
 # NOTE: This option will only take effect if @disable-skins is false.
 increase-baby-scale: true
+
+# Gender selection shown to players on first join.
+# When 'enabled' is false, the gender question is skipped entirely and every new player is
+# automatically assigned the 'default' gender below (male or female).
+# The 'default' sub-option has no effect when 'enabled' is true (players choose for themselves).
+gender-selection:
+  enabled: true
+  default: male
+  # Whether /gender may change an answer that has already been given.
+  #
+  # Off, because a gender is read by half the plugin - names, figures, how villagers speak to
+  # you - so one that can be retyped at will is not an answer, it is a switch, and it flips
+  # under everyone standing nearby. No permission overrides this, operators included.
+  #
+  # Staff can still put somebody right, with a different command:
+  #   /rv genderset <player> <male|female>
+  allow-change: false
+
+# Regionality system: assigns names and messages based on villager biome type.
+# When enabled, villagers in desert biomes get Arabic names, snow biomes get Nordic names, etc.
+# If a regional file doesn't define a name/message, the global pool is used as fallback.
+regionality:
+  enabled: true
+
+# Speed multipliers applied to the base MOVEMENT_SPEED attribute (0.1, same as a player).
+# Actual movement speed = base (0.1) * modifier.
+# Examples: walk=1.0 means same speed as a player walking (0.1 * 1.0 = 0.1)
+#           sprint=1.4 means 40% faster than a player walking (0.1 * 1.4 = 0.14)
+speed-modifier:
+  # Speed when eating or doing idle activities (slower than normal walk).
+  eat: 0.6
+  # Speed when walking normally (0.5 = same as player walking speed).
+  walk: 0.5
+  # Speed when sprinting during combat or fleeing (0.7 = faster than player sprint).
+  sprint: 0.7
+  # Speed when swimming (higher to compensate for water resistance).
+  swim: 1.5
+
+# Chance (0.0 - 1.0) that a villager will jump toward the target during a melee charge.
+# Lower values = more grounded fights. Recommended: 0.05 - 0.15.
+melee-attack-jump-chance: 0.08
+
+# Chance (0.0 - 1.0) that a villager will jump backward when backing away from a target.
+back-up-jump-chance: 0.1
+
+# Detection range (in blocks) for melee combat engagement.
+# This is NOT the visual detection range, only how close the target must be to trigger an attack walk.
+melee-attack-range: 8.0
+
+# If true, villagers can only use riptide enchantment when in water or during rain.
+riptide-only-in-water-or-rain: true

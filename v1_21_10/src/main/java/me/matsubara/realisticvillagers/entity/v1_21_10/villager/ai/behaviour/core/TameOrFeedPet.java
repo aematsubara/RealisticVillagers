@@ -10,6 +10,7 @@ import me.matsubara.realisticvillagers.entity.v1_21_10.pet.PetCat;
 import me.matsubara.realisticvillagers.entity.v1_21_10.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_21_10.pet.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_21_10.pet.horse.HorseEating;
+import me.matsubara.realisticvillagers.entity.v1_21_10.pet.horse.PetCamel;
 import me.matsubara.realisticvillagers.entity.v1_21_10.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerTameEvent;
 import me.matsubara.realisticvillagers.files.Config;
@@ -175,7 +176,10 @@ public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
         boolean isTamed = false;
         if (isTame && tamable instanceof Pet pet && (isTamed = canTame(level, npc, tamable))) {
             pet.tameByVillager(npc);
-            if (tamable instanceof AbstractHorse horse) { // Ride horse.
+            if (tamable instanceof PetCamel camel) { // Ride camel.
+                if (!camel.isVehicle()) villager.startRiding(camel, true, true);
+                villager.getInventory().removeItemType(Items.SADDLE, 1);
+            } else if (tamable instanceof AbstractHorse horse) { // Ride horse.
                 if (!horse.isVehicle()) villager.startRiding(horse, true, true);
                 if (!horse.isSaddled()) {
                     horse.setItemSlot(EquipmentSlot.SADDLE, Items.SADDLE.getDefaultInstance());

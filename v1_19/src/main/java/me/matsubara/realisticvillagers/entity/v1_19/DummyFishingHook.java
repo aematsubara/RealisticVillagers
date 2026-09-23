@@ -3,6 +3,7 @@ package me.matsubara.realisticvillagers.entity.v1_19;
 import me.matsubara.realisticvillagers.entity.v1_19.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.event.VillagerFishEvent;
 import me.matsubara.realisticvillagers.files.Config;
+import me.matsubara.realisticvillagers.util.Reflection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -40,6 +41,7 @@ import org.bukkit.entity.FishHook;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+import java.lang.invoke.MethodHandle;
 import java.util.Iterator;
 
 @SuppressWarnings("WhileLoopReplaceableByForEach")
@@ -64,6 +66,28 @@ public class DummyFishingHook extends FishingHook {
 
     static {
         BITING = SynchedEntityData.defineId(DummyFishingHook.class, EntityDataSerializers.BOOLEAN);
+    }
+
+
+    /**
+     * Reads {@link FishingHook}'s hooked entity.
+     * <p>
+     * The field is private on some server builds (Purpur among them) even though it is
+     * accessible in the Spigot mappings this is compiled against — touching it directly throws
+     * {@link IllegalAccessError} every tick the bobber is in the water.
+     */
+    private static final MethodHandle HOOKED_IN = Reflection.getFieldGetter(FishingHook.class, "hookedIn");
+
+    /** The entity this bobber has hooked, or {@code null} — including when the field is unreadable. */
+    private @Nullable Entity hookedEntity() {
+        if (HOOKED_IN == null) return null;
+
+        try {
+            return (Entity) HOOKED_IN.invoke(this);
+        } catch (Throwable throwable) {
+            // Nothing hooked is the safe answer; the bobber simply keeps flying or bobbing.
+            return null;
+        }
     }
 
     public DummyFishingHook(VillagerNPC npc, Level level, int luck, int lureSpeed) {
@@ -203,7 +227,7 @@ public class DummyFishingHook extends FishingHook {
         float height = fluid.is(FluidTags.WATER) ? fluid.getHeight(level, pos) : 0.0f;
 
         if (currentState == FishingHook.FishHookState.FLYING) {
-            if (hookedIn != null) {
+            if (hookedEntity() != null) {
                 setDeltaMovement(Vec3.ZERO);
                 currentState = FishingHook.FishHookState.HOOKED_IN_ENTITY;
                 return;
@@ -217,10 +241,11 @@ public class DummyFishingHook extends FishingHook {
 
             checkCollision();
         } else if (currentState == FishingHook.FishHookState.HOOKED_IN_ENTITY) {
-            if (hookedIn == null) return;
+            Entity hooked = hookedEntity();
+            if (hooked == null) return;
 
-            if (!hookedIn.isRemoved() && hookedIn.level.dimension() == level.dimension()) {
-                setPos(hookedIn.getX(), hookedIn.getY(0.8d), hookedIn.getZ());
+            if (!hooked.isRemoved() && hooked.level.dimension() == level.dimension()) {
+                setPos(hooked.getX(), hooked.getY(0.8d), hooked.getZ());
                 // Retrieve hooked entity.
                 retrieveAndAddCooldown();
             } else {
@@ -477,13 +502,14 @@ public class DummyFishingHook extends FishingHook {
 
         int i = 0;
         VillagerFishEvent fishEvent;
-        if (hookedIn != null) {
-            fishEvent = callEvent(hookedIn, VillagerFishEvent.State.CAUGHT_ENTITY);
+        Entity hooked = hookedEntity();
+        if (hooked != null) {
+            fishEvent = callEvent(hooked, VillagerFishEvent.State.CAUGHT_ENTITY);
             if (fishEvent.isCancelled()) return 0;
 
-            pullEntity(hookedIn);
+            pullEntity(hooked);
             level.broadcastEntityEvent(this, (byte) 31);
-            i = hookedIn instanceof ItemEntity ? 3 : 5;
+            i = hooked instanceof ItemEntity ? 3 : 5;
         } else if (nibble > 0 && level.getServer() != null) {
             LootContext.Builder lootBuilder = new LootContext.Builder((ServerLevel) level)
                     .withParameter(LootContextParams.ORIGIN, position())

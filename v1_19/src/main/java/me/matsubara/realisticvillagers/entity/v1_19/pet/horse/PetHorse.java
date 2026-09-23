@@ -24,8 +24,15 @@ public class PetHorse extends Horse implements Pet, HorseEating {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Getter
-    private @Setter boolean tamedByVillager;
+    private boolean tamedByVillager;
+
+    public boolean isTamedByVillager() {
+        return tamedByVillager;
+    }
+
+    public void setTamedByVillager(boolean tamedByVillager) {
+        this.tamedByVillager = tamedByVillager;
+    }
 
     public PetHorse(EntityType<? extends Horse> type, Level level) {
         super(type, level);

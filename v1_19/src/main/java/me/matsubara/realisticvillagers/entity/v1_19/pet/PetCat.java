@@ -51,8 +51,15 @@ public class PetCat extends Cat implements Pet {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Getter
-    private @Setter boolean tamedByVillager;
+    private boolean tamedByVillager;
+
+    public boolean isTamedByVillager() {
+        return tamedByVillager;
+    }
+
+    public void setTamedByVillager(boolean tamedByVillager) {
+        this.tamedByVillager = tamedByVillager;
+    }
     private CatAvoidEntityGoal<Player> avoidPlayersGoal;
     private @Nullable CatTemptGoal temptGoal;
 

@@ -44,10 +44,13 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         LivingEntity target = getAttackTarget(villager);
+        double distSq = villager.distanceToSqr(target);
+        double maxDist = isCrossbow ? 144.0 : 225.0; // 12 blocks for crossbow, 15 for bow
+
         return isHoldingUsableProjectileWeapon(villager)
                 && BlockAttackWithShield.notUsingShield(villager)
                 && BehaviorUtils.canSee(villager, target)
-                && BehaviorUtils.isWithinAttackRange(villager, target, 0);
+                && distSq <= maxDist;
     }
 
     private boolean isHoldingUsableProjectileWeapon(@NotNull Villager villager) {
@@ -76,6 +79,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     public void tick(ServerLevel level, Villager villager, long time) {
         LivingEntity target = getAttackTarget(villager);
         lookAtTarget(villager, target);
+
         crossbowAttack((VillagerNPC) villager, target);
     }
 
@@ -97,6 +101,10 @@ public class RangeWeaponAttack extends Behavior<Villager> {
     }
 
     private void crossbowAttack(VillagerNPC npc, LivingEntity target) {
+        if (!(weapon.getItem() instanceof ProjectileWeaponItem rangedWeapon)) {
+            state = CrossbowState.UNCHARGED;
+            return;
+        }
         if (state == CrossbowState.UNCHARGED) {
             npc.startUsingItem(hand);
             state = CrossbowState.CHARGING;
@@ -114,7 +122,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
             if (isCrossbow) {
                 stopCharging(npc);
 
-                ItemStack projectile = npc.getProjectile((ProjectileWeaponItem) weapon.getItem());
+                ItemStack projectile = npc.getProjectile(rangedWeapon);
                 addChargedProjectiles(weapon, projectile);
             }
 
@@ -136,7 +144,7 @@ public class RangeWeaponAttack extends Behavior<Villager> {
                 npc.performRangedAttack(target, force);
             }
 
-            ItemStack arrow = npc.getProjectile((ProjectileWeaponItem) weapon.getItem());
+            ItemStack arrow = npc.getProjectile(rangedWeapon);
 
             // Remove arrow(s).
             boolean infinity = EnchantmentHelper.getItemEnchantmentLevel(CraftEnchantment.bukkitToMinecraftHolder(Enchantment.INFINITY), weapon) > 0;

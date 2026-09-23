@@ -1,0 +1,344 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Plains  (Western / Generic English)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for PLAINS villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/plains.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "Ugh… you again…?"
+  - "I was busy, you know."
+  - "Seriously? AGAIN?"
+  - "I don't get paid enough for this."
+  - "If you keep this up, I'll raise my prices just for you."
+  - "Even zombies are less annoying."
+  - "You're why I lock my doors at night."
+
+reaction:
+  on-hit:
+    - "That hurt!"
+    - "Ouch! Why did you hit me?!"
+    - "That hurts, stop it!"
+    - "That really hurt!"
+    - "Hey! What do you think you're doing?!"
+    - "*Oof*! That better have been an accident!"
+
+marry:
+  success:
+    - "Yes! I'll marry you! I love you!"
+    - "Of course I'll marry you!"
+    - "About time... just kidding! I love you!"
+    - "Is... is this real? I mean, this moment, not the ring. But the ring is real, right?"
+    - "It's a dream come true! I'll love you forever!"
+    - "We're finally married! Now what?"
+    - "I'm happy to be married to you!"
+    - "I can't wait to start our life together!"
+  fail:
+    married-to-giver:
+      - "It's a pretty ring, but I'm already married to you, silly."
+      - "We are already married. Did you forget?"
+    married-to-other:
+      - "I'm sorry, no... I'm already married."
+      - "Oh, I thought you knew... I'm already married to someone."
+    player-married:
+      - "Uh... I see that ring on your finger. You're already married!"
+      - "Just what are you trying to do? You're already married!"
+    low-reputation:
+      - "What? No! I don't like you!"
+      - "I'm flattered, but I don't really know you."
+  end:
+    - "I've had it. You don't treat me well enough. I'm leaving you!"
+    - "I'm leaving. Forever! Don't look for me."
+    - "I'm sorry, I thought we could work things out, but it's not working for me. Goodbye."
+
+divorce:
+  normal:
+    - "I hate you!"
+    - "Fine, get out of here!"
+    - "That's the worst thing you could've done!"
+  papers:
+    - "Okay..."
+
+follow-me:
+  start:
+    - "I'll follow you!"
+    - "Lead the way!"
+  stop:
+    - "Ok, goodbye!"
+    - "Take care!"
+  low-reputation:
+    - "Who are you?"
+    - "I don't even know you!"
+
+stay-here:
+  start:
+    - "I'll stay here!"
+    - "Okay, I'll wait right here."
+  stop:
+    - "Ok, I'll go!"
+    - "Let's move!"
+  low-reputation:
+    - "And you are...?"
+    - "I don't like this place."
+
+no-trades:
+  - "I don't have anything to trade."
+  - "Nope!"
+
+chat:
+  adult:
+    success:
+      - "Hi %player-name%, I'm %villager-name%!"
+      - "Good talk!"
+      - "Sounds cool!"
+      - "Nice."
+      - "Hey %player-name%!"
+      - "That happens to the best of us."
+      - "Man, cookies and milk does sound delicious right now."
+      - "Yes, I suppose the weather is nice today."
+      - "I'm doing just fine! Hit my toe when I woke up, though."
+      - "An apple a day keeps the zombies away!"
+      - "My dream is to build my own village, but I'm so lazy."
+      - "My friend told me that they found a chest full of diamonds yesterday!"
+    fail:
+      - "What..."
+      - "Ummm, what?"
+      - "That's great... I guess."
+      - "Well, I'll see you around."
+      - "Did you seriously just say that?"
+      - "I don't believe it exploded on its own."
+      - "You know, you're not that cool."
+      - "Show off."
+      - "You should be thrown in a dungeon!"
+  child:
+    success:
+      - "I heard stories about you! Are you a hero?"
+      - "Are you... %player-name%?"
+      - "Hi. I was going to go try and climb to the roof."
+      - "Do you wanna go burn stuff with me?"
+      - "I'm going to be a hunter like you and kill many things!"
+      - "Hi! What are you doing today? I'm going swimmin'!"
+    fail:
+      - "If you don't give me cookies I'll hold my breath."
+      - "My parents said not to talk to you, that you're bad."
+      - "*Laughs* You look smelly!"
+      - "Oh yeah? Well I'm gonna egg your house!"
+      - "Lalala, I'm not listening! Lalala."
+  child-offspring:
+    success:
+      - "Can we go camping? Please?!"
+      - "Hi, can you make me a cake?"
+      - "Can I have my own room away from our house? That would be cool!"
+      - "Let's move into a cave! That sounds so fun!"
+    fail:
+      - "I don't think I'd like that very much."
+      - "I want a new daddy."
+      - "I don't want a baby sister."
+  partner:
+    success:
+      - "I cleaned the entire house. How was your day?"
+      - "Honey, let's go camping sometime. Doesn't that sound like fun?"
+      - "So today I saw a spider. It was huge so I ran away."
+      - "We should build a new house together!"
+      - "I almost walked into a lava pit the other day. That wouldn't have been good!"
+    fail:
+      - "I know we're not the poorest family, but..."
+      - "I love being around you but I need some space."
+      - "Sometimes I wish I had my own \"cave\" to escape from you and everyone."
+      - "Go away, I'm not in the mood."
+      - "Where have you been? Are you seeing someone behind my back?"
+
+gift:
+  expecting:
+    - "Wow, a gift for me?"
+    - "What are you going to give me?"
+    - "A gift? but it's not christmas yet! *Laughs*"
+  expecting-fail:
+    - "So why did you call me?"
+    - "You said you were going to give me something?"
+  loved:
+    - "Oh wow, I love this! Thank you so much!"
+    - "This is amazing, I've always wanted one of these!"
+    - "I... I don't know what to say. Thank you!"
+    - "You're too kind, %player-name%!"
+    - "This is fantastic! I'll treasure it."
+  neutral:
+    - "How considerate! Thank you."
+    - "Thanks, %player-name%!"
+    - "How thoughtful of you!"
+    - "Oh, I love these!"
+    - "A gift? For me? How nice!"
+  disliked:
+    - "This isn't really my thing, but... thanks."
+    - "I... guess I can find a use for this."
+    - "Hmm. Thank you, I suppose."
+    - "Well... it was thoughtful of you."
+  bad:
+    - "This isn't a good gift..."
+    - "What made you think that I would like this?"
+    - "No thanks."
+    - "I don't want that, why would I?"
+    - "Why are you giving me that?"
+    - "Is this supposed to be a gift? No thanks."
+    - "I'm not a trash can."
+  cooldown:
+    - "I've had enough gifts for now, thank you!"
+    - "You've given me plenty already."
+    - "Please, no more gifts for a while."
+  adult:
+    success:
+      good:
+        - "How considerate! Thank you."
+        - "Thanks!"
+        - "How thoughtful!"
+        - "Oh, I love these!"
+        - "A gift? For me? How nice!"
+      better:
+        - "Hey, this is pretty cool!"
+        - "Thanks, friend!"
+        - "You're such a good friend!"
+        - "Oh wow, I actually needed one of these!"
+        - "This is a pretty good gift!"
+      best:
+        - "I... I don't know what to say. Thank you so much!"
+        - "How did you... nevermind, this is amazing!"
+        - "Oh wow, I've always wanted one of these!"
+        - "This is fantastic! I'll put it to good use."
+        - "Thank you so much. I'll remember this forever."
+    fail:
+      - "This isn't a good gift..."
+      - "What made you think that I would like this?"
+      - "No thanks."
+      - "I don't want that, why would I?"
+      - "Why are you giving me that?"
+      - "Is this supposed to be a gift? No thanks."
+      - "I'm not a trash can."
+  child:
+    success:
+      good:
+        - "Is it... is it all mine?"
+        - "Is this really for me?"
+        - "This is cool!"
+      better:
+        - "Awesome! I'm going to show this to all my friends."
+        - "You found it! I lost this a few minutes ago."
+        - "My friend stole one of these from me. Did you beat him up for me?"
+      best:
+        - "You give the best presents!"
+        - "Finally! My friend will stop bragging now."
+        - "Wow! Where did you get this thing?"
+        - "My Dad has one of these. Now I have one too!"
+    fail:
+      - "Ew, I don't like this!"
+      - "Yuck! I don't want this."
+      - "Why did you bring me this? It's dumb!"
+      - "I don't even know what this is!"
+  child-offspring:
+    success:
+      good:
+        - "Oh, cool! Thank you!"
+        - "Is it my birthday? This is awesome!"
+        - "This is much better than the last gift I got!"
+        - "Woo hoo! It's mine, all mine!"
+        - "Can I... can I eat it?"
+      better:
+        - "For me? For free?!"
+        - "Ooh! Shiny!"
+        - "I really like this one, can I have another?"
+        - "All of my friends will be jealous now!"
+        - "This is so cool! I've wanted one of these forever!"
+      best:
+        - "This must have cost a fortune!"
+        - "I knew you would get me one of these. I just knew it!"
+        - "Yay! I have the best parents in the world!"
+        - "This is so amazing! I can't believe this is all mine!"
+        - "Thank you so much! You're the best ever!"
+    fail:
+      - "This... is a really bad gift."
+      - "Ew, I've gotten so much better before!"
+      - "Didn't you give me this like, last year?"
+      - "I could get this easily, no thanks."
+  partner:
+    success:
+      good:
+        - "You're so sweet."
+        - "Aw! You're too good to me."
+        - "This is unexpected, thank you, dear!"
+        - "Aw, how sweet of you."
+        - "Thanks, hun!"
+      better:
+        - "Oh wow, this is actually really nice!"
+        - "I love it! Thank you!"
+        - "This is amazing, dear!"
+        - "You got this for me? How sweet!"
+        - "Oh, thank you!"
+      best:
+        - "Oh, I love you!"
+        - "You are *way* too good to me!"
+        - "This must have been extremely expensive! Thank you!"
+        - "I... can't believe you'd get me something so thoughtful!"
+    fail:
+      - "Oh honey... this is just terrible."
+      - "Um, is this supposed to be a gift for me?"
+      - "Throw away your own junk! Oh, this was a gift? sorry."
+      - "I thought you knew me better than that. I hate these."

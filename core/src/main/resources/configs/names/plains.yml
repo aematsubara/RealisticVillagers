@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Plains  (Western / Generic English)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is PLAINS.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/plains.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Liam
+  - Noah
+  - Oliver
+  - Elijah
+  - James
+  - William
+  - Benjamin
+  - Lucas
+  - Henry
+  - Theodore
+  - Jack
+  - Owen
+  - Samuel
+  - Jacob
+  - Asher
+  - John
+  - Joseph
+  - David
+  - Leo
+  - Luke
+  - Julian
+  - Grayson
+  - Matthew
+  - Gabriel
+  - Carter
+  - Isaac
+  - Dylan
+  - Lincoln
+  - Thomas
+  - Elias
+  - Charles
+  - Caleb
+  - Christopher
+  - Miles
+  - Andrew
+  - Joshua
+  - Nathan
+  - Nolan
+  - Cameron
+  - Eli
+
+female:
+  - Olivia
+  - Emma
+  - Charlotte
+  - Amelia
+  - Ava
+  - Sophia
+  - Isabella
+  - Mia
+  - Evelyn
+  - Harper
+  - Luna
+  - Elizabeth
+  - Eleanor
+  - Ella
+  - Abigail
+  - Sofia
+  - Scarlett
+  - Emily
+  - Penelope
+  - Chloe
+  - Layla
+  - Mila
+  - Nora
+  - Hazel
+  - Madison
+  - Ellie
+  - Lily
+  - Nova
+  - Grace
+  - Violet
+  - Aurora
+  - Riley
+  - Zoey
+  - Willow
+  - Hannah
+  - Lucy
+  - Eliana
+  - Ivy
+  - Natalie
+  - Claire

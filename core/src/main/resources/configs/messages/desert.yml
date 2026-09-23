@@ -1,0 +1,339 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Desert  (Arabic / Middle Eastern)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for DESERT villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/desert.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "Wallah, you again?!"
+  - "By the sands, what do you want now?"
+  - "Yalla, leave me in peace."
+  - "Al-sabr! Patience has its limits..."
+  - "You are more persistent than a sandstorm."
+  - "Even the camel grows tired of the load."
+  - "Inshallah you will leave soon."
+
+reaction:
+  on-hit:
+    - "Aie! What was that for?!"
+    - "Ya Allah, that hurt!"
+    - "Halas! Stop hitting me!"
+    - "Are you out of your mind?!"
+    - "By the desert sun, that stings!"
+
+marry:
+  success:
+    - "Yes, a thousand times yes! Mabrouk to us!"
+    - "May Allah bless this union!"
+    - "I have dreamed of this day, habibi!"
+    - "Together we will weather every storm!"
+    - "My heart is yours, for all time."
+  fail:
+    married-to-giver:
+      - "We are already wed, habibi!"
+      - "Did the desert sun addle your memory? We are married!"
+    married-to-other:
+      - "I am already promised to another. Forgive me."
+      - "My heart belongs to someone else."
+    player-married:
+      - "But you already wear a ring! This is haram!"
+      - "You are already married, I see it!"
+    low-reputation:
+      - "I do not know you well enough, stranger."
+      - "Build trust first. Then we talk."
+  end:
+    - "You have broken the covenant. I am leaving."
+    - "This marriage is over. Go in peace."
+    - "I thought you were different. Goodbye."
+
+divorce:
+  normal:
+    - "You have shamed me!"
+    - "By the sands, I am done with you!"
+    - "A thousand curses on this day!"
+  papers:
+    - "So be it..."
+
+follow-me:
+  start:
+    - "As you wish, I will follow."
+    - "Lead the way, I am with you."
+  stop:
+    - "Until we meet again."
+    - "Ma'a salaama."
+  low-reputation:
+    - "And who are you, stranger?"
+    - "I do not follow those I do not know."
+
+stay-here:
+  start:
+    - "I will wait here like the desert waits for rain."
+    - "I shall not move."
+  stop:
+    - "At last, we move again!"
+    - "Good, I was growing restless."
+  low-reputation:
+    - "Why should I listen to you?"
+    - "Earn my trust first."
+
+no-trades:
+  - "My goods are not for you today."
+  - "Come back when the sun is lower."
+
+chat:
+  adult:
+    success:
+      - "Ahlan wa sahlan, %player-name%!"
+      - "The dates are sweet this season, yes?"
+      - "A caravan passed through last night with remarkable goods."
+      - "The stars guided me here, and here I stay."
+      - "Even the desert has its oasis, friend."
+      - "I traded three camels for this cart. Worth every coin."
+    fail:
+      - "Hmm. Very unusual."
+      - "I am not sure I understand."
+      - "The desert wind speaks more sense."
+      - "Let us not speak of that again."
+  child:
+    success:
+      - "Do you know where the camels sleep?"
+      - "I found a scorpion! Want to see it?"
+      - "Tell me a story from your travels!"
+    fail:
+      - "That sounds boring."
+      - "My dad says strangers tell tall tales."
+      - "I don't believe you!"
+  child-offspring:
+    success:
+      - "Can we ride the camel today?"
+      - "Tell me about the faraway lands!"
+      - "I want to be a great merchant like you!"
+    fail:
+      - "I don't want to go to the market again."
+      - "But the sun is so hot today..."
+  partner:
+    success:
+      - "I swept the sand from the doorway. How was your journey?"
+      - "I made fresh bread. Come, eat with me."
+      - "The night sky is beautiful tonight, yalla come look."
+    fail:
+      - "You were gone too long."
+      - "The children missed you. I missed you too, though I won't say it twice."
+      - "We need to talk when you get back."
+
+joke:
+  adult:
+    success:
+      - "Ha! That is a good one!"
+      - "By the sands, I am laughing!"
+      - "You should perform at the bazaar!"
+      - "Tell it again for the others!"
+    fail:
+      - "That is not funny here."
+      - "My camel has better humor."
+      - "Do not quit your day job."
+      - "I do not understand this joke."
+  child:
+    success:
+      - "Haha! Tell my friends!"
+      - "You're the funniest outsider I've met!"
+    fail:
+      - "That's weird."
+      - "I don't get it."
+  child-offspring:
+    success:
+      - "Baba, tell it again!"
+      - "*Giggles* Again, again!"
+    fail:
+      - "That was not funny at all."
+      - "Tell a better one next time."
+  partner:
+    success:
+      - "Habibi, you always make me smile."
+      - "This is why I married you!"
+    fail:
+      - "You and your jokes..."
+      - "Not funny, habibi."
+
+story:
+  adult:
+    success:
+      - "Mashallah, what a tale!"
+      - "I have heard of such things from the caravans."
+      - "That is worthy of a thousand nights of telling."
+      - "By Allah, you are brave indeed!"
+    fail:
+      - "I do not believe such a story."
+      - "You speak of things I know nothing of."
+      - "This is not how things are done here."
+  child:
+    success:
+      - "Wow! Are you a hero?"
+      - "I want adventures like that!"
+    fail:
+      - "That sounds scary."
+      - "My mama says not to do that."
+  child-offspring:
+    success:
+      - "Tell me more! What happened next?"
+      - "You are the bravest person I know!"
+    fail:
+      - "That sounds made up."
+      - "I am not sure I like that story."
+  partner:
+    success:
+      - "Every evening with you is a new story."
+      - "I love hearing about your travels, habibi."
+    fail:
+      - "Let's not talk about that again."
+      - "I worry when you tell stories like that."
+
+gift:
+  expecting:
+    - "A gift? For me? Mashallah!"
+    - "What have you brought from your travels?"
+    - "I am honored by your generosity."
+  expecting-fail:
+    - "I thought you had something for me?"
+    - "Did you forget what you promised?"
+  loved:
+    - "This is wonderful! Shukran jazeelan!"
+    - "By the stars, this is magnificent!"
+    - "I will treasure this always!"
+    - "You are too generous, %player-name%!"
+  neutral:
+    - "Shukran, this is appreciated."
+    - "A kind gesture, thank you."
+    - "I will find a use for this."
+  disliked:
+    - "This is... not quite what I expected."
+    - "Thank you, I suppose..."
+    - "I will try to use this."
+  bad:
+    - "This is not a gift worth giving."
+    - "I expected better from a traveler."
+    - "No thank you, keep it."
+  cooldown:
+    - "You are too generous! Enough for now."
+    - "Halas, no more gifts today!"
+  adult:
+    success:
+      good:
+        - "Shukran, this is kind of you."
+        - "Thank you, friend."
+        - "Jazakallah khayran!"
+      better:
+        - "This is a fine gift!"
+        - "You have good taste, my friend."
+        - "I did not expect such quality!"
+      best:
+        - "By the stars, this is incredible!"
+        - "I am speechless. Shukran!"
+        - "A merchant could not offer better."
+    fail:
+      - "This is not what I wanted."
+      - "Perhaps next time bring something useful."
+      - "Keep this for yourself."
+  child:
+    success:
+      good:
+        - "Oh! Can I keep it?"
+        - "Is this for me? Yay!"
+      better:
+        - "My friends will be jealous!"
+        - "This is the best thing ever!"
+      best:
+        - "I love it so much!"
+        - "Thank you, you're the best!"
+    fail:
+      - "I don't like this."
+      - "What is this even?"
+  child-offspring:
+    success:
+      good:
+        - "You got me something? Yay!"
+        - "Oh wow, is this mine?"
+      better:
+        - "I love it! Can I have another?"
+        - "This is so cool!"
+      best:
+        - "You're the best parent ever!"
+        - "I'll show all my friends!"
+    fail:
+      - "I don't want this."
+      - "This is not a good gift."
+  partner:
+    success:
+      good:
+        - "Habibi, you are thoughtful."
+        - "Thank you, my love."
+      better:
+        - "You remembered! I love it!"
+        - "This is exactly what I needed."
+      best:
+        - "You make my heart overflow!"
+        - "I love you more every day."
+    fail:
+      - "Oh honey... really?"
+      - "I thought you knew me better."

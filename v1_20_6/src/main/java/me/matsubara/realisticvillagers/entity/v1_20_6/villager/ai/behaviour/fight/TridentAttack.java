@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.fig
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.util.Reflection;
 import me.matsubara.realisticvillagers.event.VillagerRiptideEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
+import java.lang.invoke.MethodHandle;
 public class TridentAttack extends Behavior<Villager> {
 
     private int delay;
@@ -150,7 +152,7 @@ public class TridentAttack extends Behavior<Villager> {
 
             weapon.hurtAndBreak(1, npc, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
 
-            trident.pickupItemStack = weapon.copy();
+            setPickupItemStack(trident, weapon.copy());
             npc.level().playSound(null, trident, SoundEvents.TRIDENT_THROW, SoundSource.PLAYERS, 1.0f, 1.0f);
             npc.setItemInHand(hand, ItemStack.EMPTY);
             npc.setThrownTrident(trident);
@@ -213,4 +215,24 @@ public class TridentAttack extends Behavior<Villager> {
         CHARGED,
         READY_TO_ATTACK
     }
+
+    /**
+     * Sets {@link AbstractArrow}'s pickup stack.
+     * <p>
+     * Reflective because the field is private on some server builds even though the Spigot
+     * mappings this compiles against expose it.
+     */
+    private static final MethodHandle PICKUP_ITEM_STACK_SET =
+            Reflection.getFieldSetter(AbstractArrow.class, "pickupItemStack");
+
+    private static void setPickupItemStack(AbstractArrow arrow, ItemStack stack) {
+        if (PICKUP_ITEM_STACK_SET == null) return;
+
+        try {
+            PICKUP_ITEM_STACK_SET.invoke(arrow, stack);
+        } catch (Throwable throwable) {
+            // Only affects what the trident drops when picked up.
+        }
+    }
+
 }

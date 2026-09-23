@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_20_6.villager.ai.behaviour.cor
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_20_6.pet.horse.HorseEating;
+import me.matsubara.realisticvillagers.entity.v1_20_6.pet.horse.PetCamel;
 import me.matsubara.realisticvillagers.entity.v1_20_6.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
@@ -82,12 +83,17 @@ public class RideHorse extends Behavior<Villager> {
         Optional<NearestVisibleLivingEntities> nearest = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return Optional.empty();
 
-        return nearest.get().findClosest(living -> living instanceof OwnableEntity ownable
-                && villager.getUUID().equals(ownable.getOwnerUUID())
-                && living instanceof HorseEating
-                && living instanceof AbstractHorse horse
-                && horse.isTamed()
-                && horse.isSaddled());
+        return nearest.get().findClosest(living -> {
+            if (!(living instanceof HorseEating)) return false;
+            if (living instanceof OwnableEntity ownable) {
+                if (!villager.getUUID().equals(ownable.getOwnerUUID())) return false;
+                if (living instanceof AbstractHorse horse) return horse.isTamed() && horse.isSaddled();
+            } else if (living instanceof PetCamel camel) {
+                java.util.UUID owner = camel.getOwnerUniqueId();
+                return owner != null && villager.getUUID().equals(owner) && camel.isTamed() && camel.isSaddled();
+            }
+            return false;
+        });
     }
 
     private boolean isWithinRideDistance(@NotNull Villager villager, @NotNull LivingEntity horse) {

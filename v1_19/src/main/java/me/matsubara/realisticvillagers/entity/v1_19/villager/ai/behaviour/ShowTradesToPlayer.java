@@ -34,7 +34,12 @@ public class ShowTradesToPlayer extends Behavior<Villager> implements Exchangeab
     private int displayIndex;
     private int lookTime;
 
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
 
     public ShowTradesToPlayer(int minDuration, int maxDuration) {
         super(ImmutableMap.of(

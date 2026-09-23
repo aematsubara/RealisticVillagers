@@ -2,15 +2,19 @@ package me.matsubara.realisticvillagers.nms;
 
 import com.mojang.authlib.GameProfile;
 import me.matsubara.realisticvillagers.RealisticVillagers;
+import me.matsubara.realisticvillagers.data.serialization.OfflineDataWrapper;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Raid;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.Optional;
@@ -47,6 +51,12 @@ public interface INMSConverter {
     void spawnFromTag(Location location, String tag);
 
     void addGameRuleListener(World world);
+
+    /**
+     * Attempts to read an {@link OfflineDataWrapper} directly from a PDC container using the given key.
+     * Used for migrating data saved in legacy format (OfflineVillagerNPC stored directly by 1.21.8).
+     */
+    @Nullable OfflineDataWrapper getNPCFromPDC(PersistentDataContainer container, NamespacedKey key);
 
     static void printRuleWarning(@NotNull RealisticVillagers plugin,
                                  @NotNull World world,

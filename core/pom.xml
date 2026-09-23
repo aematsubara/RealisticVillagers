@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -9,7 +9,7 @@
     <parent>
         <groupId>me.matsubara</groupId>
         <artifactId>realisticvillagers-parent</artifactId>
-        <version>3.3.6.5</version>
+        <version>4.0.1</version>
     </parent>
 
     <pluginRepositories>
@@ -28,6 +28,13 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -86,6 +93,7 @@
                                 <filter>
                                     <artifact>net.wesjd:anvilgui</artifact>
                                     <excludes>
+                                        <exclude>net/wesjd/anvilgui/version/Wrapper26_R1*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_7*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_8*</exclude>
                                         <exclude>net/wesjd/anvilgui/version/Wrapper1_9*</exclude>
@@ -113,18 +121,37 @@
             </plugin>
         </plugins>
         <resources>
+            <!--
+                Binary resources are copied byte for byte. Filtering runs every resource through
+                a text decoder to substitute ${...} placeholders, which a schematic is not, and
+                the build dies decoding it as UTF-8.
+            -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.schem</include>
+                    <include>**/*.nbt</include>
+                </includes>
+            </resource>
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
+                <excludes>
+                    <exclude>**/*.schem</exclude>
+                    <exclude>**/*.nbt</exclude>
+                </excludes>
             </resource>
         </resources>
     </build>
 
     <repositories>
+        <!-- Spigot -->
         <repository>
             <id>spigotmc-repo</id>
             <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
+        <!-- Sonatype -->
         <repository>
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
@@ -133,55 +160,67 @@
             <id>sonatype-snapshots</id>
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </repository>
+        <!-- AnvilGUI -->
         <repository>
             <id>mvn-wesjd-net</id>
             <url>https://mvn.wesjd.net/</url>
         </repository>
+        <!-- CodeMC (bStats, PacketEvents) -->
         <repository>
             <id>codemc-releases</id>
             <url>https://repo.codemc.io/repository/maven-releases/</url>
         </repository>
         <repository>
-            <id>maven-central</id>
-            <url>https://oss.sonatype.org/content/groups/public</url>
+            <id>codemc-snapshots</id>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
         </repository>
+        <!-- Mojang (authlib) -->
         <repository>
             <id>minecraft-repo</id>
             <url>https://libraries.minecraft.net/</url>
         </repository>
+        <!-- JitPack (XSeries, VTL, MineskinClient, Config-Updater, EliteMobs) -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
+        <!-- ViaVersion -->
         <repository>
             <id>viaversion-repo</id>
             <url>https://repo.viaversion.com</url>
+        </repository>
+        <!-- OpenCollab (PacketEvents snapshots) -->
+        <repository>
+            <id>opencollab-snapshots</id>
+            <url>https://repo.opencollab.dev/maven-snapshots/</url>
+        </repository>
+        <repository>
+            <id>opencollab-releases</id>
+            <url>https://repo.opencollab.dev/maven-releases/</url>
         </repository>
     </repositories>
 
     <dependencies>
         <!-- SpigotAPI -->
-        <!-- Unfortunately, we need to stick with 1.20.4 to prevent backward compatibility issues. -->
         <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
-            <version>1.20.4-R0.1-SNAPSHOT</version>
+            <version>1.21.8-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- AnvilGUI -->
         <dependency>
             <groupId>net.wesjd</groupId>
             <artifactId>anvilgui</artifactId>
-            <version>1.10.11-SNAPSHOT</version>
+            <version>1.10.13-SNAPSHOT</version>
         </dependency>
-        <!-- ConfigUpdater -->
+        <!-- ConfigUpdater (local module) -->
         <dependency>
             <groupId>com.tchristofferson</groupId>
             <artifactId>ConfigUpdater</artifactId>
-            <version>2.0-SNAPSHOT</version>
+            <version>2.2-SNAPSHOT</version>
         </dependency>
-        <!-- AuthLib -->
-        <!--suppress VulnerableLibrariesLocal -->
+        <!-- Authlib -->
         <dependency>
             <groupId>com.mojang</groupId>
             <artifactId>authlib</artifactId>
@@ -195,18 +234,21 @@
             <!--suppress MavenModelInspection -->
             <version>master-SNAPSHOT</version>
         </dependency>
-        <!-- EliteMobs -->
+        <!-- EliteMobs (local lib) -->
         <dependency>
             <groupId>com.magmaguy</groupId>
             <artifactId>EliteMobs</artifactId>
-            <version>8.7.4-SNAPSHOT</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>*</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
+            <version>8.4.2</version>
+            <scope>system</scope>
+            <systemPath>${maven.multiModuleProjectDirectory}/libs/EliteMobs.jar</systemPath>
+        </dependency>
+        <!-- ValhallaMMO (local lib, premium) -->
+        <dependency>
+            <groupId>me.athlaeos</groupId>
+            <artifactId>ValhallaMMO</artifactId>
+            <version>1.14.1</version>
+            <scope>system</scope>
+            <systemPath>${maven.multiModuleProjectDirectory}/libs/ValhallaMMO_premium_1.14.1.jar</systemPath>
         </dependency>
         <!-- VTL -->
         <dependency>
@@ -222,18 +264,19 @@
             <version>4.7.0</version>
             <scope>provided</scope>
         </dependency>
-        <!-- XSeries -->
+        <!-- XSeries 13.7.0 â€” adds MC 26.x (unversioned CraftBukkit) support -->
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>13.6.0</version>
+            <version>13.7.0</version>
         </dependency>
-        <!-- PacketEvents -->
+        <!-- PacketEvents (local lib) -->
         <dependency>
             <groupId>com.github.retrooper</groupId>
             <artifactId>packetevents-spigot</artifactId>
-            <version>2.9.5-SNAPSHOT</version>
-            <scope>provided</scope>
+            <version>2.13.0</version>
+            <scope>system</scope>
+            <systemPath>${maven.multiModuleProjectDirectory}/libs/packetevents-spigot-2.13.0.jar</systemPath>
         </dependency>
         <!-- MorePersistentDataTypes -->
         <dependency>
@@ -249,3 +292,4 @@
         </dependency>
     </dependencies>
 </project>
+

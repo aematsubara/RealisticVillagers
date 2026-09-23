@@ -1,0 +1,328 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Jungle  (Latin American / Tropical)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for JUNGLE villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/jungle.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "Ay, you again?!"
+  - "Dios mio, what now?"
+  - "Ugh, can't you leave me alone?"
+  - "I was resting in the shade!"
+  - "Even the monkeys know when to be quiet."
+  - "Por favor, give me some peace."
+  - "Caramba, not again!"
+
+reaction:
+  on-hit:
+    - "Ay! That hurt!"
+    - "What was that for, loco?"
+    - "Dios mio, stop hitting me!"
+    - "You are crazy! That really hurt!"
+    - "Ouch! I'm telling everyone you did that!"
+
+marry:
+  success:
+    - "Si! A thousand times si!"
+    - "You make my heart sing!"
+    - "I have been waiting for this moment!"
+    - "Mi amor, yes! I'll marry you!"
+    - "This is the happiest day of my life!"
+  fail:
+    married-to-giver:
+      - "Ay, we are already married, silly!"
+      - "Did you forget? We are already wed!"
+    married-to-other:
+      - "Lo siento, I am already with someone."
+      - "My heart belongs to another."
+    player-married:
+      - "But you are already married! I can see the ring!"
+      - "Que?! You already have a partner!"
+    low-reputation:
+      - "I do not know you well enough yet."
+      - "Come back when we know each other better."
+  end:
+    - "I cannot do this anymore. Goodbye."
+    - "You have broken my heart. I am leaving."
+    - "Adios. Do not look for me."
+
+divorce:
+  normal:
+    - "Que barbaridad! I am done with you!"
+    - "I cannot believe you did that!"
+    - "Get out!"
+  papers:
+    - "So be it..."
+
+follow-me:
+  start:
+    - "Vamos! Let's go!"
+    - "I will follow you anywhere."
+  stop:
+    - "Hasta luego!"
+    - "Until next time, amigo."
+  low-reputation:
+    - "I don't follow strangers."
+    - "Who are you?"
+
+stay-here:
+  start:
+    - "Okay, I will wait here in the shade."
+    - "Si, I stay."
+  stop:
+    - "Finally! Let's go!"
+    - "Good, I was getting restless."
+  low-reputation:
+    - "Why should I listen to you?"
+    - "Earn my trust first."
+
+no-trades:
+  - "Nothing for you today, amigo."
+  - "Come back mañana."
+
+chat:
+  adult:
+    success:
+      - "Hola %player-name%! Como estas?"
+      - "The jungle is beautiful today, no?"
+      - "I found amazing fruits this morning!"
+      - "My grandfather knew every tree in this jungle."
+      - "There are jaguars nearby, but they leave us alone."
+    fail:
+      - "Hmm. Interesting."
+      - "I do not think that is how it works."
+      - "Que raro."
+      - "Whatever you say, amigo."
+  child:
+    success:
+      - "Have you seen any parrots today?"
+      - "I climbed the biggest tree! Want to see?"
+      - "Can you teach me to fish in the river?"
+    fail:
+      - "That sounds boring."
+      - "Mama says to be careful with strangers."
+      - "You're weird."
+  child-offspring:
+    success:
+      - "Can we go explore the jungle today?"
+      - "Tell me about your adventures!"
+      - "I want to be brave like you!"
+    fail:
+      - "It's too hot to go outside."
+      - "I want to stay and play here."
+  partner:
+    success:
+      - "I made fresh tamales. Come eat!"
+      - "The sunset through the trees is beautiful tonight."
+      - "You are my sunshine even in the rain."
+    fail:
+      - "You were gone too long."
+      - "We need to talk, mi amor."
+      - "I was worried about you in this jungle."
+
+joke:
+  adult:
+    success:
+      - "Hahaha! That's a good one!"
+      - "I'm going to tell that at the market!"
+      - "You are very funny, amigo!"
+    fail:
+      - "I don't get it."
+      - "That's not funny here."
+      - "My abuela tells better jokes."
+  child:
+    success:
+      - "Hahaha! Tell another!"
+      - "You're so funny!"
+    fail:
+      - "That's dumb."
+      - "I don't understand."
+  child-offspring:
+    success:
+      - "*Giggles* Again, again!"
+      - "Papa/Mama, that's so funny!"
+    fail:
+      - "That wasn't funny."
+      - "Tell a better one."
+  partner:
+    success:
+      - "You always make me laugh, mi amor!"
+      - "That is why I married you!"
+    fail:
+      - "You are not funny, corazon."
+      - "Stick to what you're good at."
+
+story:
+  adult:
+    success:
+      - "Dios mio, that's incredible!"
+      - "I've heard tales like that from the elders!"
+      - "You are very brave, amigo!"
+      - "That would make a great legend!"
+    fail:
+      - "I don't believe all of that."
+      - "You exaggerate too much."
+      - "That's not how things work here."
+  child:
+    success:
+      - "Wow! You are like a hero!"
+      - "I want to do that someday!"
+    fail:
+      - "That sounds scary."
+      - "Mama would not like that."
+  child-offspring:
+    success:
+      - "Tell me more!"
+      - "You are so brave and cool!"
+    fail:
+      - "That story is too scary."
+      - "I don't like that one."
+  partner:
+    success:
+      - "Every day with you is an adventure."
+      - "Your stories make me fall in love all over again."
+    fail:
+      - "Please be more careful."
+      - "That makes me worry, mi amor."
+
+gift:
+  expecting:
+    - "A gift? For me? Que bueno!"
+    - "What did you bring me from your travels?"
+    - "Oh! Something for me?"
+  expecting-fail:
+    - "I thought you had something for me?"
+    - "You promised a gift..."
+  loved:
+    - "Ay, I love it! Gracias!"
+    - "This is amazing, thank you so much!"
+    - "I will treasure this always!"
+  neutral:
+    - "Gracias, this is nice."
+    - "Thank you, amigo."
+  disliked:
+    - "Hmm... thank you, I suppose."
+    - "It's... something."
+  bad:
+    - "This is not a good gift."
+    - "No thank you, keep it."
+  cooldown:
+    - "Enough gifts! You are too generous."
+    - "No more, gracias."
+  adult:
+    success:
+      good:
+        - "Gracias, this is kind."
+        - "Thank you, friend."
+      better:
+        - "This is great! Well chosen."
+        - "I really needed this."
+      best:
+        - "This is incredible! Muchas gracias!"
+        - "I have no words. Thank you."
+    fail:
+      - "This is not what I wanted."
+      - "Bring something better next time."
+  child:
+    success:
+      good:
+        - "Oh! Is this mine? Yay!"
+        - "Thank you thank you thank you!"
+      better:
+        - "I love it! My friends will be jealous!"
+        - "This is the best!"
+      best:
+        - "You are the best person ever!"
+        - "I'll keep this forever!"
+    fail:
+      - "I don't want this."
+      - "This is not a good gift."
+  child-offspring:
+    success:
+      good:
+        - "You got me something? Yay!"
+        - "Oh wow, really?"
+      better:
+        - "I love it! Can I have another?"
+        - "This is so cool!"
+      best:
+        - "You are the best parent in the world!"
+        - "I'll show all my friends!"
+    fail:
+      - "I don't like this."
+      - "This is not a good gift."
+  partner:
+    success:
+      good:
+        - "You are so thoughtful, mi amor."
+        - "Thank you, corazon."
+      better:
+        - "You remembered! I love it!"
+        - "This is exactly what I needed."
+      best:
+        - "You make my heart burst!"
+        - "Te amo more every day."
+    fail:
+      - "Oh honey... really?"
+      - "I expected better, mi amor."

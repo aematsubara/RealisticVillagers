@@ -1,5 +1,6 @@
 # User-specific stuff
 .idea/
+.vscode/
 
 *.iml
 *.ipr
@@ -111,3 +112,9 @@ buildNumber.properties
 
 # Common working directory
 run/
+
+# libs folder and config-updater
+Config-Updater-2.2-SNAPSHOT/
+libs/
+
+

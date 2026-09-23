@@ -263,7 +263,8 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
     }
 
     private static boolean isHarmful(@NotNull MobEffectInstance instance) {
-        return instance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL;
+        Object effect = ((net.minecraft.core.Holder<?>) instance.getEffect()).value();
+        return effect instanceof MobEffect me && me.getCategory() == MobEffectCategory.HARMFUL;
     }
 
     public enum ConsumeType {

@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.behaviour.co
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.HorseEating;
+import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetCamel;
 import me.matsubara.realisticvillagers.entity.v1_21_11.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.server.level.ServerLevel;
@@ -82,13 +83,19 @@ public class RideHorse extends Behavior<Villager> {
         Optional<NearestVisibleLivingEntities> nearest = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return Optional.empty();
 
-        return nearest.get().findClosest(living -> living instanceof OwnableEntity ownable
-                && ownable.getOwnerReference() != null
-                && villager.getUUID().equals(ownable.getOwnerReference().getUUID())
-                && living instanceof HorseEating
-                && living instanceof AbstractHorse horse
-                && horse.isTamed()
-                && horse.isSaddled());
+        return nearest.get().findClosest(living -> {
+            if (!(living instanceof HorseEating)) return false;
+            if (living instanceof OwnableEntity ownable) {
+                if (ownable.getOwnerReference() == null) return false;
+                if (!villager.getUUID().equals(ownable.getOwnerReference().getUUID())) return false;
+                if (living instanceof AbstractHorse horse) return horse.isTamed() && horse.isSaddled();
+                if (living instanceof PetCamel camel) return camel.isTamed() && camel.isSaddled();
+            } else if (living instanceof PetCamel camel) {
+                java.util.UUID owner = camel.getOwnerUniqueId();
+                return owner != null && villager.getUUID().equals(owner) && camel.isTamed() && camel.isSaddled();
+            }
+            return false;
+        });
     }
 
     private boolean isWithinRideDistance(@NotNull Villager villager, @NotNull LivingEntity horse) {

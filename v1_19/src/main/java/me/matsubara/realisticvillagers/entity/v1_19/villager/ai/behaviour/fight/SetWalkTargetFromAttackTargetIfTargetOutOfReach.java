@@ -42,8 +42,15 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
     public void start(ServerLevel level, Villager villager, long time) {
         if (cooldown > 0) cooldown--;
         LivingEntity target = villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
-        if (BehaviorUtils.canSee(villager, target) && BehaviorUtils.isWithinAttackRange(villager, target, 1)) {
+        // Use range 1 for the walk target check: stop walking when already close enough to attack.
+        double stopDistSqr = 12.25; // 3.5 blocks for melee
+        if (villager instanceof VillagerNPC npc && npc.isHoldingRangeWeapon()) {
+            stopDistSqr = 100.0; // 10 blocks for archers
+        }
+
+        if (BehaviorUtils.canSee(villager, target) && villager.distanceToSqr(target) <= stopDistSqr) {
             clearWalkTarget(villager);
+            villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
         } else {
             setWalkAndLookTarget(villager, target);
         }
@@ -54,7 +61,7 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
         brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
         brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityTracker(target, false), speedModifier.apply(villager), 0));
 
-        // Fake attacks.
+        // Fake attacks while approaching.
         Path path;
         if (cooldown == 0
                 && MeleeAttack.canAttack(villager, true)
@@ -67,6 +74,9 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
     }
 
     private void clearWalkTarget(@NotNull Villager villager) {
+        // Also clear CANT_REACH_WALK_TARGET_SINCE so StopAttackingIfTargetInvalid
+        // doesn't prematurely abort the fight after we successfully reach the target.
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 }

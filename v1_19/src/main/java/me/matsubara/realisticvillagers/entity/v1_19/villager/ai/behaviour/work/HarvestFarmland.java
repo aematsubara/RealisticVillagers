@@ -46,7 +46,12 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
     private int timeWorkedSoFar;
     private long nextOkStartTime;
     private @Nullable BlockPos aboveFarmlandPos;
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
     private final List<BlockPos> validFarmlandAroundVillager = Lists.newArrayList();
 
     private static final int HARVEST_DURATION = 200;

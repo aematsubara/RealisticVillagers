@@ -1,0 +1,231 @@
+# Variable texts and translations for RealisticVillagers.
+
+# Texts that are used in some variables.
+variable-text:
+  acronym:
+    second: "s"
+    minute: "m"
+    hour: "h"
+    day: "d"
+  dead: "†"
+  infinite: "∞"
+  none: "None"
+  unknown: "Unknown"
+  villager: "Villager"
+  player: "Player"
+  console: "Console"
+  no-partners: "No partners(s)"
+  no-partner-currently: "Currently unmarried"
+  no-childrens: "No childrens"
+  no-effects: "No effects"
+  kid: "Kid"
+  adult: "Adult"
+  boy: "Boy"
+  girl: "Girl"
+  sex:
+    male: "Male"
+    female: "Female"
+  type:
+    desert: "Desert"
+    jungle: "Jungle"
+    plains: "Plains"
+    savanna: "Savanna"
+    snow: "Snow"
+    swamp: "Swamp"
+    taiga: "Taiga"
+  # For other languages, you can specify a different profession name per sex.
+  profession:
+    male:
+      none: "Unemployed"
+      armorer: "Armorer"
+      butcher: "Butcher"
+      cartographer: "Cartographer"
+      cleric: "Cleric"
+      farmer: "Farmer"
+      fisherman: "Fisherman"
+      fletcher: "Fletcher"
+      leatherworker: "Leatherworker"
+      librarian: "Librarian"
+      mason: "Mason"
+      nitwit: "Nitwit"
+      shepherd: "Shepherd"
+      toolsmith: "Toolsmith"
+      weaponsmith: "Weaponsmith"
+      wandering-trader: "Wandering Trader"
+    female:
+      none: "Unemployed"
+      armorer: "Armorer"
+      butcher: "Butcher"
+      cartographer: "Cartographer"
+      cleric: "Cleric"
+      farmer: "Farmer"
+      fisherman: "Fisherman"
+      fletcher: "Fletcher"
+      leatherworker: "Leatherworker"
+      librarian: "Librarian"
+      mason: "Mason"
+      nitwit: "Nitwit"
+      shepherd: "Shepherd"
+      toolsmith: "Toolsmith"
+      weaponsmith: "Weaponsmith"
+      wandering-trader: "Wandering Trader"
+  activity:
+    play: "Play"
+    work: "Work"
+    core: "Core"
+    meet: "Meet"
+    rest: "Rest"
+    idle: "Idle"
+    panic: "Panic"
+    pre_raid: "Pre-Raid"
+    raid: "Raid"
+    hide: "Hide"
+    fight: "Fight"
+    stay: "Stay"
+  entity:
+    allay: "Allay"
+    armadillo: "Armadillo"
+    axolotl: "Axolotl"
+    bat: "Bat"
+    bee: "Bee"
+    blaze: "Blaze"
+    bogged: "Bogged"
+    breeze: "Breeze"
+    camel: "Camel"
+    cat: "Cat"
+    cave-spider: "Cave Spider"
+    chicken: "Chicken"
+    cod: "Cod"
+    cow: "Cow"
+    creaking: "Creaking"
+    creeper: "Creeper"
+    dolphin: "Dolphin"
+    donkey: "Donkey"
+    drowned: "Drowned"
+    elder-guardian: "Elder Guardian"
+    enderman: "Enderman"
+    endermite: "Endermite"
+    ender-dragon: "Ender Dragon"
+    evoker: "Evoker"
+    fox: "Fox"
+    frog: "Frog"
+    ghast: "Ghast"
+    giant: "Giant"
+    glow-squid: "Glow Squid"
+    goat: "Goat"
+    guardian: "Guardian"
+    happy-ghast: "Happy Ghast"
+    hoglin: "Hoglin"
+    horse: "Horse"
+    husk: "Husk"
+    illusioner: "Illusioner"
+    llama: "Llama"
+    magma-cube: "Magma Cube"
+    mule: "Mule"
+    mushroom-cow: "Mushroom Cow"
+    ocelot: "Ocelot"
+    panda: "Panda"
+    parrot: "Parrot"
+    phantom: "Phantom"
+    pig: "Pig"
+    piglin: "Piglin"
+    piglin-brute: "Piglin Brute"
+    pillager: "Pillager"
+    polar-bear: "Polar Bear"
+    pufferfish: "Pufferfish"
+    rabbit: "Rabbit"
+    ravager: "Ravager"
+    salmon: "Salmon"
+    sheep: "Sheep"
+    shulker: "Shulker"
+    silverfish: "Silverfish"
+    skeleton: "Skeleton"
+    skeleton-horse: "Skeleton Horse"
+    slime: "Slime"
+    sniffer: "Sniffer"
+    spider: "Spider"
+    squid: "Squid"
+    stray: "Stray"
+    strider: "Strider"
+    tadpole: "Tadpole"
+    trader-llama: "Trader Llama"
+    tropical-fish: "Tropical Fish"
+    turtle: "Turtle"
+    vex: "Vex"
+    vindicator: "Vindicator"
+    warden: "Warden"
+    witch: "Witch"
+    wither: "Wither"
+    wither-skeleton: "Wither Skeleton"
+    wolf: "Wolf"
+    zoglin: "Zoglin"
+    zombie: "Zombie"
+    zombie-villager: "Zombie Villager"
+    zombified-piglin: "Zombified Piglin"
+  potion-effect-type:
+    speed: "Speed"
+    slowness: "Slowness"
+    haste: "Haste"
+    mining-fatigue: "Mining Fatigue"
+    strength: "Strength"
+    instant-health: "Instant Health"
+    instant-damage: "Instant Damage"
+    jump-boost: "Jump Boost"
+    nausea: "Nausea"
+    regeneration: "Regeneration"
+    resistance: "Resistance"
+    fire-resistance: "Fire Resistance"
+    water-breathing: "Water Breathing"
+    invisibility: "Invisibility"
+    blindness: "Blindness"
+    night-vision: "Night Vision"
+    hunger: "Hunger"
+    weakness: "Weakness"
+    poison: "Poison"
+    wither: "Wither"
+    health-boost: "Health Boost"
+    absorption: "Absorption"
+    saturation: "Saturation"
+    glowing: "Glowing"
+    levitation: "Levitation"
+    luck: "Luck"
+    unluck: "Unluck"
+    slow-falling: "Slow Falling"
+    conduit-power: "Conduit Power"
+    dolphins-grace: "Dolphins Grace"
+    bad-omen: "Bad Omen"
+    hero-of-the-village: "Hero Of The Village"
+    darkness: "Darkness"
+
+# Here you can modify automatic greetings from villagers.
+greet-messages:
+  # Whether this behavior is enabled.
+  enabled: true
+  # The distance the player must be from the villagers.
+  range: 5.0
+  # The waiting time (in millis) between greetings.
+  cooldown: 60000
+  # The waiting time (in millis) between each type of greetings the player can receive.
+  # Those types are: ADULT, CHILD, CHILD_OFFSPRING, PARTNER.
+  per-type-cooldown: 300000
+  # The required reputation to receive a greeting from a villager.
+  required-reputation: 5
+
+# Here you can modify the schedule of the villagers and their respective activities whether they're babies or adults.
+# For more information, take a look at: https://minecraft.fandom.com/wiki/Villager#Schedules
+#
+# NOTE: Don't touch this if you don't know what you're doing!
+# Available activities: IDLE, PLAY, WORK, MEET, REST.
+schedules:
+  baby:
+    10: IDLE
+    3000: PLAY
+    6000: IDLE
+    10000: PLAY
+    12000: REST
+  default:
+    10: IDLE
+    2000: WORK
+    9000: MEET
+    11000: IDLE
+    12000: REST

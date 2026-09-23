@@ -1,0 +1,208 @@
+# Loot configuration for RealisticVillagers.
+
+# Here you can configure the looting of chests from villagers.
+# NOTE: The items that the villager will loot from the chests are those specified above in @default-wanted-items.
+loot-chest:
+  # Whether this behavior is enabled.
+  enabled: true
+  # The required text on some line of the sign that must be placed on the chest for the villagers to loot.
+  # If you want the villagers to be able to loot any chest, leave the text empty, like this: required-sign-line: "" (NOT RECOMMENDED)
+  required-sign-line: "[Villager]"
+  # If true, nitwit villagers will randomly order the chest after looting a chest.
+  nitwit-shuffle-inventory: false
+  # The time (in ticks) a villager must wait before being able to loot another chest.
+  cooldown: 2400
+  # The time (in millis) a villager must wait before being able to loot a specific chest.
+  # Once a villager loots a chest, this chest will receive a cooldown.
+  per-chest-cooldown: 3600000
+  # Whether villagers can loot chests.
+  allow-babies: false
+  # Which container types villagers can search and interact with.
+  # Set a type to false to disable it entirely (e.g. disable chests but keep barrels).
+  containers:
+    chest: true
+    barrel: true
+  # Whether villagers deposit items they don't need into the container after looting.
+  # Items that are not equipment, not in the wanted-items list, and not in chest-items will be deposited.
+  deposit-enabled: true
+  # Items that villagers can take from and deposit into chests regardless of the wanted-items list.
+  # Weapons and armor are always included automatically.
+  chest-items:
+    - BREAD
+    - APPLE
+    - GOLDEN_APPLE
+    - ENCHANTED_GOLDEN_APPLE
+    - COOKED_BEEF
+    - BEEF
+    - COOKED_PORKCHOP
+    - PORKCHOP
+    - COOKED_CHICKEN
+    - CHICKEN
+    - COOKED_MUTTON
+    - MUTTON
+    - COOKED_RABBIT
+    - RABBIT
+    - COOKED_COD
+    - COD
+    - COOKED_SALMON
+    - SALMON
+    - BAKED_POTATO
+    - POTATO
+    - CARROT
+    - GOLDEN_CARROT
+    - WHEAT
+    - WHEAT_SEEDS
+    - BEETROOT
+    - BEETROOT_SEEDS
+    - MELON_SLICE
+    - PUMPKIN_PIE
+    - COOKIE
+    - CAKE
+    - MUSHROOM_STEW
+    - BEETROOT_SOUP
+    - RABBIT_STEW
+    - SUSPICIOUS_STEW
+    - DRIED_KELP
+    - SWEET_BERRIES
+    - GLOW_BERRIES
+    - HONEY_BOTTLE
+    - CHORUS_FRUIT
+    - IRON_INGOT
+    - GOLD_INGOT
+    - EMERALD
+    - COAL
+    - BONE
+    - BONE_MEAL
+    - ARROW
+    - TORCH
+    - SADDLE
+
+# Here you can modify the equipment a villager will receive when spawning.
+# @chance: the chance of receiving the item (from 0.0 to 1.0). If not stated, it'll be 1.0.
+# @only-for-range-weapon: the item will only be added to the inventory if the villager received a ranged weapon.
+# @only-for-bow: same as above, but only for bows.
+# @only-for-crossbow: same as above, but only for crossbows.
+# @off-hand-if-possible: the item will be added to the secondary hand if possible (only if the off-hand is not occupied).
+spawn-loot:
+  # If true, villagers who have spawned before will also be equipped.
+  force-equip: false
+  equipment:
+    hand:
+      '1':
+        chance: 0.5
+        material: BOW
+        damage: $RANDOM
+      '2':
+        chance: 0.625
+        material: STONE_SWORD
+        damage: $RANDOM
+      '3':
+        chance: 0.3
+        material: IRON_SWORD
+        damage: $RANDOM
+      '4':
+        chance: 0.4
+        material: CROSSBOW
+        damage: 45%
+      '5':
+        chance: 0.1
+        material: TRIDENT
+        damage: $RANDOM
+        enchantments:
+          - LOYALTY, 1-3
+      '6':
+        chance: 0.05
+        material: MACE
+        damage: $RANDOM
+        enchantments:
+          - DENSITY, 1-3
+          - BREACH, 1-2
+    off-hand:
+      '1':
+        chance: 0.225
+        material: SHIELD
+      '2':
+        chance: 0.1
+        material: TOTEM_OF_UNDYING
+    head:
+      '1':
+        chance: 0.45
+        material: LEATHER_HELMET
+        enchantments:
+          - PROTECTION, 1
+          - UNBREAKING, 1-2
+        leather-color: $RANDOM
+    chest:
+      '1':
+        chance: 0.4
+        material: LEATHER_CHESTPLATE
+      '2':
+        chance: 0.25
+        material: IRON_CHESTPLATE
+        enchantments:
+          - PROTECTION, 1
+      '3':
+        chance: 0.01
+        material: DIAMOND_CHESTPLATE
+        damage: 50%
+        enchantments:
+          - UNBREAKING, 1-2
+    legs:
+      '1':
+        chance: 0.4
+        material: LEATHER_LEGGINGS
+        damage: 25%
+    feet:
+      '1':
+        chance: 0.4
+        material: LEATHER_BOOTS
+        enchantments:
+          - PROTECTION
+  inventory-items:
+    '1':
+      chance: 0.4
+      material: GOLDEN_APPLE
+    '2':
+      chance: 0.6
+      material: BREAD
+      amount: 4-8
+    '3':
+      material: ARROW
+      amount: 16-48
+      only-for-range-weapon: true
+    '4':
+      chance: 0.7
+      material: TIPPED_ARROW
+      amount: 8-16
+      only-for-bow: true
+      tipped: $RANDOM
+    '5':
+      chance: 0.7
+      material: FIREWORK_ROCKET
+      amount: 6-12
+      only-for-crossbow: true
+      off-hand-if-possible: true
+      firework:
+        power: 12-18
+        firework-effects:
+          '1':
+            type: CREEPER
+            flicker: true
+            trail: true
+            colors:
+              - RED
+              - WHITE
+            fade-colors:
+              - $RANDOM
+    '6':
+      chance: 0.3
+      material: IRON_INGOT
+      amount: 6-9
+    '7':
+      chance: 0.55
+      material: BONE
+      amount: 1-3
+    '8':
+      chance: 0.1
+      material: MILK_BUCKET
+      amount: 1

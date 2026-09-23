@@ -1,7 +1,6 @@
 package me.matsubara.realisticvillagers.entity.v1_19.villager;
 
-import lombok.Getter;
-import lombok.Setter;
+
 import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.data.ExpectingType;
 import me.matsubara.realisticvillagers.data.HandleHomeResult;
@@ -26,18 +25,24 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 
-@Getter
 public class OfflineVillagerNPC implements IVillagerNPC {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
     private final UUID uuid;
-    private @Setter CompoundTag tag;
+    private CompoundTag tag;
     private final List<IVillagerNPC> partners = new ArrayList<>();
     private final List<IVillagerNPC> childrens = new ArrayList<>();
     private final Set<EntityType<?>> targetEntities = new HashSet<>();
     private final Set<UUID> players = new HashSet<>();
     private final LastKnownPosition lastKnownPosition;
+
+
+
+    @Override
+    public LastKnownPosition getLastKnownPosition() {
+        return lastKnownPosition;
+    }
 
     public static final String UUID = "UUID";
     public static final String INVENTORY = "Inventory";
@@ -59,6 +64,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String BED_HOME_POS = "BedHomePos";
     public static final String BED_HOME = "BedHome";
     public static final String EQUIPPED = "Equipped";
+    public static final String GENDER_LOCKED = "GenderLocked";
     public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
@@ -533,6 +539,26 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public void setEquipped(boolean equipped) {
+
+    }
+
+    @Override
+    public boolean isGenderLocked() {
+        return tag.getBoolean(GENDER_LOCKED);
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
 
     }
 

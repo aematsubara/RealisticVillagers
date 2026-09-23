@@ -65,6 +65,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     private final BlockPos bedHome;
     private final boolean wasInfected;
     private final boolean equipped;
+    private final boolean genderLocked;
     private final int foodLevel;
     private final int tickTimer;
     private final float saturationLevel;
@@ -96,6 +97,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
                               BlockPos bedHome,
                               boolean wasInfected,
                               boolean equipped,
+                              boolean genderLocked,
                               int foodLevel,
                               int tickTimer,
                               float saturationLevel,
@@ -118,6 +120,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
         this.bedHome = bedHome;
         this.wasInfected = wasInfected;
         this.equipped = equipped;
+        this.genderLocked = genderLocked;
         this.foodLevel = foodLevel;
         this.tickTimer = tickTimer;
         this.saturationLevel = saturationLevel;
@@ -495,6 +498,26 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public boolean isGenderLocked() {
+        return genderLocked;
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
+
+    }
+
+    @Override
     public boolean validShoulderEntityLeft() {
         return getShoulderEntityLeft() != null;
     }
@@ -597,6 +620,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
                         wrapper.getBedHome().getBlockZ()) : null,
                 wrapper.isWasInfected(),
                 wrapper.isEquipped(),
+                wrapper.isGenderLocked(),
                 wrapper.getFoodLevel(),
                 wrapper.getTickTimer(),
                 wrapper.getSaturationLevel(),
@@ -636,6 +660,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
                 bedHome != null ? new Vector(bedHome.getX(), bedHome.getY(), bedHome.getZ()) : null,
                 wasInfected,
                 equipped,
+                genderLocked,
                 foodLevel,
                 tickTimer,
                 saturationLevel,
@@ -676,6 +701,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
                 Collections.emptyList(), Collections.emptyList(), Collections.emptySet(), Collections.emptySet(), Collections.emptyList(),
                 null, null,
                 null, null,
+                false,
                 false,
                 false,
                 20, 0, 5.0f, 0.0f,

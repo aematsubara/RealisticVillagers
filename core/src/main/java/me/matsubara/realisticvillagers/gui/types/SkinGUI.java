@@ -92,6 +92,30 @@ public class SkinGUI extends PaginatedGUI {
         InventoryUpdate.updateInventory(player, getTitle());
     }
 
+    public boolean isMale() {
+        return isMale;
+    }
+
+    public boolean isAdult() {
+        return isAdult;
+    }
+
+    public String getKeyword() {
+        return keyword;
+    }
+
+    public Map<String, ItemStack> getProfessionItems() {
+        return professionItems;
+    }
+
+    public String getCurrentProfession() {
+        return currentProfession;
+    }
+
+    public void setCurrentProfession(String currentProfession) {
+        this.currentProfession = currentProfession;
+    }
+
     public static void openMenu(@NotNull RealisticVillagers plugin, Player player, @NotNull String sex, boolean isAdult, @Nullable Integer page, @Nullable String keyword) {
         boolean isMale = sex.equals("male");
         if ((isMale ? SkinGUI.CACHE_MALE_HEADS : SkinGUI.CACHE_FEMALE_HEADS).isEmpty()) {
@@ -104,9 +128,14 @@ public class SkinGUI extends PaginatedGUI {
             ConfigurationSection section = config.getConfigurationSection("none");
             if (section == null) return Collections.emptyList();
 
+            // If viewing baby skins but no for-babies entries exist, fall back to adult skins.
+            boolean hasBabySkins = !isAdult && section.getKeys(false).stream()
+                    .anyMatch(k -> config.getBoolean("none." + k + ".for-babies"));
+            boolean filterAsAdult = isAdult || !hasBabySkins;
+
             List<ItemStack> heads = new ArrayList<>();
             for (String skinId : section.getKeys(false).stream().sorted(Comparator.comparingInt(Integer::parseInt)).toList()) {
-                ItemStack skinItem = createSkinItem(plugin, config, sex, isAdult, Integer.parseInt(skinId), keyword);
+                ItemStack skinItem = createSkinItem(plugin, config, sex, filterAsAdult, Integer.parseInt(skinId), keyword);
                 if (skinItem != null) heads.add(skinItem);
             }
             return heads;

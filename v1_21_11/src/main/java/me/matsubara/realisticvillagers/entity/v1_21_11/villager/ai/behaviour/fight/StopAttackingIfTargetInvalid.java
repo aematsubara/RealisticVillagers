@@ -11,9 +11,9 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.schedule.Activity;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -44,18 +44,13 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     public void start(ServerLevel level, @NotNull Villager villager, long time) {
         Brain<Villager> brain = villager.getBrain();
 
-        if (!brain.hasMemoryValue(MemoryModuleType.ATTACK_TARGET)) {
-            Optional<Activity> activity = brain.getActiveNonCoreActivity();
-            if (activity.isPresent()) backToDefault(villager);
-            return;
-        }
-
         LivingEntity target = getAttackTarget(villager);
-        if (!villager.canAttack(target)
-                || isTiredOfTryingToReachTarget(villager)
-                || isCurrentTargetDeadOrRemoved(villager)
+        if (target == null) return;
+        
+        if (isCurrentTargetDeadOrRemoved(villager)
+                || target.isInvulnerable()
                 || isCurrentTargetInDifferentLevel(villager)
-                || stopAttackingWhen.test(getAttackTarget(villager))
+                || stopAttackingWhen.test(target)
                 || noWeapon(villager)
                 || isCurrentTargetOffline(villager)) {
             clearAttackTarget(villager);
@@ -68,13 +63,12 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     }
 
     private boolean isCurrentTargetInDifferentLevel(Villager villager) {
-        return getAttackTarget(villager).level() != villager.level();
+        LivingEntity target = getAttackTarget(villager);
+        return target != null && target.level() != villager.level();
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
-        // Can't be null since the value should be present in the constructor.
-        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+    private @Nullable LivingEntity getAttackTarget(@NotNull Villager villager) {
+        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
     }
 
     private boolean noWeapon(Villager villager) {
@@ -93,11 +87,13 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     }
 
     private boolean isCurrentTargetDeadOrRemoved(Villager villager) {
-        return !getAttackTarget(villager).isAlive();
+        LivingEntity target = getAttackTarget(villager);
+        return target == null || !target.isAlive();
     }
 
     private boolean isCurrentTargetFarAway(@NotNull Villager villager) {
-        return villager.distanceTo(getAttackTarget(villager)) > MAX_DISTANCE_LIMIT;
+        LivingEntity target = getAttackTarget(villager);
+        return target != null && villager.distanceTo(target) > MAX_DISTANCE_LIMIT;
     }
 
     private void clearAttackTarget(Villager villager) {
@@ -108,17 +104,6 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         brain.eraseMemory(VillagerNPC.TARGET_REASON);
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-
-        backToDefault(villager);
-    }
-
-    private void backToDefault(@NotNull Villager villager) {
-        if (!(villager instanceof VillagerNPC npc)) return;
-
-        Brain<Villager> brain = npc.getBrain();
-        brain.setDefaultActivity(Activity.IDLE);
-        brain.setActiveActivityIfPossible(Activity.IDLE);
-
-        npc.updateActivityFromSchedule();
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 }

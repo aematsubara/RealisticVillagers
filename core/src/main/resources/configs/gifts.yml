@@ -1,0 +1,56 @@
+# Gift items and their reputation effects.
+# category: LOVED / NEUTRAL / DISLIKED
+# reputation: points gained (positive) or lost (negative)
+# inventory-loot-only: true = villager only picks this up from chests, not from floor drops
+
+# Reputation cap per villager per day.
+default-cooldown-seconds: 300
+max-gain: 9999
+max-loss: 9999
+
+items:
+  GOLDEN_APPLE:
+    category: LOVED
+    reputation: 6
+  CAKE:
+    category: LOVED
+    reputation: 5
+  EMERALD:
+    category: NEUTRAL
+    reputation: 3
+  FLOWER_POT:
+    category: NEUTRAL
+    reputation: 2
+  ROTTEN_FLESH:
+    category: DISLIKED
+    reputation: -4
+  POISONOUS_POTATO:
+    category: DISLIKED
+    reputation: -3
+  ENCHANTED_GOLDEN_APPLE:
+    category: LOVED
+    reputation: 10
+  TRIDENT:
+    category: LOVED
+    reputation: 7
+  DIAMOND:
+    category: LOVED
+    reputation: 3
+  NETHERITE_INGOT:
+    category: LOVED
+    reputation: 9
+  APPLE:
+    category: NEUTRAL
+    reputation: 2
+  BREAD:
+    category: NEUTRAL
+    reputation: 1
+  COOKIE:
+    category: NEUTRAL
+    reputation: 1
+  BONE:
+    category: DISLIKED
+    reputation: -2
+  SPIDER_EYE:
+    category: DISLIKED
+    reputation: -3

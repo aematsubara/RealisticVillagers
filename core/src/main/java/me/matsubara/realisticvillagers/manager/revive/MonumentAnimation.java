@@ -6,6 +6,7 @@ import me.matsubara.realisticvillagers.RealisticVillagers;
 import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.util.PluginUtils;
+import me.matsubara.realisticvillagers.util.customblockdata.CustomBlockData;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -137,7 +138,7 @@ public class MonumentAnimation extends BukkitRunnable {
         // Spawn angry particles above the lightning flame.
         ThreadLocalRandom random = ThreadLocalRandom.current();
         world.spawnParticle(
-                Particle.VILLAGER_ANGRY,
+                Particle.ANGRY_VILLAGER,
                 target.clone().add(0.5d, 1.5d, 0.5d),
                 1,
                 random.nextGaussian() * 0.02d,
@@ -194,6 +195,9 @@ public class MonumentAnimation extends BukkitRunnable {
 
         Location spawnLocation = block.getLocation().add(0.5d, 0.0d, 0.5d);
         spawnLocation.setYaw(spawnYaw);
+
+        // Clear the stored tag so the monument can't trigger again without placing a new head.
+        new CustomBlockData(block, plugin).remove(plugin.getNpcValuesKey());
 
         // Spawn from tag at the middle of the top block.
         plugin.getConverter().spawnFromTag(spawnLocation, tag);

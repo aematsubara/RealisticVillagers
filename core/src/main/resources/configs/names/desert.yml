@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Desert  (Arabic / Middle Eastern)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is DESERT.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/desert.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Khalid
+  - Omar
+  - Yusuf
+  - Ibrahim
+  - Hassan
+  - Ali
+  - Ahmed
+  - Tariq
+  - Samir
+  - Karim
+  - Bilal
+  - Nasser
+  - Zaid
+  - Hamza
+  - Faisal
+  - Mansour
+  - Saleh
+  - Majid
+  - Rashid
+  - Waleed
+  - Adel
+  - Jamil
+  - Sami
+  - Rami
+  - Hatem
+  - Mustafa
+  - Anwar
+  - Kareem
+  - Yousef
+  - Ammar
+  - Maher
+  - Wael
+  - Basem
+  - Tarek
+  - Nabil
+  - Ihab
+  - Khaled
+  - Mohamad
+  - Amir
+  - Essam
+
+female:
+  - Fatima
+  - Aisha
+  - Maryam
+  - Zahra
+  - Noor
+  - Layla
+  - Sana
+  - Rania
+  - Amira
+  - Hana
+  - Dina
+  - Rana
+  - Salma
+  - Yasmin
+  - Samira
+  - Nadia
+  - Lina
+  - Sara
+  - Reem
+  - Huda
+  - Noura
+  - Maysa
+  - Abeer
+  - Wafa
+  - Samar
+  - Ghada
+  - Mona
+  - Iman
+  - Hayam
+  - Asma
+  - Zainab
+  - Roaa
+  - Alia
+  - Mariam
+  - Dalal
+  - Suhad
+  - Rawya
+  - Nahla
+  - Suha
+  - Amal

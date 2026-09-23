@@ -36,15 +36,16 @@ public class GoToWantedItem extends Behavior<Villager> {
         return closest.closerThan(npc, maxDistToWalk)
                 && villager.canPickUpLoot()
                 && level.getWorldBorder().isWithinBounds(closest.blockPosition())
-                && !isOnPickupCooldown(npc)
-                && !npc.getBrain().hasMemoryValue(MemoryModuleType.WALK_TARGET);
+                && !isOnPickupCooldown(npc);
     }
 
     @Override
     public boolean canStillUse(ServerLevel level, Villager villager, long time) {
-        return villager instanceof VillagerNPC npc
-                && villager.getBrain().hasMemoryValue(VillagerNPC.NEAREST_WANTED_ITEM)
-                && force(npc, getClosestLovedItem(villager));
+        if (!(villager instanceof VillagerNPC npc)) return false;
+        if (!villager.getBrain().hasMemoryValue(VillagerNPC.NEAREST_WANTED_ITEM)) return false;
+        ItemEntity closest = getClosestLovedItem(villager);
+        if (force(npc, closest)) return true;
+        return closest.closerThan(npc, maxDistToWalk) && npc.canPickUpLoot();
     }
 
     @Override

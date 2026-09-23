@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Swamp  (Southern US / Bayou)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is SWAMP.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/swamp.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Garrett
+  - Clem
+  - Huck
+  - Beau
+  - Jasper
+  - Holt
+  - Buck
+  - Wade
+  - Earl
+  - Grady
+  - Silas
+  - Amos
+  - Elmer
+  - Coy
+  - Dix
+  - Gus
+  - Remy
+  - Odell
+  - Landon
+  - Rufus
+  - Boone
+  - Dale
+  - Floyd
+  - Hal
+  - Ray
+  - Lee
+  - Roy
+  - Ned
+  - Cody
+  - Wyatt
+  - Cal
+  - Hugh
+  - Zeke
+  - Luther
+  - Chester
+  - Harlan
+  - Dewey
+  - Alton
+  - Cleatus
+  - Orval
+
+female:
+  - Dolly
+  - Loretta
+  - Jolene
+  - Merle
+  - June
+  - Patsy
+  - Tammy
+  - Emmylou
+  - Wynonna
+  - Reba
+  - Hattie
+  - Opal
+  - Pearl
+  - Rosie
+  - Bessie
+  - Fern
+  - Nell
+  - Ada
+  - Della
+  - Mae
+  - Lula
+  - Ola
+  - Mamie
+  - Cleo
+  - Edna
+  - Mabel
+  - Bonnie
+  - Jewell
+  - Ora
+  - Minnie
+  - Nannie
+  - Dovie
+  - Sudie
+  - Verna
+  - Essie
+  - Ila
+  - Zula
+  - Maggie
+  - Elva
+  - Wilda

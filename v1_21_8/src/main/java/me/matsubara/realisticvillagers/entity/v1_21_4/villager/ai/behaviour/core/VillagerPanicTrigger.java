@@ -3,6 +3,8 @@ package me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.cor
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import me.matsubara.realisticvillagers.data.TargetReason;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.v1_21_4.NMSConverter;
@@ -15,6 +17,7 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -40,6 +43,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             Items.CREEPER_HEAD);
 
     public VillagerPanicTrigger() {
+        // VALUE_ABSENT: this behavior only fires when villager is NOT already fighting.
         super(ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT));
     }
 
@@ -58,6 +62,8 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             return;
         }
 
+        if (target instanceof Pet) return;
+
         if (target instanceof ServerPlayer player) {
             if (player.isCreative()) return;
             if (villager instanceof VillagerNPC npc && npc.isPartner(player.getUUID())) return;
@@ -67,7 +73,11 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         }
 
         if (villager instanceof VillagerNPC npc) npc.stopAllInteractions();
-        NMSConverter.leaveVehicle(villager);
+        boolean mountedCombat = villager instanceof VillagerNPC npc2
+                && npc2.isPassenger()
+                && villager.getVehicle() instanceof Pet
+                && npc2.canAttack();
+        if (!mountedCombat) NMSConverter.leaveVehicle(villager);
 
         // Use the same condition as canStillUse(), but the name doesn't mean anything.
         if (canStillUse(level, villager, time)) {
@@ -111,6 +121,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
 
     private void handleNormalReaction(@NotNull Brain<Villager> brain) {
         if (!brain.isActive(Activity.PANIC)) stopWhatWasDoing(brain);
+        brain.setDefaultActivity(Activity.IDLE); // Reset from FIGHT to IDLE
         brain.setActiveActivityIfPossible(Activity.PANIC);
     }
 
@@ -118,7 +129,6 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         if (!brain.isActive(Activity.FIGHT)) stopWhatWasDoing(brain);
         brain.setMemory(MemoryModuleType.ATTACK_TARGET, target);
         brain.setMemory(VillagerNPC.TARGET_REASON, targetReason);
-        brain.setDefaultActivity(Activity.FIGHT);
         brain.setActiveActivityIfPossible(Activity.FIGHT);
     }
 
@@ -128,10 +138,30 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
         brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 
     private boolean shouldPanic(Villager villager) {
         return !(villager instanceof VillagerNPC npc) || !npc.canAttack();
+    }
+
+    private boolean isOverwhelmed(Villager villager) {
+        Optional<NearestVisibleLivingEntities> visible = villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+        if (visible.isEmpty()) return false;
+
+        int allies = 1; 
+        int enemies = 0;
+
+        for (LivingEntity entity : visible.get().findAll(e -> true)) {
+            if (entity instanceof IVillagerNPC otherNpc && otherNpc.canAttack()) {
+                allies++;
+            } else if (entity.getType().getCategory() == MobCategory.MONSTER) {
+                enemies++;
+            }
+        }
+
+        // Overwhelmed if enemies are strictly greater than 4x the allies (e.g. 1v5, 2v9)
+        return enemies > allies * 4;
     }
 
     private boolean hasHostile(@NotNull LivingEntity entity) {
@@ -178,24 +208,32 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
     private static boolean isDefendVillager(LivingEntity entity, LivingEntity closest) {
         if (!(entity instanceof VillagerNPC npc)) return false;
         if (!(closest instanceof Player player)) return false;
-        if (!Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) return false;
+        
+        // Armed villagers defend ANYONE. Unarmed only defend family if config enabled.
+        boolean isArmed = npc.canAttack();
+        if (!isArmed && !Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) return false;
 
-        Optional<Player> damager = getPlayerFightningFamily(npc);
+        Optional<Player> damager = getPlayerFightingVillager(npc, !isArmed);
         return damager.isPresent() && damager.get().is(player);
     }
 
-    private static Optional<Player> getPlayerFightningFamily(Villager villager) {
+    private static Optional<Player> getPlayerFightingVillager(VillagerNPC npc, boolean familyOnly) {
         Optional<Player> empty = Optional.empty();
-        if (!(villager instanceof VillagerNPC npc)) return empty;
-
         Optional<NearestVisibleLivingEntities> nearest = npc.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (nearest.isEmpty()) return empty;
 
-        Optional<LivingEntity> closest = nearest.get().findClosest(
-                living -> living instanceof VillagerNPC && npc.isFamily(living.getUUID(), true));
-        if (closest.isEmpty() || !(closest.get() instanceof VillagerNPC family)) return empty;
+        // Check all visible villagers to see if any are being attacked by a player.
+        for (LivingEntity living : nearest.get().findAll(l -> l instanceof VillagerNPC)) {
+            VillagerNPC other = (VillagerNPC) living;
+            if (other.equals(npc)) continue;
+            if (familyOnly && !npc.isFamily(other.getUUID(), true)) continue;
 
-        Optional<LivingEntity> hurtBy = family.getBrain().getMemory(MemoryModuleType.HURT_BY_ENTITY);
-        return hurtBy.isPresent() && hurtBy.get() instanceof Player player ? Optional.of(player) : empty;
+            Optional<LivingEntity> hurtBy = other.getBrain().getMemory(MemoryModuleType.HURT_BY_ENTITY);
+            if (hurtBy.isPresent() && hurtBy.get() instanceof Player player) {
+                return Optional.of(player);
+            }
+        }
+
+        return empty;
     }
 }

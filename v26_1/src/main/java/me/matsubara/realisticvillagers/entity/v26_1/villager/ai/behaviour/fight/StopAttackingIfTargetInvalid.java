@@ -1,0 +1,109 @@
+package me.matsubara.realisticvillagers.entity.v26_1.villager.ai.behaviour.fight;
+
+import com.google.common.collect.ImmutableMap;
+import me.matsubara.realisticvillagers.data.TargetReason;
+import me.matsubara.realisticvillagers.entity.v26_1.villager.VillagerNPC;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.behavior.Behavior;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
+import net.minecraft.world.entity.npc.villager.Villager;
+import org.bukkit.Bukkit;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+
+public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
+
+    private static final double MAX_DISTANCE_LIMIT = 24.0d;
+    private static final long TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE = 200L;
+    private final Predicate<LivingEntity> stopAttackingWhen;
+    private final Consumer<Villager> onTargetErased;
+
+    public StopAttackingIfTargetInvalid(Predicate<LivingEntity> predicate, Consumer<Villager> consumer) {
+        super(ImmutableMap.of(
+                MemoryModuleType.ATTACK_TARGET, MemoryStatus.REGISTERED,
+                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryStatus.REGISTERED));
+
+        this.stopAttackingWhen = predicate;
+        this.onTargetErased = consumer;
+    }
+
+    public StopAttackingIfTargetInvalid() {
+        this((living) -> false, (villager) -> {
+        });
+    }
+
+    @Override
+    public void start(ServerLevel level, @NotNull Villager villager, long time) {
+        Brain<Villager> brain = villager.getBrain();
+
+        LivingEntity target = getAttackTarget(villager);
+        if (target == null) return;
+        
+        if (isCurrentTargetDeadOrRemoved(villager)
+                || target.isInvulnerable()
+                || isCurrentTargetInDifferentLevel(villager)
+                || stopAttackingWhen.test(target)
+                || noWeapon(villager)
+                || isCurrentTargetOffline(villager)) {
+            clearAttackTarget(villager);
+        } else if (isCurrentTargetFarAway(villager)) {
+            // If target reason is horn, we don't check the distance.
+            Optional<TargetReason> targetReason = brain.getMemory(VillagerNPC.TARGET_REASON);
+            if (targetReason.isPresent() && targetReason.get() == TargetReason.HORN) return;
+            clearAttackTarget(villager);
+        }
+    }
+
+    private boolean isCurrentTargetInDifferentLevel(Villager villager) {
+        LivingEntity target = getAttackTarget(villager);
+        return target != null && target.level() != villager.level();
+    }
+
+    private @Nullable LivingEntity getAttackTarget(@NotNull Villager villager) {
+        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+    }
+
+    private boolean noWeapon(Villager villager) {
+        if (!(villager instanceof VillagerNPC npc)) return false;
+        return !npc.isHoldingWeapon();
+    }
+
+    private boolean isCurrentTargetOffline(Villager villager) {
+        LivingEntity target = getAttackTarget(villager);
+        return target instanceof ServerPlayer && Bukkit.getServer().getPlayer(target.getUUID()) == null;
+    }
+
+    private boolean isTiredOfTryingToReachTarget(@NotNull Villager villager) {
+        Optional<Long> optional = villager.getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        return optional.isPresent() && villager.level().getGameTime() - optional.get() > TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE;
+    }
+
+    private boolean isCurrentTargetDeadOrRemoved(Villager villager) {
+        LivingEntity target = getAttackTarget(villager);
+        return target == null || !target.isAlive();
+    }
+
+    private boolean isCurrentTargetFarAway(@NotNull Villager villager) {
+        LivingEntity target = getAttackTarget(villager);
+        return target != null && villager.distanceTo(target) > MAX_DISTANCE_LIMIT;
+    }
+
+    private void clearAttackTarget(Villager villager) {
+        onTargetErased.accept(villager);
+
+        Brain<Villager> brain = villager.getBrain();
+        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        brain.eraseMemory(VillagerNPC.TARGET_REASON);
+        brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+    }
+}

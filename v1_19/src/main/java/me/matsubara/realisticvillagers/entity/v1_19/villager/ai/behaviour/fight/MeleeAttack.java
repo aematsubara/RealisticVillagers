@@ -12,6 +12,9 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 public class MeleeAttack extends Behavior<Villager> {
 
@@ -29,6 +32,8 @@ public class MeleeAttack extends Behavior<Villager> {
     @Override
     public void start(ServerLevel level, Villager villager, long time) {
         LivingEntity target = getAttackTarget(villager);
+        if (target == null) return;
+        
         BehaviorUtils.lookAtEntity(villager, target);
 
         // Random jump to be more "realistic".
@@ -45,12 +50,14 @@ public class MeleeAttack extends Behavior<Villager> {
 
     public static boolean canAttack(Villager villager, boolean ignoreRange) {
         LivingEntity target = getAttackTarget(villager);
+        if (target == null) return false;
+        
         return villager instanceof VillagerNPC npc
                 && !npc.isAttackingWithTrident()
                 && npc.isHoldingMeleeWeapon()
                 && BlockAttackWithShield.notUsingShield(npc)
                 && BehaviorUtils.canSee(npc, target)
-                && (ignoreRange || BehaviorUtils.isWithinAttackRange(npc, target, 0));
+                && (ignoreRange || npc.distanceToSqr(target) <= 20.25);
     }
 
     public static void setAttackCooldown(@NotNull Villager villager) {
@@ -58,9 +65,8 @@ public class MeleeAttack extends Behavior<Villager> {
         villager.getBrain().setMemoryWithExpiry(MemoryModuleType.ATTACK_COOLING_DOWN, true, cooldown);
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private static @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
-        // Can't be null since the value should be present in the constructor.
-        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+    private static @Nullable LivingEntity getAttackTarget(@NotNull Villager villager) {
+        Optional<LivingEntity> target = villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET);
+        return target.orElse(null);
     }
 }

@@ -213,7 +213,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
         }
 
         // Above is a grown crop, try to remove block.
-        if (isValidCrop(aboveState) && !callEntityChangeBlockEvent(villager, aboveFarmlandPos, Blocks.AIR.defaultBlockState()).isCancelled()) {
+        if (isValidCrop(aboveState) && !isEntityChangeBlockEventCancelled(villager, aboveFarmlandPos, Blocks.AIR.defaultBlockState())) {
             level.destroyBlock(aboveFarmlandPos, true, villager);
         }
 
@@ -312,7 +312,7 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
             if (item.isEmpty()) continue;
 
             BlockState newState = getNewState(item);
-            if (newState == null || (checkEvent && callEntityChangeBlockEvent(villager, aboveFarmlandPos, newState).isCancelled())) {
+            if (newState == null || (checkEvent && isEntityChangeBlockEventCancelled(villager, aboveFarmlandPos, newState))) {
                 continue;
             }
 
@@ -327,10 +327,17 @@ public class HarvestFarmland extends Behavior<Villager> implements Exchangeable 
         return timeWorkedSoFar < HARVEST_DURATION;
     }
 
-    private static @NotNull EntityChangeBlockEvent callEntityChangeBlockEvent(@NotNull Entity entity, @NotNull BlockPos position, BlockState newBlock) {
-        // Fixes "boolean cannot be dereferenced".
-        EntityChangeBlockEvent event = new EntityChangeBlockEvent(entity.getBukkitEntity(), CraftBlock.at(entity.level(), position), CraftBlockData.fromData(newBlock));
-        Bukkit.getPluginManager().callEvent(event);
-        return event;
+    private static boolean isEntityChangeBlockEventCancelled(@NotNull Entity entity, @NotNull BlockPos position, BlockState newBlock) {
+        try {
+            // Fixes "boolean cannot be dereferenced".
+            EntityChangeBlockEvent event = new EntityChangeBlockEvent(entity.getBukkitEntity(), CraftBlock.at(entity.level(), position), CraftBlockData.fromData(newBlock));
+            Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable error) {
+            // CraftBlockData#fromData is an internal CraftBukkit method whose signature isn't
+            // guaranteed stable across server builds/forks. A mismatch here must never crash —
+            // and so remove — the villager mid-tick; skip firing the event instead.
+            return false;
+        }
     }
 }

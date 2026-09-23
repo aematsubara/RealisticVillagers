@@ -1,0 +1,721 @@
+# GUI configuration for RealisticVillagers.
+
+# Here you can modify the text displayed above the player.
+# NOTE: This function doesn't work in 1.18.2, 1.19.4 and 1.20.1 :(.
+custom-nametags:
+  # If true, a small block will be displayed above the text representing the villager's job block (except the unemployed and nitwits).
+  show-job-block: true
+  # Whether the text is displayed with shadow.
+  shadow: true
+  # Whether the text be visible through blocks.
+  see-through: false
+  # Alpha value of rendered text, from -128 to 127.
+  # Default to -1, which is completely opaque.
+  text-opacity: -1
+  # Background color of the nametag frame in hex format (#RRGGBB).
+  # Examples: "#000000" = black, "#1a1a2e" = dark navy, "#2d0000" = dark red.
+  background-color: "#000000"
+  # Opacity (transparency) of the nametag background, from 0 (invisible) to 255 (fully opaque).
+  # Tip: 64 = Minecraft's default semi-transparent background, 0 = completely hidden.
+  background-opacity: 64
+  lines:
+    # %villager-name% - name of the villager.
+    # %level% - level of the villager (only for @villager).
+    # %profession% - profession of the villager (only for @villager).
+    villager:
+      - "&f%villager-name% &a(Lvl. %level%)"
+      - "&7%profession%"
+    wandering-trader:
+      - "&dWandering Trader"
+      - "&f%villager-name%"
+  # Here you can apply a special color to the villager's name if they have a family relationship with the player.
+  # At the moment, it is only evaluated if the player is the partner or father of a villager.
+  relationship-color:
+    # Color for partners.
+    partner: "&d"
+    # Color for childrens.
+    children: "&b"
+
+skin-preview:
+  # The seconds that the preview will last.
+  seconds: 10
+  # %remaining% - the remaining seconds of preview.
+  message: "Preview finishing in %remaining% seconds!"
+  # If true, the message will have a rainbow effect (similar to the jukebox effect when a record is playing).
+  rainbow-message: true
+
+# Variables:
+# %sex% - the sex of the newborn baby.
+input-gui:
+  combat-search:
+    title: "Search..."
+    text: "Search..."
+  baby:
+    title: "I'ts a %sex%!"
+    text: "Name..."
+    invalid-name: "Invalid name!"
+  whistle-search:
+    title: "Search..."
+    text: "Search..."
+  skin-search:
+    title: "Search..."
+    text: "Search..."
+  new-skin:
+    title: "Which player?"
+    text: "Write..."
+  players:
+    title: "Add Player"
+    text: "Player name..."
+
+# Here you can modify the available GUIs.
+#
+# Global title variables:
+# %villager-name% - name of the villager (if a particular villager is involved).
+# %page% - current page (only for @combat/whistle.title).
+# %max-page% - amount of pages (only for @combat/whistle.title).
+# %sex% - the sex of the skin that'll be generated (only for @skins/new-skin.title).
+# %age-stage% the age stage of the skin that'll be generated (only for @skins/new-skin.title).
+#
+# NOTE: For the "main" inventory it's possible to choose the slot in which the item'll be positioned,
+# with the following format: slot: x, y; starting from the top left; being 1, 1.
+#
+# if this seems difficult for you, you can assign the slot of the inventory directly,
+# take a look at https://wiki.vg/Inventory#Large_chest.
+# For example: if you got a 6x9 chest, and you want to put an item on x = 1, y = 6, you'll need to use: slot: 45.
+#
+# All valid slots: https://filoghost.me/data/chest-commands/coordinates-table.png (credits to @filoghost)
+gui:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SETTLEMENT SYSTEM SCREENS
+  # ─────────────────────────────────────────────────────────────────────────
+  # Shown only when the settlement system is on (village.enabled in config.yml).
+  # The mayor's screen appears when right-clicking a mayor while holograms are
+  # OFF; with holograms on you get the hologram version instead, whose labels
+  # live in configs/holograms.yml.
+
+  # The mayor's screen.
+  mayor:
+    title: "&8Mayor of %village%"
+    village-name: "&e%village%"
+    residents: "&7Residents: &f%count%"
+    radius: "&7Radius: &f%radius% blocks"
+    center: "&7Centre: &f%x%, %z%"
+    standing-name: "&aYour standing"
+    reputation: "&7Standing: &f%value% &7/ &f%required%"
+    reputation-hint: "&8Earned through the villagers themselves, never by talking to the mayor."
+    commission-name: "&eBuilding commissions"
+    commission-allowed: "&aYou may commission new buildings."
+    commission-no-mayor: "&cThis settlement has no mayor."
+    commission-low-reputation: "&cYour standing with the mayor is too low."
+    commission-no-family: "&cYou need a family among this village's residents."
+    storage-name: "&eSettlement stores"
+    storage-empty: "&7The stores are empty."
+    storage-entry: "&7%item%: &f%amount%"
+    storage-more: "&8...and more"
+    program-name: "&eGoverning program: &f%program%"
+    radar-name: "&eVillage map"
+    borders-name: "&eSettlement border"
+    borders-on: "&aCurrently shown."
+    borders-off: "&7Currently hidden."
+    program-none: "&7This mayor took office without a platform."
+    program-none-name: "none"
+    effect-trade: "&7Trade prices: %value%"
+    effect-cost: "&7Build cost: %value%"
+    effect-time: "&7Build time: %value%"
+    effect-harvest: "&7Resource gathering: %value%"
+    radar-hint: "&7See the settlement laid out, and what stands where."
+
+  # The chest map, opened from the mayor's screen. This is what servers running the chest
+  # menus get instead of the hologram radar — each slot is one tile of the settlement.
+  radar:
+    title: "&8Map of %village%"
+    you: "&dYou are here"
+    mayor: "&a&lMAYOR &f%name%"
+    resident: "&f%name%"
+    building-name: "&eBuilding"
+    building-kind: "&7Type: &f%kind%"
+    building-box: "&7Size: &f%width%x%depth%x%height% &7blocks at &f%x%, %y%, %z%"
+    building-beds: "&7Sleeps: &f%count%"
+    building-work: "&7Work: &f%trades%"
+    building-outline: "&bClick to outline it in the world"
+    zoom-in: "&eZoom in »"
+    zoom-out: "&e« Zoom out"
+    back: "&c« Back"
+    legend: "&eMap key"
+    legend-size: "&7Settlement: &f%x% x %z% &7blocks"
+    legend-zoom: "&7Showing: &f%percent%% &7of the settlement"
+    legend-outside: "&8Brown: outside the settlement"
+    outside: "&8Outside the settlement"
+    inside-building: "&7Inside a building"
+    type-residential: "&aResidential"
+    type-workplace: "&6Workplace"
+    type-mixed: "&bHome & workshop"
+    type-unknown: "&7Unknown"
+
+  # The ballot, shown when right-clicking the village bell during an election.
+  election:
+    title: "&8Election: %village%"
+    candidate-name: "&e%name%"
+    program-line: "&7Program: &f%program%"
+    effect-trade: "&7Trade prices: %value%"
+    effect-cost: "&7Build cost: %value%"
+    effect-time: "&7Build time: %value%"
+    effect-harvest: "&7Resource gathering: %value%"
+    votes-line: "&7Votes: &f%votes%"
+    click-to-vote: "&eClick to vote"
+    your-vote: "&aYou voted for this candidate"
+    already-voted: "&cYou already voted"
+    timer: "&eTime left: &f%time%"
+
+    # Display names for the electoral programs. Each program is a trade-off; the
+    # exact numbers are shown to the player automatically as +/- percentages.
+    programs:
+      merchant-friendly: "Merchant Friendly"
+      builder-friendly: "Builder Friendly"
+      ambitious: "Ambitious"
+      frugal: "Frugal"
+      populist: "Populist"
+      industrious: "Industrious"
+      leisurely: "Leisurely"
+      steward: "Steward"
+
+  # The list of buildings the settlement can raise, opened from the mayor's screen.
+  # Each building's cost is counted from its blueprint in configs/blueprints.yml, then
+  # scaled by the sitting mayor's programme.
+  commission:
+    title: "&8Build in %village%"
+    size: "&7Size: &f%width%x%depth%x%height%"
+    time: "&7Takes: &f%seconds%s"
+    materials: "&7Materials:"
+    material-have: "&a+ &f%item%&7: %held%/%needed%"
+    material-missing: "&c- &f%item%&7: %held%/%needed%"
+    # Shown when a building needs more kinds of material than fit in one tooltip. Missing
+    # ones are listed first, so what you are short of is never the part that gets cut.
+    material-more: "&8...and %count% more"
+    can-build: "&aClick to place it"
+    cannot-build: "&cThe stores are short."
+    none: "&cNothing here can be built yet."
+    none-hint: "&7Record a village you have found, or add structures to the blueprints folder."
+    region: "&8From: &7%region%"
+    region-any: "anywhere"
+    # A recorded building is named after its type; the wording comes from gui.radar.type-*
+    # above, so renaming a type there renames every building of that type here.
+    name-with-trade: "&f%trade% &7— %type%"
+    rename-hint: "&8Shift-click to rename it"
+    rename-title: "&8Name this building"
+    previous: "&e« Previous page"
+    next: "&eNext page »"
+    page: "&7Page &f%page%&7/&f%pages%"
+    back: "&c<< Back"
+
+  # The settlement's stores, opened from the mayor's screen.
+  # Anyone may give goods; taking them needs the same standing as commissioning a building
+  # (operators and realisticvillagers.village.bypass are exempt from that, as always).
+  storage:
+    title: "&8Stores of %village%"
+    item: "&f%item%"
+    held: "&7Held: &f%amount%"
+    take: "&eClick to take up to one stack"
+    empty: "&7The stores are empty."
+    help: "&eThe settlement's stores"
+    help-deposit: "&7Shift-click an item in your inventory to give it."
+    help-withdraw: "&7Click a stack here to take it."
+    help-no-withdraw: "&cYou need standing with the mayor to take from the stores."
+    previous: "&e« Previous page"
+    next: "&eNext page »"
+    back: "&c<< Back"
+
+  # Rainbow animation is applied to all GUI's.
+  rainbow-animation:
+    enabled: false
+    # The type of animation.
+    # 1 = All frames are changed to a random color.
+    # 2 = Each frame is changed to a different color.
+    type: 1
+    # Animation speed (in ticks).
+    delay: 10
+  main:
+    # The size of this inventory. Must be a multiple of 9; minimum 27, maximum 54.
+    size: 45
+    # %reputation% - player reputation with this villager (only for @main).
+    title: "%villager-name% (rep. %reputation%)"
+    frame:
+      enabled: true
+      material: GRAY_STAINED_GLASS_PANE
+      display-name: "&7"
+    items:
+      chat:
+        slot: 2, 2
+        material: PAPER
+        display-name: "&aChat"
+        lore:
+          - "&7Click to chat with this villager."
+      greet:
+        slot: 3, 2
+        material: PAPER
+        display-name: "&aGreet"
+        lore:
+          - "&7Click to greet this villager."
+      story:
+        slot: 4, 2
+        material: PAPER
+        display-name: "&aStory"
+        lore:
+          - "&7Click to tell a story to this villager."
+      joke:
+        slot: 5, 2
+        material: PAPER
+        display-name: "&aJoke"
+        lore:
+          - "&7Click to tell a joke to this villager."
+      insult:
+        slot: 6, 2
+        material: PAPER
+        display-name: "&aInsult"
+        lore:
+          - "&7Click to insult this villager."
+      flirt:
+        slot: 7, 2
+        material: PAPER
+        display-name: "&aFlirt"
+        lore:
+          - "&7Click to flirt with this villager."
+      proud-of:
+        slot: 8, 2
+        material: PAPER
+        display-name: "&aBe proud of"
+        lore:
+          - "&7Click to be proud of this villager"
+      follow-me:
+        slot: 2, 3
+        material: SADDLE
+        display-name: "&aFollow me"
+        lore:
+          - "&7Click to ask this villager to follow you."
+      stay-here:
+        slot: 3, 3
+        material: LEAD
+        display-name: "&aStay here"
+        lore:
+          - "&7Click to ask this villager to stay here."
+      inspect-inventory:
+        slot: 4, 3
+        material: CHEST
+        display-name: "&aInspect inventory"
+        lore:
+          - "&7Click to see the inventory of this villager."
+      gift:
+        slot: 5, 3
+        url: 5726d9d0632e40bda5bcf65839ba2cc98a87bd619c53adf00310d6fc71f042b5
+        material: PLAYER_HEAD
+        display-name: "&aGift"
+        lore:
+          - "&7Click to give a gift to this villager."
+      information:
+        slot: 6, 3
+        material: KNOWLEDGE_BOOK
+        display-name: "&aVillager information"
+        # %villager-name% - name of the villager.
+        # %id% - unique ID of the villager.
+        # %skin-id% - the id of the skin the villager is using.
+        # %experience% - the current villager's experience.
+        # %max-experience% - the experience that the villager must have to level up.
+        # %sex% - sex of the villager (MALE/FEMALE).
+        # %age-stage% - age stage of the villager (KID/DULT).
+        # %health% - current health of the villager (including absorption amount).
+        # %max-health% - maximum amount of health of the villager.
+        # %type% - biome of the villager.
+        # %profession% - profession of the villager.
+        # %level% - level of the villager.
+        # %activity% - the activity that this villager is performing (if any).
+        # %current-partner% - current partner of this villager (if any).
+        # %partners% - partners of this villager (one line).
+        # %partner% - partners of this villager (displayed one below the other).
+        # %father% - father of this villager.
+        # %mother% - mother of this villager.
+        # %childrens% - children of this villager (one line).
+        # %children% - children of this villager (displayed one below the other).
+        # %effect% - active potion effects.
+        # %reputation% - player reputation with this villager.
+        lore:
+          - "&7Name: &e%villager-name%"
+          - "&7ID: &e%id%"
+          - "&7Skin ID: &e%skin-id%"
+          - "&7Reputation: &e%reputation%"
+          - "&7Sex: &e%sex%"
+          - "&7Age stage: &e%age-stage%"
+          - "&7Health: &e%health%&7/&e%max-health%"
+          - "&7Food level: &e%food-level%&7/&e%max-food-level%"
+          - "&7Type: &e%type%"
+          - "&7Profession: &e%profession% (lvl. %level%)"
+          - "&7Experience: &e%experience%&7/&e%max-experience%"
+          - "&7Activity (non-core): &e%activity%"
+          - "&7Partner(s):"
+          - "&8* &e%partner%"
+          - "&7Father: &e%father%"
+          - "&7Mother: &e%mother%"
+          - "&7Childrens:"
+          - "&8* &e%children%"
+          - "&7Effects:"
+          - "&8* &e%effect%"
+      trade:
+        slot: 7, 3
+        material: EMERALD
+        display-name: "&aTrade"
+        lore:
+          - "&7Click to start trading with this villager."
+      no-trades:
+        slot: 7, 3
+        material: BARRIER
+        display-name: "&cEmpty trades"
+        lore:
+          - "&7This villager has nothing to trade."
+      divorce:
+        slot: 8, 3
+        material: WRITABLE_BOOK
+        display-name: "&cDivorce"
+        lore:
+          - "&7Divorce this villager."
+        only-if-married: false
+      divorce-papers:
+        slot: 8, 3
+        material: FILLED_MAP
+        display-name: "&aDivorce papers"
+        lore:
+          - "&7Ask for divorce papers."
+      set-home:
+        slot: 2, 4
+        material: RED_BED
+        display-name: "&aSet home"
+        lore:
+          - "&7Give this villager a bed."
+        only-if-allowed: false
+      procreate:
+        slot: 3, 4
+        material: EGG
+        display-name: "&aProcreate"
+        lore:
+          - "&7Click to start procreating."
+        only-if-married: false
+      combat:
+        slot: 4, 4
+        material: STONE_SWORD
+        display-name: "&cCombat"
+        lore:
+          - "&7Click to manage combat of this villager."
+        only-if-allowed: false
+        flags:
+          - HIDE_ATTRIBUTES
+  equipment:
+    title: "%villager-name%'s inventory"
+    items:
+      villager:
+        url: SELF
+        material: PLAYER_HEAD
+        display-name: "&a%villager-name%"
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
+  combat:
+    title: "Targets (%page%/%max-page%)"
+    # Whether to use spawn eggs instead of heads (only for 1.21.5+).
+    use-spawn-egg: false
+    items:
+      enabled:
+        material: LIME_DYE
+        display-name: "&aEnabled"
+      disabled:
+        material: GRAY_DYE
+        display-name: "&cDisabled"
+      entity:
+        material: PLAYER_HEAD
+        # *** The ones listed below are only applicable for @display-name. ***
+        # %entity-type% - the entity type (name).
+        display-name: "&a%entity-type%"
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific entity."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+  combat-settings:
+    title: "Combat | Settings"
+    items:
+      players:
+        material: PLAYER_HEAD
+        display-name: "&bPlayers"
+        lore:
+          - "&7Add the players that should be attacked."
+      animals:
+        material: PLAYER_HEAD
+        url: d6551840955f524367580f11b35228938b6786397a8f2e8c8cc6b0eb01b5db3d
+        display-name: "&aAnimals"
+        lore:
+          - "&7Choose the animals you want to be attacked."
+      monsters:
+        material: CREEPER_HEAD
+        display-name: "&cMonsters"
+        lore:
+          - "&7Choose the monsters you want to be attacked."
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
+  players:
+    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
+    size: 36
+    title: "Players (%page%/%max-page%)"
+    items:
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific player."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      player:
+        material: PLAYER_HEAD
+        # %name% - name of the player.
+        display-name: "&a%name%"
+        lore:
+          - "&7This villager will attack this player."
+          - "&6Click to remove this player from this list."
+      add-new-player:
+        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
+        material: PLAYER_HEAD
+        display-name: "&bNew player"
+        lore:
+          - "&7Click to add a new player!"
+  whistle:
+    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
+    size: 36
+    title: "Family (%page%/%max-page%)"
+    items:
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific villager."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      villager:
+        material: PLAYER_HEAD
+        # %villager-name% - name of the villager.
+        display-name: "&a%villager-name%"
+        lore:
+          - "&7Click to summon this villager."
+  skin:
+    # The size of this inventory. Must be a multiple of 9; minimum 36, maximum 54.
+    size: 54
+    title: "Skins: %sex%/%age-stage% (%page%/%max-page%)"
+    items:
+      previous:
+        url: bd69e06e5dadfd84e5f3d1c21063f2553b2fa945ee1d4d7152fdc5425bc12a9
+        material: PLAYER_HEAD
+        display-name: "&aPrevious"
+        lore:
+          - "&7Click to go to the previous page."
+      next:
+        url: 19bf3292e126a105b54eba713aa1b152d541a1d8938829c56364d178ed22bf
+        material: PLAYER_HEAD
+        display-name: "&aNext"
+        lore:
+          - "&7Click to go to the next page."
+      search:
+        material: COMPASS
+        display-name: "&9Search"
+        lore:
+          - "&7Click to search for a specific skin."
+      clear-search:
+        material: COMPASS
+        # %keyword% - the current word used as a filter.
+        display-name: "&cClear search: &8&o%keyword%"
+        lore:
+          - "&7Click to clear the browser!"
+      male:
+        url: e7fe6e2316ca384e0c85261b14fc066e231d6127e540dfeddb8b54d911b82831
+        material: PLAYER_HEAD
+        display-name: "&aSex: &bMale"
+        lore:
+          - "&7Click to toggle sex!"
+      female:
+        url: f6aac8c1c290be9d3bd495476aca42c68623b9cbefdd6ddbd6144855b9731c63
+        material: PLAYER_HEAD
+        display-name: "&aSex: &dFemale"
+        lore:
+          - "&7Click to toggle sex!"
+      adult:
+        material: WATER_BUCKET
+        display-name: "&aAdult"
+        lore:
+          - "&7Click to toggle age stage!"
+      kid:
+        material: BUCKET
+        display-name: "&aKid"
+        lore:
+          - "&7Click to toggle age stage!"
+      add-new-skin:
+        url: 3edd20be93520949e6ce789dc4f43efaeb28c717ee6bfcbbe02780142f716
+        material: PLAYER_HEAD
+        display-name: "&bNew skin (BETA)"
+        lore:
+          - "&7Click to add a new skin!"
+      profession:
+        # %profession% - the name of the current profession.
+        display-name: "&a%profession%"
+        lore:
+          - "&7Click to toggle profession (left or right)!"
+      skin:
+        # %skin-id% - the id of the current skin.
+        display-name: "&a#%skin-id%"
+        # %added-by% - the player (or console) that added the skin.
+        # %when% - when was this skin added.
+        # %generated% - how many profession overlays were generated.
+        # %max-professions% - max amount of professions.
+        # %profession% - professions and their state (either added (GREEN) or not (RED), displayed one below the other).
+        lore:
+          - "&7Added by: &e%added-by%"
+          - "&7When: &e%when%"
+          - "&7"
+          - "&7Variants: &e%generated%&7/&e%max-professions%"
+          - "&8* %profession%"
+          - "&7"
+          - "&7Left click to preview this skin!"
+          - "&6Middle click to select kid skins!"
+          - "&cRight click to delete this skin!"
+  new-skin:
+    title: "New skin: %sex%/%age-stage%"
+    items:
+      from-player:
+        url: 185d9c3fbb63e8e8f1d3f250c1a8b408412ca82e9966b53b33159e766c1278b7
+        material: PLAYER_HEAD
+        display-name: "&aFrom a player"
+        lore:
+          - "&7Add a new skin from a player texture!"
+      from-console:
+        url: dcafbac5068197fda18636dfc4ce7f9df5af9b2a06e6f91e38ae35e4c435b2df
+        material: PLAYER_HEAD
+        display-name: "&aFrom console"
+        lore:
+          - "&7Add a new skin using texture values!"
+          - "&7To do this, you need to use the next command"
+          - "&7in console: &b/rv add-skin <sex> <texture> <signature>"
+      back:
+        material: BARRIER
+        display-name: "&cBack"
+        lore:
+          - "&7Click to go to the previous menu."
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CUSTOM CHEST GUIs — fully your own, defined entirely in config.
+  #
+  # Each entry under "custom:" is a whole new chest GUI. It's always opened
+  # for a specific villager+player pair (usually via a hologram menu item
+  # whose id matches the GUI's name — see holograms.yml, "HOW TO ADD A
+  # CUSTOM CLICKABLE SUB-MENU"), so %villager-name% and %reputation% work
+  # in the title and in any action below.
+  #
+  # Slots are plain numbers here (not "x, y" like @main), starting at 0,
+  # top-left. Size must be a multiple of 9, 9-54.
+  #
+  # Each item can have an "actions:" list, run top-to-bottom on click:
+  #   - close                        Closes the GUI.
+  #   - give-item: "material:amount" Gives the player an item (amount optional, default 1).
+  #   - message: "&atext"            Sends the player a chat message.
+  #   - run-command: "cmd %player%"  Runs a command AS CONSOLE (works regardless of player perms).
+  #   - run-command-as-player: "cmd" Runs a command AS the clicking player (needs their permission).
+  #   - open-menu: "other-gui-name"  Closes this GUI and opens another "gui.custom.<name>".
+  #   - open-anvil:                  Opens an anvil text-input prompt; the submitted text becomes
+  #       title: "Type something..."   %input% for its own nested "actions:" list below.
+  #       text: "..."
+  #       actions:
+  #         - message: "&7You typed: %input%"
+  #
+  # Placeholders available everywhere above: %player%, %villager-name%, %reputation%, and
+  # (inside an open-anvil's own actions only) %input%.
+  #
+  # Example — a 3-row shop opened from a "shop" hologram/main-menu button:
+  #
+  #   custom:
+  #     shop:
+  #       size: 27
+  #       title: "&8Shop (%villager-name%)"
+  #       items:
+  #         10:
+  #           material: EMERALD
+  #           display-name: "&aBuy a potion"
+  #           lore:
+  #             - "&7Costs 10 coins."
+  #           actions:
+  #             - run-command: "eco take %player% 10"
+  #             - give-item: "potion:1"
+  #             - message: "&aThanks for your purchase!"
+  #         16:
+  #           material: BARRIER
+  #           display-name: "&cClose"
+  #           actions:
+  #             - close
+  # ─────────────────────────────────────────────────────────────────────────

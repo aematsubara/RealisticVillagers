@@ -42,14 +42,14 @@ public class BlockAttackWithShield extends Behavior<Villager> {
                 stopBlocking(villager);
 
                 // Delay to use again between 1 & 2s.
-                delayToUseAgain = random.nextInt(20, 40);
+                delayToUseAgain = random.nextInt(20) + 20;
             }
         } else if (random.nextFloat() < 0.25f && --delayToUseAgain <= 0) {
             // Start using shield.
             villager.startUsingItem(InteractionHand.OFF_HAND);
 
             // Random delay of use between 1.5s & 2s.
-            delay = random.nextInt(30, 40);
+            delay = random.nextInt(10) + 30;
         }
     }
 

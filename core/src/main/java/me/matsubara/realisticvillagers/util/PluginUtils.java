@@ -451,6 +451,12 @@ public final class PluginUtils {
     }
 
     public static @Nullable FileConfiguration reloadConfig(RealisticVillagers plugin, @NotNull File file, @Nullable Consumer<File> error) {
+        // File simply missing — recreate silently without logging an error.
+        if (!file.exists() && error != null) {
+            error.accept(file);
+            return reloadConfig(plugin, file, null);
+        }
+
         File backup = null;
         try {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");

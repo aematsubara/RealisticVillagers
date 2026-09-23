@@ -42,8 +42,15 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
     public void start(ServerLevel level, Villager villager, long time) {
         if (cooldown > 0) cooldown--;
         LivingEntity target = villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
-        if (BehaviorUtils.canSee(villager, target) && BehaviorUtils.isWithinAttackRange(villager, target, 1)) {
+        
+        double stopDistSqr = 12.25; // 3.5 blocks for melee
+        if (villager instanceof VillagerNPC npc && npc.isHoldingRangeWeapon()) {
+            stopDistSqr = 100.0; // 10 blocks for archers
+        }
+
+        if (BehaviorUtils.canSee(villager, target) && villager.distanceToSqr(target) <= stopDistSqr) {
             clearWalkTarget(villager);
+            villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
         } else {
             setWalkAndLookTarget(villager, target);
         }
@@ -52,13 +59,24 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
     private void setWalkAndLookTarget(@NotNull Villager villager, LivingEntity target) {
         Brain<Villager> brain = villager.getBrain();
         brain.setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
-        brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityTracker(target, false), speedModifier.apply(villager), 0));
+
+        boolean shouldUpdate = true;
+        java.util.Optional<WalkTarget> existing = brain.getMemory(MemoryModuleType.WALK_TARGET);
+        if (existing.isPresent() && existing.get().getTarget() instanceof EntityTracker tracker) {
+            if (tracker.getEntity() == target) {
+                shouldUpdate = false;
+            }
+        }
+
+        if (shouldUpdate) {
+            brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(new EntityTracker(target, false), speedModifier.apply(villager), 0));
+        }
 
         // Fake attacks.
         Path path;
         if (cooldown == 0
-                && MeleeAttack.canAttack(villager, true)
-                && !BehaviorUtils.isWithinAttackRange(villager, target, 0)
+                && villager instanceof VillagerNPC npc && npc.isHoldingMeleeWeapon()
+                && villager.distanceToSqr(target) > 20.25
                 && villager.getRandom().nextFloat() <= 0.35f
                 && ((path = villager.getNavigation().createPath(target, 0)) != null && path.canReach())) {
             villager.swing(InteractionHand.MAIN_HAND);
@@ -67,6 +85,9 @@ public class SetWalkTargetFromAttackTargetIfTargetOutOfReach extends Behavior<Vi
     }
 
     private void clearWalkTarget(@NotNull Villager villager) {
+        // Also clear CANT_REACH_WALK_TARGET_SINCE so StopAttackingIfTargetInvalid
+        // doesn't prematurely abort the fight after we successfully reach the target.
         villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 }

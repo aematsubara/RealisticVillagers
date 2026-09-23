@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -6,7 +6,7 @@
 
     <groupId>me.matsubara</groupId>
     <artifactId>realisticvillagers-parent</artifactId>
-    <version>3.3.6.5</version>
+    <version>4.0.1</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -18,12 +18,13 @@
     <description>Forget about those boring villagers and replace them with interactive humans!</description>
 
     <modules>
-        <module>v1_18</module>
+        <module>Config-Updater-2.2-SNAPSHOT</module>
         <module>v1_19</module>
         <module>v1_20_6</module>
         <module>v1_21_8</module>
         <module>v1_21_10</module>
         <module>v1_21_11</module>
+        <module>v26_1</module>
         <module>core</module>
         <module>dist</module>
     </modules>
@@ -40,8 +41,9 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
+            <version>1.18.46</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
 </project>

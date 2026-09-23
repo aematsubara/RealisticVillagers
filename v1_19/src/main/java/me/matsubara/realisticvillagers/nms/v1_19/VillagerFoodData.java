@@ -17,8 +17,6 @@ import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-@Getter
-@Setter
 public class VillagerFoodData {
 
     private final VillagerNPC npc;
@@ -28,6 +26,46 @@ public class VillagerFoodData {
     private int lastFoodLevel;
     private float saturationLevel;
     private float exhaustionLevel;
+
+    public int getFoodLevel() {
+        return foodLevel;
+    }
+
+    public void setFoodLevel(int foodLevel) {
+        this.foodLevel = foodLevel;
+    }
+
+    public int getTickTimer() {
+        return tickTimer;
+    }
+
+    public void setTickTimer(int tickTimer) {
+        this.tickTimer = tickTimer;
+    }
+
+    public int getLastFoodLevel() {
+        return lastFoodLevel;
+    }
+
+    public void setLastFoodLevel(int lastFoodLevel) {
+        this.lastFoodLevel = lastFoodLevel;
+    }
+
+    public float getSaturationLevel() {
+        return saturationLevel;
+    }
+
+    public void setSaturationLevel(float saturationLevel) {
+        this.saturationLevel = saturationLevel;
+    }
+
+    public float getExhaustionLevel() {
+        return exhaustionLevel;
+    }
+
+    public void setExhaustionLevel(float exhaustionLevel) {
+        this.exhaustionLevel = exhaustionLevel;
+    }
 
     private static final int SATURATED_REGEN_RATE = 10;
     private static final int UNSATURATED_REGEN_RATE = 80;

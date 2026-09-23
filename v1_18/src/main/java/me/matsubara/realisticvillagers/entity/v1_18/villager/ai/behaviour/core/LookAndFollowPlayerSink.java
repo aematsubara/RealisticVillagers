@@ -80,6 +80,7 @@ public class LookAndFollowPlayerSink extends Behavior<Villager> {
         Brain<Villager> brain = villager.getBrain();
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+        villager.getNavigation().stop();
     }
 
     @Override

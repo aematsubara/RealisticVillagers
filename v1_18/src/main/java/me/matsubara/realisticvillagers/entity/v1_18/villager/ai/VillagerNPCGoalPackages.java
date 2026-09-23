@@ -136,8 +136,13 @@ public class VillagerNPCGoalPackages {
                         3,
                         (npc, living) -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
                         ImmutableSet.of(Items.BONE))),
-                Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())),
-                Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())));
+                Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())),
+                Pair.of(99, new GateBehavior<>(
+                        ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT),
+                        ImmutableSet.of(),
+                        GateBehavior.OrderPolicy.ORDERED,
+                        GateBehavior.RunningPolicy.RUN_ONE,
+                        ImmutableList.of(Pair.of(new UpdateActivityFromSchedule(), 1)))));
     }
 
     @Contract("_, _, _ -> new")

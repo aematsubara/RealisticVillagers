@@ -50,8 +50,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-@Getter
-@Setter
 public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
@@ -59,6 +57,30 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
     private String villagerName;
     private String sex;
     private int skinTextureId = -1;
+
+    public String getVillagerName() {
+        return villagerName;
+    }
+
+    public void setVillagerName(String villagerName) {
+        this.villagerName = villagerName;
+    }
+
+    public String getSex() {
+        return sex;
+    }
+
+    public void setSex(String sex) {
+        this.sex = sex;
+    }
+
+    public int getSkinTextureId() {
+        return skinTextureId;
+    }
+
+    public void setSkinTextureId(int skinTextureId) {
+        this.skinTextureId = skinTextureId;
+    }
 
     private static final @SuppressWarnings("unchecked") EntityDataAccessor<Integer> DATA_EFFECT_COLOR_ID =
             (EntityDataAccessor<Integer>) Reflection.getFieldValue(Reflection.getFieldGetter(net.minecraft.world.entity.LivingEntity.class, "bG"));
@@ -614,6 +636,26 @@ public class WanderingTraderNPC extends WanderingTrader implements IVillagerNPC 
 
     @Override
     public void setEquipped(boolean equipped) {
+
+    }
+
+    @Override
+    public boolean isGenderLocked() {
+        return false;
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
 
     }
 

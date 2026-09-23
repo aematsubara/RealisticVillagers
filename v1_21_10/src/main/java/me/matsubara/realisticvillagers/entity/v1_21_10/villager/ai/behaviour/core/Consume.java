@@ -67,10 +67,12 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
         if (contents == null) return false;
 
         boolean isWanted = false;
-        for (MobEffectInstance instance : contents.getAllEffects()) {
-            if (isHarmful(instance)) return false;
-            if (effects.contains(instance.getEffect())) {
-                isWanted = true;
+        for (Object effect : contents.getAllEffects()) {
+            if (effect instanceof MobEffectInstance instance) {
+                if (isHarmful(instance)) return false;
+                if (effects.contains(instance.getEffect())) {
+                    isWanted = true;
+                }
             }
         }
 
@@ -108,9 +110,11 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
         return hasHarmfulEffects(npc.getActiveEffects()) && npc.getInventory().hasAnyMatching(item -> item.is(Items.MILK_BUCKET));
     }
 
-    public static boolean hasHarmfulEffects(@NotNull Collection<MobEffectInstance> effects) {
-        for (MobEffectInstance effect : effects) {
-            if (isHarmful(effect)) return true;
+    public static boolean hasHarmfulEffects(@NotNull Collection<?> effects) {
+        for (Object effect : effects) {
+            if (effect instanceof MobEffectInstance instance) {
+                if (isHarmful(instance)) return true;
+            }
         }
         return false;
     }
@@ -278,7 +282,10 @@ public class Consume extends Behavior<Villager> implements Exchangeable {
     }
 
     private static boolean isHarmful(@NotNull MobEffectInstance instance) {
-        return instance.getEffect().value().getCategory() == MobEffectCategory.HARMFUL;
+        Object effect = instance.getEffect();
+        if (effect instanceof Holder<?> holder) effect = holder.value();
+
+        return effect instanceof MobEffect me && me.getCategory() == MobEffectCategory.HARMFUL;
     }
 
     public enum ConsumeType {

@@ -119,6 +119,18 @@ public enum EntityHead {
         this.otherNames = otherNames;
     }
 
+    public EntityCategory getCategory() {
+        return category;
+    }
+
+    public @Nullable String getUrl() {
+        return url;
+    }
+
+    public String[] getOtherNames() {
+        return otherNames;
+    }
+
     public @Nullable EntityType getType() {
         EntityType type = PluginUtils.getOrNull(EntityType.class, name());
         if (type != null) return type;

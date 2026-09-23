@@ -29,11 +29,12 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Barrel;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.craftbukkit.v1_21_R6.block.CraftBlock;
-import org.bukkit.craftbukkit.v1_21_R6.block.CraftChest;
 import org.bukkit.craftbukkit.v1_21_R6.inventory.CraftItemStack;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
@@ -45,12 +46,13 @@ import java.util.*;
 
 public class LootChest extends Behavior<Villager> implements Exchangeable {
 
-    private Chest chest;
+    private Container container;
     private boolean chestOpen;
     private final Map<String, Long> cooldown = new HashMap<>();
     private final List<ItemStack> items = new ArrayList<>();
 
     private boolean looted;
+    private boolean deposited;
     private boolean addToCooldown;
     private int count;
     private int tryAgain;
@@ -88,7 +90,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
                 || !npc.isDoingNothing(ChangeItemType.LOOTING)
                 || !canStoreItems(npc)) {
             // Task already started, probably the villager was interrupted while looting.
-            if (chest != null) addToCooldown = true;
+            if (container != null) addToCooldown = true;
             return false;
         }
 
@@ -99,7 +101,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         if (villager.isDeadOrDying()) return false;
         if (villager.getBrain().hasMemoryValue(VillagerNPC.HAS_LOOTED_RECENTLY)) return false;
 
-        if (chest != null) return true;
+        if (container != null) return true;
 
         BlockPos.MutableBlockPos mutable = villager.blockPosition().mutable();
 
@@ -110,24 +112,26 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
                     mutable.set(villager.getX() + x, villager.getY() + y, villager.getZ() + z);
 
                     BlockState state = level.getWorld().getBlockState(mutable.getX(), mutable.getY(), mutable.getZ());
-                    if (state.getType() != Material.CHEST) continue;
+                    Material blockType = state.getType();
+                    boolean isChest = blockType == Material.CHEST && Config.LOOT_CHEST_CONTAINER_CHEST.asBool();
+                    boolean isBarrel = blockType == Material.BARREL && Config.LOOT_CHEST_CONTAINER_BARREL.asBool();
+                    if (!isChest && !isBarrel) continue;
+                    container = (Container) state;
 
-                    chest = (Chest) state;
-
-                    long last = cooldown.getOrDefault(chest.getLocation().toString(), 0L);
+                    long last = cooldown.getOrDefault(container.getLocation().toString(), 0L);
                     if (System.currentTimeMillis() - last <= Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong()) {
-                        chest = null;
+                        container = null;
                         continue;
                     }
 
                     ChestManager chestManager = npc.getPlugin().getChestManager();
                     if (chestManager.getVillagerChests().containsKey(vector())) {
-                        chest = null;
+                        container = null;
                         continue;
                     }
 
                     String requiredLine = Config.LOOT_CHEST_REQUIRED_SIGN_LINE.asStringTranslated();
-                    if (requiredLine.isEmpty()) break;
+                    if (requiredLine.isEmpty()) break out;
 
                     for (Direction direction : Direction.values()) {
                         if (direction.getAxis().isVertical()) continue;
@@ -142,12 +146,12 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
                         }
                     }
 
-                    chest = null;
+                    container = null;
                 }
             }
         }
 
-        return chest != null;
+        return container != null;
     }
 
     @Override
@@ -165,13 +169,14 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         return checkExtraStartConditions(level, villager)
                 && (viewer == null || viewer.equals(villager.getUUID()))
                 && canReach
-                && level.getWorld().getBlockAt(chest.getLocation()).getType() == Material.CHEST;
+                && (level.getWorld().getBlockAt(container.getLocation()).getType() == Material.CHEST
+                        || level.getWorld().getBlockAt(container.getLocation()).getType() == Material.BARREL);
     }
 
     @Override
     public void tick(ServerLevel level, @NotNull Villager villager, long time) {
-        BlockPos pos = ((CraftChest) chest).getPosition();
-        if (chest.getLocation().distance(villager.getBukkitEntity().getLocation()) > 3 || !(villager instanceof VillagerNPC npc)) {
+        BlockPos pos = new BlockPos(container.getX(), container.getY(), container.getZ());
+        if (container.getLocation().distance(villager.getBukkitEntity().getLocation()) > 3 || !(villager instanceof VillagerNPC npc)) {
             BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, VillagerNPC.WALK_SPEED.get(), 1);
             return;
         }
@@ -179,7 +184,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         // Look at chest all the time.
         BehaviorUtils.setWalkAndLookTargetMemories(villager, pos, VillagerNPC.WALK_SPEED.get(), 1);
 
-        Inventory inventory = chest.getInventory();
+        Inventory inventory = container.getInventory();
         boolean isOpen = isOpen();
 
         // Open the chest if not opened.
@@ -190,17 +195,21 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
 
         // Loot wanted items and add cooldown to selected chest.
         if (!looted) {
+            boolean hasEnoughFood = !needsFood(npc);
+            Set<String> chestItems = new java.util.HashSet<>(Config.LOOT_CHEST_ITEMS.asStringList());
             for (ItemStack item : inventory.getContents()) {
                 if (item == null || alreadyLooted(npc, item)) continue;
 
+                String typeName = item.getType().name();
+                boolean isChestItem = chestItems.contains(typeName);
+                boolean isWeaponOrArmor = ItemStackUtils.isWeapon(item) || ItemStackUtils.getSlotByItem(item) != null || item.getType() == Material.SHIELD;
                 Gift gift = npc.getPlugin().getWantedItem(npc, item, false);
-                if (gift == null) continue;
+                if (gift == null && !isChestItem && !isWeaponOrArmor && (hasEnoughFood || !item.getType().isEdible())) continue;
 
                 ItemStack copy = item.clone();
-                int takeAmount = gift.getAmount();
                 int currentAmount = copy.getAmount();
 
-                copy.setAmount(Math.min(takeAmount != -1 ? takeAmount : level.random.nextInt(1, currentAmount + 1), currentAmount));
+                copy.setAmount(level.random.nextInt(currentAmount) + 1);
 
                 if (villager.getInventory().canAddItem(CraftItemStack.asNMSCopy(copy))) {
                     items.add(copy);
@@ -208,7 +217,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
             }
 
             looted = true;
-            count = 20;
+            count = 10;
         }
 
         if (!chestOpen) return;
@@ -219,6 +228,14 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         }
 
         if (items.isEmpty()) {
+            // Deposit unwanted items before closing.
+            if (!deposited) {
+                if (Config.LOOT_CHEST_DEPOSIT_ENABLED.asBool()) {
+                    depositUnwantedItems(npc, container.getInventory());
+                }
+                deposited = true;
+            }
+
             // No more item to add, close chest (only if inventory viewers are empty).
             containerAction(npc, level, false, isOpen);
 
@@ -262,7 +279,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
             inventory.setContents(contents.toArray(value -> new ItemStack[0]));
         }
 
-        if (!items.isEmpty()) count = 20;
+        if (!items.isEmpty()) count = 10;
     }
 
     @Override
@@ -280,7 +297,7 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
     public void stop(ServerLevel level, Villager villager, long time) {
         if (villager instanceof VillagerNPC npc) {
             npc.setLooting(false);
-            if (chest != null && chestOpen) {
+            if (container != null && chestOpen) {
                 containerAction(npc, level, false, isOpen());
             }
         }
@@ -294,10 +311,11 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
 
-        chest = null;
+        container = null;
         chestOpen = false;
         items.clear();
         looted = false;
+        deposited = false;
         addToCooldown = false;
         count = 0;
     }
@@ -329,8 +347,8 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
 
         for (ServerPlayer player : level.players()) {
             player.connection.send(new ClientboundBlockEventPacket(
-                    ((CraftChest) chest).getPosition(),
-                    Blocks.CHEST,
+                    new BlockPos(container.getX(), container.getY(), container.getZ()),
+                    level.getBlockState(new BlockPos(container.getX(), container.getY(), container.getZ())).getBlock(),
                     1,
                     open ? 1 : 0));
         }
@@ -340,18 +358,39 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
     }
 
     private void playSound(ServerLevel level, boolean open) {
-        Location location = chest.getLocation().clone().add(0.5d, 0.5d, 0.5d);
+        Location location = container.getLocation().clone().add(0.5d, 0.5d, 0.5d);
+        Sound sound;
 
-        org.bukkit.block.data.type.Chest data = (org.bukkit.block.data.type.Chest) chest.getBlockData();
-        org.bukkit.block.data.type.Chest.Type type = (data).getType();
-        if (type != org.bukkit.block.data.type.Chest.Type.SINGLE) {
-            BlockFace facing = data.getFacing();
-            facing = type == org.bukkit.block.data.type.Chest.Type.LEFT ? getClockWise(facing) : getCounterClockWise(facing);
-            location.add(facing.getModX() * 0.5d, 0.0d, facing.getModZ() * 0.5d);
+        if (container instanceof Chest chest) {
+            org.bukkit.block.data.type.Chest data = (org.bukkit.block.data.type.Chest) chest.getBlockData();
+            org.bukkit.block.data.type.Chest.Type type = data.getType();
+            if (type != org.bukkit.block.data.type.Chest.Type.SINGLE) {
+                BlockFace facing = data.getFacing();
+                facing = type == org.bukkit.block.data.type.Chest.Type.LEFT ? getClockWise(facing) : getCounterClockWise(facing);
+                location.add(facing.getModX() * 0.5d, 0.0d, facing.getModZ() * 0.5d);
+            }
+            sound = open ? Sound.BLOCK_CHEST_OPEN : Sound.BLOCK_CHEST_CLOSE;
+        } else {
+            sound = open ? Sound.BLOCK_BARREL_OPEN : Sound.BLOCK_BARREL_CLOSE;
         }
 
-        Sound sound = open ? Sound.BLOCK_CHEST_OPEN : Sound.BLOCK_CHEST_CLOSE;
         level.getWorld().playSound(location, sound, SoundCategory.BLOCKS, 0.5f, level.random.nextFloat() * 0.1f + 0.9f);
+    }
+
+    private void depositUnwantedItems(@NotNull VillagerNPC npc, @NotNull Inventory containerInv) {
+        Set<String> chestItems = new java.util.HashSet<>(Config.LOOT_CHEST_ITEMS.asStringList());
+        net.minecraft.world.SimpleContainer inv = npc.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack nmsItem = inv.getItem(i);
+            if (nmsItem.isEmpty()) continue;
+            ItemStack bukkit = CraftItemStack.asCraftMirror(nmsItem);
+            if (ItemStackUtils.isWeapon(bukkit) || ItemStackUtils.getSlotByItem(bukkit) != null || bukkit.getType() == Material.SHIELD) continue;
+            if (chestItems.contains(bukkit.getType().name())) continue;
+            if (npc.getPlugin().getWantedItem(npc, bukkit, false) != null) continue;
+            ItemStack copy = bukkit.clone();
+            if (!containerInv.addItem(copy).isEmpty()) continue;
+            inv.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+        }
     }
 
     public BlockFace getCounterClockWise(@NotNull BlockFace face) {
@@ -375,17 +414,30 @@ public class LootChest extends Behavior<Villager> implements Exchangeable {
     }
 
     private @NotNull Vector vector() {
-        return chest.getLocation().toVector();
+        return container.getLocation().toVector();
     }
 
     private boolean isOpen() {
-        return !chest.getBlockInventory().getViewers().isEmpty();
+        return !container.getInventory().getViewers().isEmpty();
     }
 
     private void addToCooldown() {
-        if (chest != null) cooldown.put(
-                chest.getLocation().toString(),
+        if (container != null) cooldown.put(
+                container.getLocation().toString(),
                 System.currentTimeMillis() + Config.LOOT_CHEST_PER_CHEST_COOLDOWN.asLong());
+    }
+
+    private boolean needsFood(@NotNull VillagerNPC npc) {
+        net.minecraft.world.SimpleContainer inv = npc.getInventory();
+        int foodCount = 0;
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack nmsItem = inv.getItem(i);
+            if (nmsItem.isEmpty()) continue;
+            if (CraftItemStack.asCraftMirror(nmsItem).getType().isEdible()) {
+                foodCount += nmsItem.getCount();
+            }
+        }
+        return foodCount < 8;
     }
 
     private boolean alreadyLooted(@NotNull VillagerNPC npc, ItemStack check) {

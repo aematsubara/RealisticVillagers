@@ -66,7 +66,7 @@ public final class CombatGUI extends InteractGUI {
         this.player = player;
         this.isAnimal = isAnimal;
         ServerVersion version = PacketEvents.getAPI().getServerManager().getVersion();
-        this.useSpawnEgg = plugin.getConfig().getBoolean("gui.combat.use-spawn-egg")
+        this.useSpawnEgg = plugin.getGuiConfig().getBoolean("gui.combat.use-spawn-egg")
                 && version.isNewerThanOrEquals(ServerVersion.V_1_20_5);
         this.current = page != null ? page : 0;
 
@@ -122,7 +122,7 @@ public final class CombatGUI extends InteractGUI {
             EntityHead skull = heads.get(aux);
 
             String defaultName = skull.name().toLowerCase(Locale.ROOT);
-            @SuppressWarnings("deprecation") String name = plugin.getConfig().getString("variable-text.entity." + defaultName.replace("-", "_"),
+            @SuppressWarnings("deprecation") String name = plugin.getVariableTextConfig().getString("variable-text.entity." + defaultName.replace("-", "_"),
                     WordUtils.capitalizeFully(defaultName.toLowerCase(Locale.ROOT).replace("_", " ")));
 
             ItemBuilder builder = new ItemBuilder(getGUIItem("entity"));

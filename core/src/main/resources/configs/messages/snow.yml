@@ -1,0 +1,329 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Snow  (Nordic / Russian)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for SNOW villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/snow.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "By the frost, you again?"
+  - "Bah, what do you want now?"
+  - "The cold is more welcome than you."
+  - "Even the wolves leave me in peace."
+  - "Da, da, what is it now?"
+  - "I was resting! The blizzard does not bother me, but you do."
+  - "Go away, I have firewood to chop."
+
+reaction:
+  on-hit:
+    - "Oof! That hurt, you fool!"
+    - "By the frost spirits, stop that!"
+    - "What are you doing?!"
+    - "You will regret that in this cold."
+    - "That hurt more than falling through ice!"
+
+marry:
+  success:
+    - "Da! I will marry you!"
+    - "You have warmed my frozen heart!"
+    - "Together we will face any winter!"
+    - "This is the warmest I have felt in years."
+    - "Our bond will outlast the longest winter."
+  fail:
+    married-to-giver:
+      - "We are already married, you snow-brained fool!"
+      - "Did the cold freeze your memory? We are wed!"
+    married-to-other:
+      - "I am already spoken for. Nyet."
+      - "My heart belongs to another."
+    player-married:
+      - "You already have a partner, I can see it!"
+      - "This is not how things are done here!"
+    low-reputation:
+      - "I do not know you well enough, stranger."
+      - "Earn my trust through the long winter first."
+  end:
+    - "You have grown cold toward me. Goodbye."
+    - "Like the ice, this is broken now."
+    - "I survived worse blizzards than this heartbreak."
+
+divorce:
+  normal:
+    - "You have disappointed me for the last time!"
+    - "Out! Into the cold with you!"
+    - "I have endured enough!"
+  papers:
+    - "So it ends..."
+
+follow-me:
+  start:
+    - "Da, I will follow."
+    - "Lead on, I know how to survive the cold."
+  stop:
+    - "Stay safe out there."
+    - "Until we meet again."
+  low-reputation:
+    - "I do not follow strangers."
+    - "Who are you to give me orders?"
+
+stay-here:
+  start:
+    - "I will wait here like stone in the tundra."
+    - "Da, I stay."
+  stop:
+    - "Good, I was getting bored."
+    - "Finally, we move."
+  low-reputation:
+    - "Why should I listen to you?"
+    - "Earn my respect first."
+
+no-trades:
+  - "I have nothing for you today."
+  - "Come back when the storm passes."
+
+chat:
+  adult:
+    success:
+      - "The blizzard last night was fierce, da?"
+      - "I once wrestled a bear. It was polite about it."
+      - "The aurora last night was beautiful, did you see it?"
+      - "Winter here is long, but we are longer."
+      - "I chopped enough wood for three winters. Just in case."
+    fail:
+      - "Hmph."
+      - "I do not understand your southern ways."
+      - "That is not how we do things here."
+      - "Strange."
+  child:
+    success:
+      - "Have you ever seen a real wolf? I have!"
+      - "Can you teach me to survive the blizzard?"
+      - "I built a snow fort this morning!"
+    fail:
+      - "That sounds boring."
+      - "Mama said not to talk to outsiders."
+      - "You are strange."
+  child-offspring:
+    success:
+      - "Can we go sledding today?"
+      - "Tell me a story about the great wolves!"
+      - "I want to be a hunter when I grow up!"
+    fail:
+      - "It is too cold to go outside."
+      - "I want to stay by the fire."
+  partner:
+    success:
+      - "I made borscht. Come eat before it freezes."
+      - "The wood is stacked. We are ready for winter."
+      - "You are warmer than the fireplace to me."
+    fail:
+      - "You were gone too long in the storm."
+      - "We need to talk."
+      - "I was worried. Do not do that again."
+
+joke:
+  adult:
+    success:
+      - "Ha! That is funny even in this cold!"
+      - "Good one! I will tell it at the fire tonight."
+      - "By the frost, you are funny!"
+    fail:
+      - "Not funny."
+      - "My grandmother tells better jokes."
+      - "The wind is more amusing."
+  child:
+    success:
+      - "Hahaha! Tell another!"
+      - "You're funny for an outsider!"
+    fail:
+      - "I don't get it."
+      - "That's dumb."
+  child-offspring:
+    success:
+      - "*Giggles* Tell it again!"
+      - "Papa, that's so funny!"
+    fail:
+      - "That wasn't funny."
+      - "Tell a better one."
+  partner:
+    success:
+      - "You always make the cold nights warmer."
+      - "Ha! I married well."
+    fail:
+      - "Stick to hunting."
+      - "That was not funny, dear."
+
+story:
+  adult:
+    success:
+      - "By the spirits, what a tale!"
+      - "I have heard of such courage!"
+      - "You survived that? Incredible!"
+      - "That would make a great saga!"
+    fail:
+      - "I do not believe that story."
+      - "Outsiders always exaggerate."
+      - "That is not how things work here."
+  child:
+    success:
+      - "Wow! You are like a hero from the old stories!"
+      - "I want adventures like that!"
+    fail:
+      - "That sounds dangerous."
+      - "Mama would not like that."
+  child-offspring:
+    success:
+      - "Tell me more! What happened next?"
+      - "You are so brave!"
+    fail:
+      - "That story is scary."
+      - "I do not like that one."
+  partner:
+    success:
+      - "Every evening by the fire with you is a blessing."
+      - "Your stories keep the cold away."
+    fail:
+      - "Let us not speak of such dangers."
+      - "I worry when you say things like that."
+
+gift:
+  expecting:
+    - "Something for me? In this cold?"
+    - "You brought something from your travels?"
+    - "What did you find out there?"
+  expecting-fail:
+    - "I thought you had something for me?"
+    - "You said you would bring something."
+  loved:
+    - "This is magnificent! Thank you!"
+    - "By the frost spirits, I love this!"
+    - "I will keep this through every winter."
+  neutral:
+    - "Thank you, this is useful."
+    - "Good thinking, I needed this."
+    - "Spasibo."
+  disliked:
+    - "Hmm. It will do, I suppose."
+    - "Thank you, I guess."
+  bad:
+    - "This is not useful to me."
+    - "Keep it. I have no use for this."
+  cooldown:
+    - "Enough gifts for now!"
+    - "You are too generous, stop."
+  adult:
+    success:
+      good:
+        - "Useful. Thank you."
+        - "This will serve me well."
+      better:
+        - "This is quality! Well chosen."
+        - "I did not expect something this fine."
+      best:
+        - "Incredible. I am grateful."
+        - "This is beyond what I hoped for."
+    fail:
+      - "I have no use for this."
+      - "Perhaps bring something practical next time."
+  child:
+    success:
+      good:
+        - "Is this mine? Really?"
+        - "Oh! Thank you!"
+      better:
+        - "I love it! I'll show everyone!"
+        - "This is the best!"
+      best:
+        - "You are the best!"
+        - "I will keep this forever!"
+    fail:
+      - "I don't want this."
+      - "What is this even?"
+  child-offspring:
+    success:
+      good:
+        - "For me? Thank you!"
+        - "Oh wow!"
+      better:
+        - "This is so cool!"
+        - "I love it!"
+      best:
+        - "You are the best parent!"
+        - "I'll treasure this always!"
+    fail:
+      - "This isn't a good gift."
+      - "I don't like it."
+  partner:
+    success:
+      good:
+        - "You are thoughtful, dear."
+        - "Thank you, milaya."
+      better:
+        - "You remembered! I love it."
+        - "This is exactly what I needed."
+      best:
+        - "You warm my heart like no fire can."
+        - "I love you more every day."
+    fail:
+      - "Oh... really, dear?"
+      - "I thought you knew me better than this."

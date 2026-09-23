@@ -1,0 +1,328 @@
+# ===========================================================================
+# RealisticVillagers - Villager Dialogue
+# Region : Swamp  (Southern US / Bayou)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# Contains spoken dialogue for SWAMP villagers.
+# Used when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain (evaluated per section, not per file):
+#   1. This file  (configs/messages/swamp.yml)
+#   2. configs/messages/default.yml   <-- if section is absent here
+#   3. Empty string                   <-- if absent from both
+#
+# You do NOT need every section -- only include the ones you want to
+# customise. Missing sections fall back to default.yml automatically.
+#
+# AVAILABLE SECTIONS
+# ---------------------------------------------------------------------------
+#   annoyed                          reaction.on-hit
+#   no-trades
+#
+#   marry.success                    marry.end
+#   marry.fail.married-to-giver      marry.fail.married-to-other
+#   marry.fail.player-married        marry.fail.low-reputation
+#
+#   set-home.expecting               set-home.success    set-home.fail
+#   divorce.normal                   divorce.papers
+#   cleric.divorce-papers            cleric.not-married
+#   procreate.fail.has-baby          procreate.fail.low-reputation
+#   procreate.fail.same-sex
+#
+#   gift.expecting   gift.expecting-fail   gift.cooldown
+#   gift.loved       gift.neutral           gift.disliked   gift.bad
+#   gift.adult       gift.child             gift.child-offspring
+#   gift.partner
+#
+#   follow-me.start   follow-me.stop   follow-me.low-reputation
+#   stay-here.start   stay-here.stop   stay-here.low-reputation
+#
+#   chat.adult    chat.child    chat.child-offspring    chat.partner
+#   joke.adult    joke.child    joke.child-offspring    joke.partner
+#   story.adult   story.child   story.child-offspring   story.partner
+#   flirt.adult   flirt.partner
+#   greet.adult   greet.child   greet.child-offspring   greet.partner
+#   insult.adult  insult.child  insult.child-offspring  insult.partner
+#   proud-of.child   proud-of.child-offspring
+#
+# SYSTEM MESSAGES (reload, permissions, bed, gender, skin, procreate
+# cooldown, whistle, players-gui) are NOT here.
+# Edit configs/messages/system.yml for those.
+#
+# PLACEHOLDERS
+# ---------------------------------------------------------------------------
+#   %player-name%           the player who triggered the message
+#   %villager-name%         the speaking villager name
+#   %random-villager-name%  a random nearby villager name
+#   %random-player-name%    a random nearby player name
+#
+# FORMAT  (single string OR list -- multiple = picked at random)
+#   annoyed: "Single line."
+#     OR
+#   annoyed:
+#     - "Option one."
+#     - "Option two."
+# ===========================================================================
+
+annoyed:
+  - "Lord have mercy, you again?"
+  - "What in tarnation do you want?"
+  - "I was just gettin' comfortable!"
+  - "Even the gators leave me be."
+  - "Sweet mother of— what now?"
+  - "Can't a body get some peace?"
+  - "You're thicker than the bayou mud."
+
+reaction:
+  on-hit:
+    - "What in the— ow!"
+    - "You crazy?! That hurt!"
+    - "Lord almighty, stop that!"
+    - "Hit me again and I'll push you into the swamp!"
+    - "Ow! What's wrong with you?!"
+
+marry:
+  success:
+    - "Well shoot, I thought you'd never ask!"
+    - "Yes! A thousand times yes!"
+    - "You've made me the happiest person in the swamp!"
+    - "I do! I really do!"
+    - "Hot dog, yes! Let's do it!"
+  fail:
+    married-to-giver:
+      - "We're already hitched, remember?"
+      - "Lord, we're already married, sugar!"
+    married-to-other:
+      - "I'm sorry, I'm already spoken for."
+      - "My heart belongs to someone else."
+    player-married:
+      - "But you're already married! I ain't blind!"
+      - "Settle down, you already got yourself a partner!"
+    low-reputation:
+      - "I don't know you well enough for that."
+      - "Buy me a drink first. Earn my trust."
+  end:
+    - "I'm done. Goodbye."
+    - "Like a cottonmouth in the water, I'm out of here."
+    - "Don't you dare follow me into that swamp."
+
+divorce:
+  normal:
+    - "Well that's it! I'm done with you!"
+    - "Get out of my sight!"
+    - "You done broke my heart for the last time!"
+  papers:
+    - "Well... alright then."
+
+follow-me:
+  start:
+    - "Alright, lead the way!"
+    - "I'm right behind ya, don't you worry."
+  stop:
+    - "Take care now."
+    - "Y'all come back now, ya hear?"
+  low-reputation:
+    - "I don't follow folks I don't know."
+    - "I don't think so."
+
+stay-here:
+  start:
+    - "I'll wait right here, still as a cypress."
+    - "Alright, I'll stay."
+  stop:
+    - "Finally! Let's get movin'!"
+    - "Good, I was gettin' stiff."
+  low-reputation:
+    - "Who do you think you are, tellin' me what to do?"
+    - "Earn my trust first."
+
+no-trades:
+  - "Ain't got nothin' for ya today."
+  - "Come back another time, friend."
+
+chat:
+  adult:
+    success:
+      - "Howdy %player-name%, good to see ya!"
+      - "Weather's been real strange lately, ain't it?"
+      - "I caught a fish this big this mornin'!"
+      - "My granddaddy used to say, slow down and listen to the swamp."
+      - "There's a whole lot more life in this mud than folks realize."
+    fail:
+      - "Well, that's somethin'."
+      - "I don't quite follow."
+      - "Hm. Alright."
+      - "Whatever you say, friend."
+  child:
+    success:
+      - "You ever seen a snapping turtle up close?"
+      - "I caught a bullfrog this big! Wanna see it?"
+      - "Can you teach me to whittle?"
+    fail:
+      - "That sounds borin'."
+      - "Mama says be careful with strangers."
+      - "You're a weird one."
+  child-offspring:
+    success:
+      - "Can we go fishin' today?"
+      - "Tell me a story about the old days!"
+      - "I wanna be tough like you when I grow up!"
+    fail:
+      - "It's too hot and muggy today."
+      - "I wanna stay in the shade."
+  partner:
+    success:
+      - "I made cornbread. Come eat 'fore it gets cold."
+      - "The fireflies are out tonight. Beautiful, ain't they?"
+      - "You make this swamp feel like paradise."
+    fail:
+      - "You were gone way too long."
+      - "We need to have a talk."
+      - "I was worried sick about you."
+
+joke:
+  adult:
+    success:
+      - "Ha! That's a good one!"
+      - "I'm gonna tell that at the fish fry!"
+      - "You are funny, I'll give you that!"
+    fail:
+      - "That ain't funny."
+      - "My grandma tells better jokes."
+      - "I don't get it."
+  child:
+    success:
+      - "Hahaha! Tell me another one!"
+      - "You're so funny!"
+    fail:
+      - "That's dumb."
+      - "I don't get it."
+  child-offspring:
+    success:
+      - "*Giggles* Again! Again!"
+      - "Tell me another one, please!"
+    fail:
+      - "That wasn't funny."
+      - "Tell a better one."
+  partner:
+    success:
+      - "You always make me laugh, sugar."
+      - "That's why I married ya!"
+    fail:
+      - "Honey, you are not funny."
+      - "Stick to fishin'."
+
+story:
+  adult:
+    success:
+      - "Well shoot, that's quite a tale!"
+      - "I heard something like that from the old-timers!"
+      - "You're braver than a whole mess of gators!"
+      - "That'll be told 'round the fire for years!"
+    fail:
+      - "I don't believe all of that."
+      - "You're stretchin' the truth somethin' fierce."
+      - "That ain't how things work here."
+  child:
+    success:
+      - "Wow! Are you some kind of hero?"
+      - "I wanna do stuff like that someday!"
+    fail:
+      - "That sounds real dangerous."
+      - "Mama wouldn't like that."
+  child-offspring:
+    success:
+      - "Tell me more! What happened after?!"
+      - "You are the bravest person I know!"
+    fail:
+      - "That story's scary."
+      - "I don't like that one."
+  partner:
+    success:
+      - "Every evenin' with you is somethin' special."
+      - "Your stories make the nights shorter."
+    fail:
+      - "Please be careful out there."
+      - "I get real worried when you say things like that."
+
+gift:
+  expecting:
+    - "A gift? Well bless your heart!"
+    - "What'd you bring back from your travels?"
+    - "Oh! Something for me?"
+  expecting-fail:
+    - "I thought you had somethin' for me?"
+    - "You said you were gonna bring a gift..."
+  loved:
+    - "Well I'll be! I love it! Thank ya!"
+    - "Lord have mercy, this is wonderful!"
+    - "I'll keep this 'til my dyin' day!"
+  neutral:
+    - "Well, thank ya kindly."
+    - "That's real thoughtful of ya."
+  disliked:
+    - "Well... it's somethin', I guess."
+    - "Thank ya, I suppose."
+  bad:
+    - "This ain't much of a gift."
+    - "No thank ya, keep it."
+  cooldown:
+    - "Enough now! You're too generous!"
+    - "No more gifts today, I thank ya."
+  adult:
+    success:
+      good:
+        - "That's real kind of ya. Thank ya."
+        - "Much obliged, friend."
+      better:
+        - "Now that's a fine gift! Good thinkin'."
+        - "I needed this something fierce!"
+      best:
+        - "Lord almighty, this is incredible! Thank ya!"
+        - "I don't know what to say. Thank ya kindly."
+    fail:
+      - "That ain't what I was hopin' for."
+      - "Bring somethin' useful next time."
+  child:
+    success:
+      good:
+        - "Oh! Is this mine? Thank ya!"
+        - "Wow!"
+      better:
+        - "I love it! Wait'll my friends see this!"
+        - "This is the best thing ever!"
+      best:
+        - "You are the best!"
+        - "I'll keep this forever!"
+    fail:
+      - "I don't want this."
+      - "That ain't a good gift."
+  child-offspring:
+    success:
+      good:
+        - "You got me somethin'! Thank ya!"
+        - "Wow! Really?"
+      better:
+        - "I love it!"
+        - "This is so cool!"
+      best:
+        - "Best parent in the whole swamp!"
+        - "I'll treasure this always!"
+    fail:
+      - "I don't like this."
+      - "That ain't a good gift."
+  partner:
+    success:
+      good:
+        - "You are so thoughtful, sugar."
+        - "Thank ya, hon."
+      better:
+        - "You remembered! I love it!"
+        - "This is exactly what I needed."
+      best:
+        - "You make my heart sing!"
+        - "I love ya more every single day."
+    fail:
+      - "Oh honey... really?"
+      - "I thought ya knew me better than that."

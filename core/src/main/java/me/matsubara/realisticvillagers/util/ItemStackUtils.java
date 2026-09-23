@@ -60,11 +60,11 @@ public final class ItemStackUtils {
             "NETHERITE_SWORD"};
 
     static {
-        ARMOR_REDUCTION.put(Enchantment.PROTECTION_ENVIRONMENTAL, 0.75d);
-        ARMOR_REDUCTION.put(Enchantment.PROTECTION_FIRE, 1.25d);
-        ARMOR_REDUCTION.put(Enchantment.PROTECTION_EXPLOSIONS, 1.5d);
-        ARMOR_REDUCTION.put(Enchantment.PROTECTION_PROJECTILE, 1.5d);
-        ARMOR_REDUCTION.put(Enchantment.PROTECTION_FALL, 2.5d);
+        ARMOR_REDUCTION.put(Enchantment.PROTECTION, 0.75d);
+        ARMOR_REDUCTION.put(Enchantment.FIRE_PROTECTION, 1.25d);
+        ARMOR_REDUCTION.put(Enchantment.BLAST_PROTECTION, 1.5d);
+        ARMOR_REDUCTION.put(Enchantment.PROJECTILE_PROTECTION, 1.5d);
+        ARMOR_REDUCTION.put(Enchantment.FEATHER_FALLING, 2.5d);
     }
 
     public static boolean isSword(@NotNull ItemStack item) {
@@ -83,8 +83,13 @@ public final class ItemStackUtils {
         return isMeleeWeapon(item) || isRangeWeapon(item);
     }
 
+    public static boolean isSpear(@NotNull ItemStack item) {
+        String name = item.getType().name();
+        return name.endsWith("_SPEAR") || name.equals("SPEAR");
+    }
+
     public static boolean isMeleeWeapon(@NotNull ItemStack item) {
-        return item.getType() == Material.TRIDENT || isSword(item) || isAxe(item);
+        return item.getType() == Material.TRIDENT || item.getType().name().equals("MACE") || isSpear(item) || isSword(item) || isAxe(item);
     }
 
     public static boolean isBetterArmorMaterial(ItemStack toCheck, ItemStack actual) {
@@ -231,6 +236,10 @@ public final class ItemStackUtils {
             return handle(living, item, content, (first, second) -> getBowBasePoints(first) > getBowBasePoints(second), addIfNotBetter);
         } else if (item.getType() == Material.TRIDENT) {
             return handle(living, item, content, (first, second) -> getTridentBasePoints(first) > getTridentBasePoints(second), addIfNotBetter);
+        } else if (item.getType().name().equals("MACE")) {
+            return handle(living, item, content, (first, second) -> getMaceBasePoints(first) > getMaceBasePoints(second), addIfNotBetter);
+        } else if (isSpear(item)) {
+            return handle(living, item, content, (first, second) -> getSpearBasePoints(first) > getSpearBasePoints(second), addIfNotBetter);
         }
         return false;
     }
@@ -285,7 +294,7 @@ public final class ItemStackUtils {
 
     private static double getSharpnessPoints(@NotNull ItemStack item) {
         // https://minecraft.fandom.com/wiki/Sharpness - 0.5 * level + 0.5.
-        int sharpnessLevel = item.getEnchantmentLevel(Enchantment.DAMAGE_ALL);
+        int sharpnessLevel = item.getEnchantmentLevel(Enchantment.SHARPNESS);
         return (sharpnessLevel > 0) ? 0.5d * sharpnessLevel + 0.5d : 0.0d;
     }
 
@@ -293,7 +302,7 @@ public final class ItemStackUtils {
         double points = 0.0d;
 
         // https://minecraft.fandom.com/wiki/Power - 25% * (level + 1).
-        int powerLevel = item.getEnchantmentLevel(Enchantment.ARROW_DAMAGE);
+        int powerLevel = item.getEnchantmentLevel(Enchantment.POWER);
         if (powerLevel > 0) {
             points += 0.25d * (powerLevel + 1);
         }
@@ -308,6 +317,22 @@ public final class ItemStackUtils {
         int impalingLevel = item.getEnchantmentLevel(Enchantment.IMPALING);
         if (impalingLevel > 0) {
             points += impalingLevel * 2.5d;
+        }
+
+        return points;
+    }
+
+    private static double getSpearBasePoints(@NotNull ItemStack item) {
+        return getSharpnessPoints(item);
+    }
+
+    private static double getMaceBasePoints(@NotNull ItemStack item) {
+        double points = getSharpnessPoints(item);
+
+        // https://minecraft.wiki/w/Density - adds 1 per level to fall damage per block.
+        int densityLevel = item.getEnchantmentLevel(Enchantment.DENSITY);
+        if (densityLevel > 0) {
+            points += densityLevel;
         }
 
         return points;

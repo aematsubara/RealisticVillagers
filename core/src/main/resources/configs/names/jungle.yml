@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Jungle  (Latin American / Tropical)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is JUNGLE.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/jungle.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Diego
+  - Carlos
+  - Miguel
+  - Juan
+  - Luis
+  - Pedro
+  - Alejandro
+  - Roberto
+  - Fernando
+  - Ricardo
+  - Eduardo
+  - Sergio
+  - Gabriel
+  - Rafael
+  - Mateo
+  - Santiago
+  - Andres
+  - Felipe
+  - Jorge
+  - Manuel
+  - Antonio
+  - Rodrigo
+  - Emiliano
+  - Josue
+  - Gonzalo
+  - Alvaro
+  - Ramiro
+  - Ignacio
+  - Renato
+  - Esteban
+  - Gustavo
+  - Marcelo
+  - Leandro
+  - Thiago
+  - Vinicius
+  - Caio
+  - Lucas
+  - Enzo
+  - Felipe
+  - Matheus
+
+female:
+  - Isabella
+  - Valentina
+  - Camila
+  - Daniela
+  - Lucia
+  - Sofia
+  - Gabriela
+  - Fernanda
+  - Juliana
+  - Mariana
+  - Catalina
+  - Ximena
+  - Adriana
+  - Alejandra
+  - Carolina
+  - Natalia
+  - Paola
+  - Monica
+  - Veronica
+  - Patricia
+  - Lorena
+  - Jimena
+  - Ana
+  - Rosa
+  - Carmen
+  - Beatriz
+  - Pilar
+  - Dolores
+  - Marisol
+  - Esperanza
+  - Leticia
+  - Paloma
+  - Renata
+  - Marisa
+  - Viviane
+  - Sabrina
+  - Larissa
+  - Aline
+  - Claudia
+  - Amanda

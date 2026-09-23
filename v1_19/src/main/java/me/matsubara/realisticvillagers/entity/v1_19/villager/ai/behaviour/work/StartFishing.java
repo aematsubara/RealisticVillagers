@@ -28,7 +28,12 @@ import java.util.Iterator;
 
 public class StartFishing extends Behavior<Villager> implements Exchangeable {
 
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
     private @Nullable BlockPos waterPos;
 
     private static final int RANGE = 16;

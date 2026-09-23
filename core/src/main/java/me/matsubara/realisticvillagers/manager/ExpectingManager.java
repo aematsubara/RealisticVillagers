@@ -8,6 +8,7 @@ import me.matsubara.realisticvillagers.event.VillagerPickGiftEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
+import me.matsubara.realisticvillagers.manager.gift.Gift;
 import me.matsubara.realisticvillagers.manager.gift.GiftCategory;
 import me.matsubara.realisticvillagers.util.ItemStackUtils;
 import me.matsubara.realisticvillagers.util.PluginUtils;
@@ -250,6 +251,7 @@ public final class ExpectingManager implements Listener {
 
         villagerExpectingCache.remove(player.getUniqueId());
         npc.stopExpecting();
+        plugin.getCooldownManager().addCooldown(player, npc.bukkit(), "bed");
     }
 
     public void handleGift(@NotNull IVillagerNPC npc, @NotNull Player player, @NotNull ItemStack gift) {
@@ -274,36 +276,49 @@ public final class ExpectingManager implements Listener {
                 && !alreadyMarriedWithPlayer;
         boolean successByCross = isCross && !alreadyHasCross;
 
-        GiftCategory category = plugin.getGiftManager().getCategory(npc, gift);
+        // ── New gift lookup ──────────────────────────────────────────────────
+        Gift giftEntry = plugin.getGiftManager().getGift(gift.getType());
+
+        // A gift is "recognised" even if DISLIKED; null means the item is not in config.
+        boolean recognised = giftEntry != null;
+
+        // Overall "success" keeps the ring/cross semantics; for normal gifts any
+        // recognised entry (including DISLIKED) counts as a handled interaction.
         boolean success = successByRing
                 || successByCross
-                || ((!isRing && !isCross) && category != null)
+                || ((!isRing && !isCross) && recognised)
                 || alreadyMarriedWithPlayer
                 || alreadyHasCross;
 
-        int amount;
+        // ── Compute raw reputation delta ─────────────────────────────────────
+        int rawDelta;
         if (success) {
             if (successByRing) {
-                amount = Config.WEDDING_RING_REPUTATION.asInt();
+                rawDelta = Config.WEDDING_RING_REPUTATION.asInt();
             } else if (successByCross) {
-                amount = Config.CROSS_REPUTATION.asInt();
+                rawDelta = Config.CROSS_REPUTATION.asInt();
             } else if (alreadyMarriedWithPlayer || alreadyHasCross) {
-                amount = 0;
+                rawDelta = 0;
             } else {
-                amount = category.reputation();
+                // giftEntry is non-null here because recognised == true
+                rawDelta = giftEntry.getReputation();
             }
         } else {
-            amount = isRing ? 0 : Config.BAD_GIFT_REPUTATION.asInt();
+            rawDelta = isRing ? 0 : -Math.abs(Config.BAD_GIFT_REPUTATION.asInt());
         }
 
-        if (amount > 1) {
-            if (success) {
-                npc.addMinorPositive(player, amount);
-            } else {
-                npc.addMinorNegative(player, amount);
-            }
+        // ── Apply daily cap (max-gain / max-loss) ────────────────────────────
+        int amount = (rawDelta == 0 || successByRing || successByCross || alreadyMarriedWithPlayer || alreadyHasCross)
+                ? rawDelta
+                : plugin.getGiftManager().applyDailyCap(bukkit.getUniqueId(), player.getUniqueId(), rawDelta);
+
+        if (amount > 0) {
+            npc.addMinorPositive(player, amount);
+        } else if (amount < 0) {
+            npc.addMinorNegative(player, -amount);
         }
 
+        // ── Special-item handling (ring / cross) ──────────────────────────────
         Messages messages = plugin.getMessages();
 
         if (successByRing) {
@@ -317,9 +332,7 @@ public final class ExpectingManager implements Listener {
             return;
         }
 
-        if (success) {
-            bukkit.playEffect(EntityEffect.VILLAGER_HAPPY);
-        } else if (isRing && !npc.isFamily(player, false) && isAdult) {
+        if (isRing && !success && !npc.isFamily(player, false) && isAdult) {
             bukkit.playEffect(EntityEffect.VILLAGER_ANGRY);
 
             Messages.Message message;
@@ -336,15 +349,10 @@ public final class ExpectingManager implements Listener {
             return;
         }
 
-        // Stop being annoyed after a good gift.
-        if (success && Config.ANNOYING_METER_CLEAR_AFTER_SUCCESS_INTERACTION.asBool()) {
-            plugin.getAnnoyingManager().stopBeingAnnoyed(player, npc);
-        }
-
         if (successByCross || (success && isCross)) {
-            // For cross, use a random category.
-            GiftCategory randomCategory = plugin.getGiftManager().getRandomCategory();
-            if (randomCategory != null) messages.sendRandomGiftMessage(player, npc, randomCategory);
+            bukkit.playEffect(EntityEffect.VILLAGER_HAPPY);
+            // For the cross item, pick a random LOVED category for the message.
+            messages.sendRandomGiftMessage(player, npc, GiftCategory.LOVED);
             return;
         }
 
@@ -357,8 +365,28 @@ public final class ExpectingManager implements Listener {
             dropRing(npc, gift);
         }
 
-        messages.sendRandomGiftMessage(player, npc, category);
+        // ── Category-specific visual reaction ────────────────────────────────
+        if (recognised) {
+            GiftCategory category = giftEntry.getCategory();
+            switch (category) {
+                case LOVED -> bukkit.playEffect(EntityEffect.VILLAGER_HEART);
+                case DISLIKED -> bukkit.playEffect(EntityEffect.VILLAGER_ANGRY);
+                default -> bukkit.playEffect(EntityEffect.VILLAGER_HAPPY);
+            }
 
+            // Stop being annoyed after a positive gift.
+            if (category.isPositive() && Config.ANNOYING_METER_CLEAR_AFTER_SUCCESS_INTERACTION.asBool()) {
+                plugin.getAnnoyingManager().stopBeingAnnoyed(player, npc);
+            }
+
+            messages.sendRandomGiftMessage(player, npc, category);
+        } else {
+            // Unknown item — counts as a bad gift.
+            bukkit.playEffect(EntityEffect.VILLAGER_ANGRY);
+            messages.sendRandomGiftMessage(player, npc, null);
+        }
+
+        // The villager may still equip a useful weapon/armour from the gift.
         ItemStackUtils.setBetterWeaponInMaindHand(bukkit, gift);
         ItemStackUtils.setArmorItem(bukkit, gift);
     }
@@ -407,3 +435,5 @@ public final class ExpectingManager implements Listener {
         }
     }
 }
+
+

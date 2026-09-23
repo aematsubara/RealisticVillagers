@@ -59,6 +59,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     public static final String BED_HOME_POS = "BedHomePos";
     public static final String BED_HOME = "BedHome";
     public static final String EQUIPPED = "Equipped";
+    public static final String GENDER_LOCKED = "GenderLocked";
     public static final String SHOULDER_ENTITY_LEFT = "ShoulderEntityLeft";
     public static final String SHOULDER_ENTITY_RIGHT = "ShoulderEntityRight";
     public static final String GOSSIPS = "Gossips";
@@ -537,6 +538,26 @@ public class OfflineVillagerNPC implements IVillagerNPC {
     }
 
     @Override
+    public boolean isGenderLocked() {
+        return tag.getBoolean(GENDER_LOCKED);
+    }
+
+    @Override
+    public void setGenderLocked(boolean genderLocked) {
+
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+
+    }
+
+    @Override
+    public void setFather(@Nullable UUID father, boolean isFatherVillager) {
+
+    }
+
+    @Override
     public boolean validShoulderEntityLeft() {
         return false;
     }
@@ -593,7 +614,7 @@ public class OfflineVillagerNPC implements IVillagerNPC {
 
     @Override
     public int getEffectColor() {
-        return 0;
+        return super.getEffectColor();
     }
 
     @Override

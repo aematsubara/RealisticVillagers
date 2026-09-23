@@ -1,23 +1,50 @@
-# IMPORTANT: All messages must be enclosed in quotation marks (either single 'test' or double "test"), or the messages will be lost, and the file will be reset to 0.
-# Whenever you modify this file, save a copy before reloading the plugin to avoid losses and having to start all over again.
-
-# Don't touch this!
-config-version: 1
-
-# You can use the following placeholders for almost every message sent by villagers to players (gift/chat/joke/etc.).
-# %player-name% - the name of the player receiving the message.
-# %random-player-name% - the name of a random player who has played on the server.
-# %villager-name% - the name of the villager involved in this conversation.
-# %random-villager-name% - the name of a random villager nearby.
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║   RealisticVillagers — Default Villager Dialogue                         ║
+# ║                                                                          ║
+# ║   This file is the GLOBAL FALLBACK for villager spoken dialogue.         ║
+# ║   Regional files (desert.yml, plains.yml, etc.) OVERRIDE specific        ║
+# ║   sections from this file. Missing sections fall back here.              ║
+# ║                                                                          ║
+# ║   You can use the following placeholders:                                ║
+# ║   %player-name%         - the name of the player receiving the message   ║
+# ║   %villager-name%       - the name of the villager                       ║
+# ║   %random-villager-name% - a random nearby villager name                 ║
+# ║   %random-player-name%  - a random nearby player name                    ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# ── ADDING A BRAND-NEW CUSTOM CHAT/CONVERSATION TYPE ────────────────────────
+#   You're not limited to chat/greet/story/joke/insult/flirt/proud-of. Add a
+#   new top-level key here (e.g. "gossip") with the same adult/child/
+#   child-offspring/partner → success/fail shape used below by "chat:", then
+#   add a hologram menu item whose id is that SAME name (see holograms.yml,
+#   "HOW TO ADD A CUSTOM CLICKABLE SUB-MENU") — it'll automatically use a
+#   global success chance, cooldown and reputation gain/loss just like a
+#   built-in chat type, no Java/plugin update needed.
+#
+#   gossip:
+#     adult:
+#       success:
+#         - "Did you hear the blacksmith fought with his wife again?"
+#       fail:
+#         - "I don't have time for gossip."
+#
+#   Optional: override how much reputation this type gives/takes (otherwise
+#   it uses the global "chat-interact-reputation" config value for both).
+#   This also works on the built-in types below (chat, greet, story, ...).
+#
+#     reputation:
+#       success: 2
+#       fail: -1
+# ─────────────────────────────────────────────────────────────────────────
 
 annoyed:
   - "Ugh… you again…?"
   - "I was busy, you know."
   - "Seriously? AGAIN?"
   - "I don't get paid enough for this."
-  - "If you keep this up, I’ll raise my prices just for you."
+  - "If you keep this up, I'll raise my prices just for you."
   - "Even zombies are less annoying."
-  - "You’re why I lock my doors at night."
+  - "You're why I lock my doors at night."
 
 reaction:
   on-hit:
@@ -45,7 +72,7 @@ marry:
     married-to-other:
       - "I'm sorry, no... I'm already married."
       - "Oh, I thought you knew... I'm already married to someone."
-      - "What?! I'm already marrie d!"
+      - "What?! I'm already married!"
       - "I'm already married to someone."
       - "I'm happily married, I don't want another partner."
       - "I don't want that, I'm already married."
@@ -97,100 +124,6 @@ cleric:
     - "You should get a partner first!"
     - "I don't see any ring on your hand!"
 
-interact-fail:
-  fighting-or-raid: "&cYou can't interact with this villager right now."
-  procreating: "&cThis villager is procreating!"
-  expecting-gift-from-you: "&cThis villager is expecting a gift from you!"
-  expecting-gift-from-someone: "&cThis villager is expecting a gift from someone!"
-  expecting-bed-from-you: "&cThis villager is expecting a bed from you!"
-  expecting-bed-from-someone: "&cThis villager is expecting a bed from someone!"
-  interacting: "&cThis villager is already interacting with another player."
-  trading: "&cThis villager is trading with another player."
-  other-expecting-gift: "&cAnother villager is expecting a gift from you!"
-  other-expecting-bed: "&cAnother villager is expecting a bed from you!"
-  in-cooldown: "&cYou can't interact that fast!"
-  not-allowed:
-    not-married: "&cYou must be married to this villager to do this!"
-    not-family: "&cYou must be part of this villager's family to do this!"
-    not-a-kid: "&cThis action can only be used with a kid!"
-    not-an-adult: "&cThis action can only be used with an adult!"
-    only-partner-or-non-family-adult: "&cThis action can only be used with your partner or a non-family adult!"
-    none: "&cThis action is not allowed by the server!"
-  rename-not-allowed: "&cYou're not allowed to change the name of this villager!"
-  already-alive: "&cThis villager is already alive!"
-
-reloading: "&6The plugin is being reloaded in another thread, wait a few seconds..."
-reload: "&6The plugin has been reloaded!"
-no-permission: "&cYou don't have permission to execute this command!"
-invalid-command: "&cThat command doesn't exist or was used incorrectly! Do /rv to see all commands."
-no-mineskin-api-key: "&cIn order to add new skins you must define a mineskin api-key!"
-no-skin-cached: "&cNo skins have been cached yet, this may take a few seconds..."
-unknown-player: "&cThat player doesn't exist!"
-only-from-player: "&cThis command must be used by players!"
-only-from-console: "&cThis command must be used in the console!"
-invalid-number: "&cThat's not a valid number!"
-# %player-name% - the name of the player involved (@not-married & @divorced).
-not-married: "&cThe player %player-name% isn't married!"
-divorced: "&6The player %player-name% has been divorced!"
-
-# %villager-name% - the name of the villager involved (@whistle-teleported & @whistle-error).
-whistle-teleported: "&a%villager-name% has been teleported."
-whistle-error: "&cIt wasn't possible to teleport %villager-name%."
-whistle-no-family: "&cYou should get a family first!"
-
-players-gui:
-  has-never-played-before: "&cThis player has never played before."
-  player-is-family-member: "&cThis player is a member of the villager's family!"
-  not-yourself: "&cYou cannot add yourself!"
-  invalid-name: "&cInvalid name!"
-  already-added: "&cThis player is already on the list."
-  # %player-name% - the name of the player involved (@added & @removed).
-  added: "&aThe player %player-name% has been added to the list of players!"
-  removed: "&cThe player %player-name% has been removed from the list of players!"
-
-skin:
-  cleared: "&6The skin has been cleaned!"
-  not-cleared: "&cThe current skin couldn't be cleaned!"
-  at-least-one: "&cAt least one skin must be left by default!"
-  removed: "&cThe skin has been removed!"
-  wait-while-creating: "&6The skin is being created, wait a moment..."
-  not-found: "&cCouldn't find that player on the minecraft servers!"
-  texture-not-found: "&cThe desired skin doesn't exist!"
-  invalid-sex: "&cInvalid sex! Must be male or female."
-  invalid-age-stage: "&cInvalid age stage! Must be adult or kid."
-  # %sex% - the sex that the villager must be to change his skin (@different-sex).
-  different-sex: "&cThe villager must be a %sex% to use this skin!"
-  # %age-stage% - the age stage that the villager must be to change his skin (@different-age-stage).
-  different-age-stage: "&cThe villager must be a(n) %age-stage% to use this skin!"
-  # %id%, %profession%, %sex% - properties of the newly added skin.
-  added: "&6Added a new skin with id of %id% and profession of %profession% (%sex%/%age-stage%)!"
-  error: "&cAn error has occurred... check the console for more information."
-  villager-same-skin: "&cThe villager already has this skin!"
-  # %id%, %profession%, %sex%, %age-stage% - properties of the disguised skin.
-  disguised: "&6Disguised to %id%/%sex%/%profession%/%age-stage%!"
-
-follow-me:
-  start:
-    - "I'll follow you!"
-  stop:
-    - "Ok, goodbye!"
-  low-reputation:
-    - "Who are you?"
-    - "I don't even know you!"
-
-stay-here:
-  start:
-    - "I'll stay here!"
-  stop:
-    - "Ok, I'll go!"
-  low-reputation:
-    - "And you are...?"
-    - "I don't like this place."
-
-no-trades:
-  - "I don't have anything to trade."
-  - "Nope!"
-
 procreate:
   fail:
     has-baby:
@@ -199,30 +132,8 @@ procreate:
       - "Spend more time with me! I'm not ready for a child."
       - "Hmm... not just yet. I think we need to spend more time together first."
       - "I think we should take things slowly."
-  # %time% - the waiting time to have another baby (@cooldown).
-  cooldown: "&cYou must wait %time% to have another baby."
-
-# %time% - how long it will take for the baby to grow (@baby-grow).
-baby-grow: "&aThis baby will grow up in %time%!"
-baby-can-not-spawn: "&cThe spawn place is obstructed, there must be at least 2 free blocks!"
-# %countdown% - the number of times you must click to spawn the baby (@baby-countdown).
-baby-countdown: "&6This baby is ready to be born, click %countdown% times to spawn your baby!"
-# %baby-name% - baby's name (@baby-spawned).
-baby-spawned: "&6Baby %baby-name% is born!"
-# %time% - The maximum time the villager will wait for a gift/bed (@right-click-gift, @throw-gift & @select-bed).
-right-click-gift:
-  - "&aYou have %time% seconds to right-click on the villager with the gift in hand."
-  - "&cShift + right click to cancel this action!"
-throw-gift:
-  - "&aYou have %time% seconds to throw the gift to the villager."
-  - "&cShift + right click to cancel this action!"
-select-bed:
-  - "&aYou have %time% seconds to give the villager a bed."
-  - "&cShift + right click to cancel this action!"
-
-bed-occupied: "&cThis bed is occupied!"
-bed-established: "&aBed established!"
-bed-invalid: "&cInvalid bed!"
+    same-sex:
+      - "We can't have a child together... we're both the same!"
 
 gift:
   expecting:
@@ -232,6 +143,35 @@ gift:
   expecting-fail:
     - "So why did you call me?"
     - "You said you were going to give me something?"
+  loved:
+    - "Oh wow, I love this! Thank you so much!"
+    - "This is amazing, I've always wanted one of these!"
+    - "I... I don't know what to say. Thank you!"
+    - "You're too kind, %player-name%!"
+    - "This is fantastic! I'll treasure it."
+  neutral:
+    - "How considerate! Thank you."
+    - "Thanks, %player-name%!"
+    - "How thoughtful of you!"
+    - "Oh, I love these!"
+    - "A gift? For me? How nice!"
+  disliked:
+    - "This isn't really my thing, but... thanks."
+    - "I... guess I can find a use for this."
+    - "Hmm. Thank you, I suppose."
+    - "Well... it was thoughtful of you."
+  bad:
+    - "This isn't a good gift..."
+    - "What made you think that I would like this?"
+    - "No thanks."
+    - "I don't want that, why would I?"
+    - "Why are you giving me that?"
+    - "Is this supposed to be a gift? No thanks."
+    - "I'm not a trash can."
+  cooldown:
+    - "I've had enough gifts for now, thank you!"
+    - "You've given me plenty already."
+    - "Please, no more gifts for a while."
   adult:
     success:
       good:
@@ -330,6 +270,28 @@ gift:
       - "Um, is this supposed to be a gift for me?"
       - "Throw away your own junk! Oh, this was a gift? sorry."
       - "I thought you knew me better than that. I hate these."
+
+follow-me:
+  start:
+    - "I'll follow you!"
+  stop:
+    - "Ok, goodbye!"
+  low-reputation:
+    - "Who are you?"
+    - "I don't even know you!"
+
+stay-here:
+  start:
+    - "I'll stay here!"
+  stop:
+    - "Ok, I'll go!"
+  low-reputation:
+    - "And you are...?"
+    - "I don't like this place."
+
+no-trades:
+  - "I don't have anything to trade."
+  - "Nope!"
 
 chat:
   adult:

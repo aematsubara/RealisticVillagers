@@ -1,6 +1,10 @@
 package me.matsubara.realisticvillagers.listener;
 
 
+import me.matsubara.realisticvillagers.gui.types.MayorGUI;
+import me.matsubara.realisticvillagers.village.MayorManager;
+import me.matsubara.realisticvillagers.village.Village;
+import me.matsubara.realisticvillagers.village.VillageManager;
 import com.cryptomorin.xseries.reflection.XReflection;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
@@ -18,6 +22,7 @@ import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.files.Messages;
 import me.matsubara.realisticvillagers.gui.InteractGUI;
 import me.matsubara.realisticvillagers.gui.types.MainGUI;
+import me.matsubara.realisticvillagers.hologram.HologramMenu;
 import me.matsubara.realisticvillagers.manager.ExpectingManager;
 import me.matsubara.realisticvillagers.npc.NPC;
 import me.matsubara.realisticvillagers.tracker.VillagerTracker;
@@ -36,6 +41,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -56,6 +62,12 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
     private final RealisticVillagers plugin;
 
     private static final MethodHandle MODIFIERS = Reflection.getFieldGetter(EntityDamageEvent.class, "modifiers");
+    public static final boolean HOLOGRAM_SUPPORTED = XReflection.supports(19, 4);
+
+    // A held right-click makes the client resend the interact packet several times a second.
+    // Without this, every resend after the one that opened the menu is read as a fresh click
+    // and immediately toggles it closed again (see the isInteracting() branch below).
+    private static final long MENU_REOPEN_DEBOUNCE_MILLIS = 300L;
 
     public VillagerListeners(RealisticVillagers plugin) {
         super(PacketListenerPriority.HIGHEST);
@@ -81,9 +93,31 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
         // PlayerInteractEntityEvent won't be called if this one is cancelled.
         // With this change, we fix the client freezing for some seconds when right-clicking a villager.
+        Player player = event.getPlayer();
+        LivingEntity bukkit = npc.get().getNpc().bukkit();
         EquipmentSlot slot = wrapper.getHand() == InteractionHand.MAIN_HAND ? EquipmentSlot.HAND : EquipmentSlot.OFF_HAND;
-        if (handleInteract(event.getPlayer(), slot, action, npc.get().getNpc().bukkit())) {
+
+        if (handleInteract(player, slot, action, bukkit)) {
             event.setCancelled(true);
+        }
+
+        // The real packet is eaten above regardless of sneaking, same as any other claimed click
+        // — cancelling it here is the one thing that keeps NMS from ever running its own default
+        // interaction (a vanilla trade window) once nothing further down the chain cancels the
+        // Bukkit event either, which is exactly what a sneaking click used to fall through to:
+        // ValhallaMMO's own "too unhappy to trade" branch, and several of its other early exits,
+        // never call setCancelled — they just answer and return — so a packet left alive for them
+        // to answer was a packet vanilla was still free to act on once they were done with it.
+        //
+        // A synthetic copy of the same click is fired here instead, purely so another plugin gets
+        // a genuine event to react to. A sneaking right-click is ValhallaMMO's own gesture for
+        // "tell me why I can't trade" — its happiness breakdown has nothing to run off without
+        // this. Whatever it does with the synthetic copy stays contained to its own listener and
+        // to chat; a merchant window it opens as a result of THIS click is not one this plugin
+        // asked for, and the guard in onValhallaMerchantOpen closes it the same as any other
+        // uninvited one — sneaking shows the numbers, never the trade screen.
+        if (player.isSneaking() && bukkit instanceof Villager villager) {
+            plugin.getServer().getPluginManager().callEvent(new PlayerInteractEntityEvent(player, villager, slot));
         }
     }
 
@@ -122,9 +156,41 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         VillagerTracker tracker = plugin.getTracker();
         if (tracker.isInvalid(villager)) return;
 
+        // If the profession didn't change, this is a trade level-up.
+        // Don't refresh the NPC skin — just update the nametag to reflect the new level.
+        Villager.Profession currentProfession = villager.getProfession();
+        Villager.Profession newProfession = event.getProfession();
+        if (currentProfession == newProfession) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                tracker.getNPC(villager.getEntityId()).ifPresent(npc -> {
+                    for (org.bukkit.entity.Player player : npc.getSeeingPlayers()) {
+                        npc.refreshNametags(player);
+                    }
+                });
+            }, 15L);
+            return;
+        }
+
         // Update villager skin when changing a job after 1 tick since this event is called before changing a job.
         // Respawn NPC with the new profession texture.
         plugin.getServer().getScheduler().runTask(plugin, () -> tracker.refreshNPCSkin(villager, true));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onVillagerAcquireTrade(@NotNull org.bukkit.event.entity.VillagerAcquireTradeEvent event) {
+        if (!(event.getEntity() instanceof Villager villager)) return;
+
+        VillagerTracker tracker = plugin.getTracker();
+        if (tracker.isInvalid(villager)) return;
+
+        // Trade level-up: just refresh nametags (level display)
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            tracker.getNPC(villager.getEntityId()).ifPresent(npc -> {
+                for (org.bukkit.entity.Player player : npc.getSeeingPlayers()) {
+                    npc.refreshNametags(player);
+                }
+            });
+        }, 15L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -140,12 +206,41 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
     public void onEntityDeath(@NotNull EntityDeathEvent event) {
         if (!(event.getEntity() instanceof Villager villager)) return;
 
+        // Her figure rides an entity of its own, and an entity does not go away because the one
+        // carrying it did. Taken off her here, while she is still here to take it off — a moment
+        // later there is no passenger list to find it in, and it stands in the grass where she
+        // fell for as long as the server is up.
+        if (plugin.getPlayerAppearanceManager() != null) {
+            plugin.getPlayerAppearanceManager().remove(villager);
+        }
+
         for (Player player : plugin.getServer().getOnlinePlayers()) {
             Inventory open = player.getOpenInventory().getTopInventory();
             if (!(open.getHolder() instanceof InteractGUI interact)) continue;
 
             IVillagerNPC npc = interact.getNPC();
             if (npc != null && npc.bukkit().equals(villager)) player.closeInventory();
+        }
+
+        // Czyść stan oczekiwania i interakcji przy śmierci villgera,
+        // żeby gracz mógł ponownie zainicjować gift/bed
+        Optional<IVillagerNPC> npcOptional = plugin.getConverter().getNPC(villager);
+        if (npcOptional.isPresent()) {
+            IVillagerNPC deadNpc = npcOptional.get();
+            if (deadNpc.isExpecting()) {
+                UUID expectingFrom = deadNpc.getExpectingFrom();
+                String cooldownKey = deadNpc.getExpectingType().name().toLowerCase(Locale.ROOT);
+                deadNpc.stopExpecting();
+                if (expectingFrom != null) {
+                    Player waitingPlayer = plugin.getServer().getPlayer(expectingFrom);
+                    if (waitingPlayer != null) {
+                        plugin.getCooldownManager().removeCooldown(waitingPlayer, cooldownKey);
+                    }
+                }
+            }
+            if (deadNpc.isInteracting()) {
+                deadNpc.stopInteracting();
+            }
         }
 
         if (!Config.DROP_WHOLE_INVENTORY.asBool()) return;
@@ -204,9 +299,70 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
     // Changed the priority to LOW to support VTL.
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onPlayerInteractEntity(@NotNull PlayerInteractEntityEvent event) {
+        // Sneaking on a villager is handled once, at the packet level (onPacketPlayReceive) — the
+        // real click there is claimed and its packet eaten exactly like any other, but a
+        // synthetic copy of the same event is then fired deliberately, purely so another plugin
+        // gets a genuine event to react to. This handler sees that synthetic copy too, being a
+        // perfectly ordinary PlayerInteractEntityEvent, and calling handleInteract again here for
+        // the very click it already ran once would run its side effects twice over — a lead
+        // toggling follow on and immediately back off, a whistle summoning family a second time —
+        // for no reason, since this plugin's own menu never opens on a sneaking click either way.
+        //
+        // Scoped to villagers only: a sneaking click on anything else never went through
+        // onPacketPlayReceive's own villager handling in the first place — the packet-level
+        // tracker lookup bails on a non-villager id regardless of sneaking, and nothing fires a
+        // synthetic copy for it — so this real event is that click's first and only stop, and
+        // skipping it here would quietly turn off preventChangeSkinItemUse the moment a player
+        // sneaks at anything that isn't a villager.
+        if (event.getPlayer().isSneaking() && event.getRightClicked() instanceof Villager) return;
+
         if (handleInteract(event.getPlayer(), event.getHand(), null, event.getRightClicked())) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Closes any ValhallaMMO trading window that opened on its own for a villager this plugin
+     * manages, so its own menu is always what a right-click shows first.
+     * <p>
+     * Exists because cancelling {@link PlayerInteractEntityEvent} above is not enough on its own.
+     * Reading ValhallaMMO's own bytecode found its interact handler registered at
+     * {@code EventPriority.HIGHEST} — after this plugin's {@code LOW} — and it never checks
+     * {@code event.isCancelled()} before acting, so it opens its trading window regardless of
+     * whether this plugin already claimed the click. Left alone, a raw right-click on a villager
+     * Valhalla already considers one of its own custom merchants would show Valhalla's window on
+     * the spot, a tick before this plugin's own menu — with its "Trade" button — ever appeared.
+     * <p>
+     * {@code MONITOR} so it runs dead last, after Valhalla's own {@code InventoryOpenEvent} hook
+     * has had its say, and cancelling the event at that point still stops the window from being
+     * shown — Bukkit only sends the open to the client once every handler has run.
+     * <p>
+     * {@link me.matsubara.realisticvillagers.compatibility.ValhallaCompatibility#isExpecting} is
+     * what keeps this from closing the one window that is meant to open this way: the moment this
+     * plugin's own "Trade" button asks Valhalla for it.
+     * <p>
+     * That includes a sneaking click's own synthetic event (see {@link #onPacketPlayReceive}) —
+     * deliberately, and this is the one place that decision is actually made. Valhalla treats
+     * sneaking as "tell me why I can't trade" and answers with a happiness breakdown in chat, but
+     * nothing about computing that breakdown stops it from also opening the real trading window
+     * once happiness turns out to be fine after all — sneaking only adds the commentary, it does
+     * not ask Valhalla to stop short of trading. Reading the numbers is meant to be the whole of
+     * what a sneaking click does, so any window that click produces is uninvited the same as a
+     * plain click's would be, and is closed here exactly the same way. Only the "Trade" button's
+     * own mark lets a window through, sneaking included.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onValhallaMerchantOpen(@NotNull InventoryOpenEvent event) {
+        if (!(event.getInventory() instanceof MerchantInventory merchant)) return;
+        if (!(merchant.getMerchant() instanceof Villager villager)) return;
+        if (plugin.getTracker().isInvalid(villager)) return;
+
+        if (me.matsubara.realisticvillagers.compatibility.ValhallaCompatibility
+                .isExpecting(event.getPlayer().getUniqueId(), villager.getUniqueId())) {
+            return;
+        }
+
+        event.setCancelled(true);
     }
 
     private boolean handleInteract(@NotNull Player player, EquipmentSlot hand, @Nullable WrapperPlayClientInteractEntity.InteractAction action, Entity entity) {
@@ -226,7 +382,9 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         if (npc == null) return cancel;
 
         if (hand != EquipmentSlot.HAND) return true;
-        if (action != null && action != WrapperPlayClientInteractEntity.InteractAction.INTERACT) return true;
+        // MC 26.x sends INTERACT_AT (not INTERACT) when right-clicking player-type entities.
+        // Allow both; ATTACK is already blocked before reaching this method.
+        if (action == WrapperPlayClientInteractEntity.InteractAction.ATTACK) return true;
 
         plugin.getServer().getScheduler().runTask(plugin, (() -> {
             Messages messages = plugin.getMessages();
@@ -258,8 +416,13 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
                 }
             }
 
-            // Prevent interacting with villager if it's fighting.
+            // Prevent interacting with villager if it's fighting or fleeing.
             if (npc.isFighting() || npc.isInsideRaid()) {
+                messages.send(player, Messages.Message.INTERACT_FAIL_FIGHTING_OR_RAID);
+                return;
+            }
+            String currentActivity = npc.getActivityName("").toLowerCase(java.util.Locale.ROOT);
+            if (currentActivity.equals("hide") || currentActivity.equals("panic")) {
                 messages.send(player, Messages.Message.INTERACT_FAIL_FIGHTING_OR_RAID);
                 return;
             }
@@ -272,16 +435,36 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
             if (isExpecting(player, npc, ExpectingType.GIFT, item)) return;
             if (isExpecting(player, npc, ExpectingType.BED, item)) return;
 
+            // Shift+rightclick nie otwiera GUI
+            if (player.isSneaking()) return;
+
             if (npc.isInteracting()) {
                 if (!npc.getInteractingWith().equals(player.getUniqueId())) {
                     messages.send(player, Messages.Message.INTERACT_FAIL_INTERACTING);
+                } else if (hologramEnabled() && plugin.getHologramManager().hasMenu(player.getUniqueId())) {
+                    // Hologram check must come before isFollowing and isStayingInPlace: when ORDER:FOLLOW
+                    // is active the villager is in FOLLOW_ME mode, but the hologram owns the session —
+                    // close() handles all state cleanup. Without this ordering, right-clicking would fire
+                    // FOLLOW_ME_STOP and leave the hologram orphaned.
+                    HologramMenu menu = plugin.getHologramManager().getMenuForPlayer(player.getUniqueId());
+                    if (menu == null || System.currentTimeMillis() - menu.getOpenedAt() >= MENU_REOPEN_DEBOUNCE_MILLIS) {
+                        plugin.getHologramManager().closeMenu(player.getUniqueId());
+                    }
                 } else if (npc.isFollowing()) {
-                    messages.send(player, npc, Messages.Message.FOLLOW_ME_STOP);
-                    npc.stopInteracting();
+                    if (hologramEnabled()) {
+                        plugin.getHologramManager().openMenu(player, npc);
+                    } else {
+                        messages.send(player, npc, Messages.Message.FOLLOW_ME_STOP);
+                        npc.stopInteracting();
+                    }
                 } else if (npc.isStayingInPlace()) {
-                    messages.send(player, npc, Messages.Message.STAY_HERE_STOP);
-                    npc.stopInteracting();
-                    npc.stopStayingInPlace();
+                    if (hologramEnabled()) {
+                        plugin.getHologramManager().openMenu(player, npc);
+                    } else {
+                        messages.send(player, npc, Messages.Message.STAY_HERE_STOP);
+                        npc.stopInteracting();
+                        npc.stopStayingInPlace();
+                    }
                 }
                 // Otherwise, is in GUI so, do nothing.
                 return;
@@ -294,8 +477,16 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
 
             if (plugin.getAnnoyingManager().isVillagerAnnoyed(player, npc)) return;
 
-            // Open custom GUI.
-            new MainGUI(plugin, npc, player);
+            // The mayor is not an ordinary tradesman: it gets the settlement screen instead of
+            // the usual villager menu, and freezes so it doesn't wander off mid-conversation.
+            if (openMayorScreen(player, npc, villager)) return;
+
+            // Open hologram menu or fall back to chest GUI.
+            if (hologramEnabled()) {
+                plugin.getHologramManager().openMenu(player, npc);
+            } else {
+                new MainGUI(plugin, npc, player);
+            }
 
             // Set interacting with id.
             npc.setInteractingWithAndType(player.getUniqueId(), InteractType.GUI);
@@ -340,33 +531,81 @@ public final class VillagerListeners extends SimplePacketListenerAbstract implem
         }
 
         // This villager is expecting something from this player, can't open the menu.
-        if (!player.isSneaking()) {
-            ExpectingManager expectingManager = plugin.getExpectingManager();
-            if (expecting.isGift()
-                    && expectingManager.getGiftModeFromConfig().rightClick()
-                    && item != null && !item.getType().isAir()
-                    && npc.bukkit() instanceof InventoryHolder holder) {
-                // Remove one unit.
-                ItemStack unit = new ItemBuilder(item)
-                        .setAmount(1)
-                        .build();
+        ExpectingManager expectingManager = plugin.getExpectingManager();
+        boolean isRightClickGift = expecting.isGift() && expectingManager.getGiftModeFromConfig().rightClick();
+        if (!player.isSneaking() || isRightClickGift) {
+            if (isRightClickGift && npc.bukkit() instanceof InventoryHolder holder) {
+                if (item != null && !item.getType().isAir()) {
+                    // Remove one unit.
+                    ItemStack unit = new ItemBuilder(item)
+                            .setAmount(1)
+                            .build();
 
-                // Remove from player inventory, add to villager inventory.
-                player.getInventory().removeItem(unit);
-                holder.getInventory().addItem(unit);
+                    // Remove from player inventory, add to villager inventory.
+                    player.getInventory().removeItem(unit);
+                    holder.getInventory().addItem(unit);
 
-                // Handle.
-                expectingManager.handleVillagerPickUp(npc, item, playerUUID, player, null);
+                    // Handle.
+                    expectingManager.handleVillagerPickUp(npc, item, playerUUID, player, null);
+                } else {
+                    // No item in hand — inform player what to hold
+                    messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_EXPECTING_" + expecting + "_FROM_YOU"));
+                }
                 return true;
             }
             messages.send(player, Messages.Message.valueOf("INTERACT_FAIL_EXPECTING_" + expecting + "_FROM_YOU"));
             return true;
         }
 
-        // This villager is expecting something from this player (sneaking), stop interaction.
-        messages.send(player, npc, Messages.Message.valueOf((expecting.isGift() ? "GIFT_EXPECTING" : "SET_HOME") + "_FAIL"));
+        // This villager is expecting something from this player (sneaking, non-gift mode), stop interaction.
+        if (expecting.isGift()) {
+            messages.send(player, npc, Messages.Message.valueOf("GIFT_EXPECTING_FAIL"));
+        } else {
+            messages.send(player, npc, Messages.Message.valueOf("SET_HOME_FAIL"));
+        }
         npc.stopExpecting();
         plugin.getCooldownManager().removeCooldown(player, checkType.name().toLowerCase(Locale.ROOT));
+        return true;
+    }
+
+    private boolean hologramEnabled() {
+        return HOLOGRAM_SUPPORTED && plugin.getHologramManager().isMenuEnabled();
+    }
+
+    /**
+     * Opens the settlement screen if this villager is its village's mayor.
+     *
+     * @return {@code true} when the mayor screen was opened, meaning the caller must not go on
+     * to open the ordinary villager menu.
+     */
+    private boolean openMayorScreen(Player player, IVillagerNPC npc, Villager villager) {
+        VillageManager villages = plugin.getVillageManager();
+        MayorManager mayors = plugin.getMayorManager();
+        if (villages == null || mayors == null || !villages.isEnabled()) return false;
+
+        // Ask the cheap, direct question first: is this villager a mayor anywhere? Resolving its
+        // village can momentarily fail (meeting-point memory still settling after a chunk load),
+        // and when it did the mayor fell through to the ordinary villager menu.
+        if (!villages.isMayorOfAnyVillage(villager.getUniqueId())) return false;
+
+        Village village = villages.getVillage(villager);
+        if (village == null) {
+            // Known to be a mayor but its village isn't resolvable this instant — swallow the
+            // interaction rather than opening the wrong screen.
+            return true;
+        }
+
+        // Prefer the hologram screen; the chest GUI is the fallback for servers that turned the
+        // hologram menu off. Both carry a map — the hologram one drawn in the world, the chest
+        // one as a grid of tiles — so switching menus costs the settlement view nothing.
+        if (hologramEnabled()) {
+            plugin.getHologramManager().openMenu(player, npc, true);
+        } else {
+            npc.stayInPlace();
+            player.openInventory(new MayorGUI(plugin, village, player).getInventory());
+        }
+
+        npc.setInteractingWithAndType(player.getUniqueId(), InteractType.GUI);
         return true;
     }
 

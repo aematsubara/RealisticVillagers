@@ -24,8 +24,15 @@ public class PetMule extends Mule implements Pet, HorseEating {
 
     private final RealisticVillagers plugin = JavaPlugin.getPlugin(RealisticVillagers.class);
 
-    @Getter
-    private @Setter boolean tamedByVillager;
+    private boolean tamedByVillager;
+
+    public boolean isTamedByVillager() {
+        return tamedByVillager;
+    }
+
+    public void setTamedByVillager(boolean tamedByVillager) {
+        this.tamedByVillager = tamedByVillager;
+    }
 
     public PetMule(EntityType<? extends Mule> type, Level level) {
         super(type, level);

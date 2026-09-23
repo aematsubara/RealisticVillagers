@@ -143,8 +143,19 @@ public record NPCHandler(RealisticVillagers plugin) implements SpawnCustomizer {
     public void adaptScale(Player player, @NotNull NPC npc) {
         if (!(npc.getNpc().bukkit() instanceof Villager villager)) return;
 
+        // Her own height, not a flat one.
+        //
+        // This packet is the last word on how big the client draws her, so setting the attribute
+        // server-side and leaving a hardcoded 1.0 here would quietly undo it — the villager would
+        // have the hitbox of someone taller than she looks. Children keep the game's own half
+        // scale, which is already a size and not a trait.
+        double scale = villager.isAdult()
+                ? me.matsubara.realisticvillagers.appearance.Traits
+                .of(villager.getUniqueId(), npc.getNpc().isFemale()).height()
+                : 0.5d;
+
         WrapperPlayServerUpdateAttributes wrapper = new WrapperPlayServerUpdateAttributes(npc.getEntityId(), List.of(
-                new WrapperPlayServerUpdateAttributes.Property(Attributes.GENERIC_SCALE, villager.isAdult() ? 1.0d : 0.5d, Collections.emptyList())));
+                new WrapperPlayServerUpdateAttributes.Property(Attributes.GENERIC_SCALE, scale, Collections.emptyList())));
 
         Object channel = PacketEvents.getAPI().getPlayerManager().getChannel(player);
         PacketEvents.getAPI().getProtocolManager().sendPacket(channel, wrapper);

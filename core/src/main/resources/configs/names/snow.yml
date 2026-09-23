@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Snow  (Nordic / Russian)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is SNOW.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/snow.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Bjorn
+  - Erik
+  - Lars
+  - Sven
+  - Olaf
+  - Gunnar
+  - Leif
+  - Ragnar
+  - Sigurd
+  - Thor
+  - Ivar
+  - Halfdan
+  - Rolf
+  - Torsten
+  - Arild
+  - Magnus
+  - Viggo
+  - Dag
+  - Eirik
+  - Hakon
+  - Nikolai
+  - Ivan
+  - Dmitri
+  - Alexei
+  - Fyodor
+  - Sergei
+  - Andrei
+  - Pavel
+  - Yuri
+  - Viktor
+  - Boris
+  - Grigori
+  - Mikhail
+  - Oleg
+  - Ruslan
+  - Vadim
+  - Timur
+  - Artem
+  - Stanislav
+  - Anatoli
+
+female:
+  - Astrid
+  - Ingrid
+  - Sigrid
+  - Freya
+  - Helga
+  - Ragna
+  - Solveig
+  - Gudrun
+  - Brynja
+  - Eira
+  - Natalya
+  - Olga
+  - Tatiana
+  - Irina
+  - Svetlana
+  - Anastasia
+  - Ekaterina
+  - Darya
+  - Ksenia
+  - Yulia
+  - Alina
+  - Vera
+  - Lyudmila
+  - Galina
+  - Valentina
+  - Oksana
+  - Mariya
+  - Sofia
+  - Polina
+  - Varvara
+  - Helga
+  - Marta
+  - Sigrid
+  - Solvieg
+  - Torhild
+  - Eldrid
+  - Ragnhild
+  - Ase
+  - Borghild
+  - Aud

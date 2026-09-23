@@ -10,6 +10,8 @@ import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetCat;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.PetWolf;
 import me.matsubara.realisticvillagers.entity.v1_21_4.pet.horse.HorseEating;
+import me.matsubara.realisticvillagers.entity.v1_21_4.pet.horse.PetCamel;
+import me.matsubara.realisticvillagers.entity.v1_21_4.pet.horse.PetLlama;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.*;
 import me.matsubara.realisticvillagers.entity.v1_21_4.villager.ai.behaviour.GiveGiftToHero;
@@ -84,6 +86,12 @@ public class VillagerNPCGoalPackages {
     private static final int GO_TO_WANTED_ITEM_DISTANCE = 10;
 
     private static final ImmutableSet<Item> HORSE_FOOD = ImmutableSet.of(Items.WHEAT, Items.SUGAR, Blocks.HAY_BLOCK.asItem(), Items.APPLE, Items.GOLDEN_CARROT, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE);
+    private static final ImmutableSet<Item> CAMEL_FOOD = ImmutableSet.of(Items.CACTUS, Items.WHEAT, Items.SUGAR, Blocks.HAY_BLOCK.asItem(), Items.APPLE, Items.GOLDEN_CARROT, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE, Items.BREAD);
+    private static final ImmutableSet<Item> LLAMA_DECOR = ImmutableSet.of(
+            Items.WHITE_CARPET, Items.ORANGE_CARPET, Items.MAGENTA_CARPET, Items.LIGHT_BLUE_CARPET,
+            Items.YELLOW_CARPET, Items.LIME_CARPET, Items.PINK_CARPET, Items.GRAY_CARPET,
+            Items.LIGHT_GRAY_CARPET, Items.CYAN_CARPET, Items.PURPLE_CARPET, Items.BLUE_CARPET,
+            Items.BROWN_CARPET, Items.GREEN_CARPET, Items.RED_CARPET, Items.BLACK_CARPET);
     private static final Predicate<LivingEntity> IS_DOING_NOTHING = living -> !(living instanceof VillagerNPC npc) || npc.isDoingNothing(true);
     private static final Predicate<LivingEntity> DUMMY = living -> true;
     private static final Predicate<Villager> SHOULD_HIDE = villager -> villager instanceof VillagerNPC npc && !npc.canAttack();
@@ -140,11 +148,31 @@ public class VillagerNPCGoalPackages {
                         (npc, living) -> Config.TAME_HORSES.asBool()
                                 && living instanceof Pet
                                 && living instanceof AbstractHorse horse
+                                && !(living instanceof PetCamel)
+                                && !(living instanceof PetLlama)
                                 && !horse.isVehicle()
                                 && !horse.isBaby()
                                 && !horse.isTamed()
                                 && npc.getInventory().hasAnyOf(Set.of(Items.SADDLE)),
                         HORSE_FOOD)),
+                Pair.of(10, createTameOrFeedPet(
+                        3,
+                        (npc, living) -> Config.TAME_HORSES.asBool()
+                                && living instanceof PetCamel camel
+                                && !camel.isVehicle()
+                                && !camel.isBaby()
+                                && !camel.isTamedByVillager()
+                                && npc.getInventory().hasAnyOf(Set.of(Items.SADDLE)),
+                        CAMEL_FOOD)),
+                Pair.of(10, createTameOrFeedPet(
+                        1,
+                        (npc, living) -> Config.TAME_HORSES.asBool()
+                                && living instanceof PetLlama llama
+                                && !llama.isVehicle()
+                                && !llama.isBaby()
+                                && !llama.isTamed()
+                                && npc.getInventory().hasAnyOf(LLAMA_DECOR),
+                        LLAMA_DECOR)),
                 Pair.of(10, createTameOrFeedPet(
                         3,
                         (npc, living) -> living instanceof PetCat cat && !cat.isTame(),
@@ -157,8 +185,13 @@ public class VillagerNPCGoalPackages {
                         3,
                         (npc, living) -> living instanceof PetWolf wolf && !wolf.isTame() && !wolf.isAngry(),
                         ImmutableSet.of(Items.BONE))),
-                Pair.of(10, new HealGolem(100, VillagerNPC.WALK_SPEED.get())),
-                Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())));
+                Pair.of(10, new HelpFamily(100, VillagerNPC.WALK_SPEED.get())),
+                Pair.of(99, BehaviorBuilder.create((instance) -> instance
+                        .group(instance.absent(MemoryModuleType.ATTACK_TARGET))
+                        .apply(instance, (target) -> (level, living, time) -> {
+                            living.getBrain().updateActivityFromSchedule(level.getDayTime(), level.getGameTime());
+                            return true;
+                        }))));
     }
 
     private static boolean validateBedPoi(@NotNull ServerLevel level, BlockPos pos) {

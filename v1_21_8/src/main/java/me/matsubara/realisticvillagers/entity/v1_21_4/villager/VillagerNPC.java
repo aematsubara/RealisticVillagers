@@ -75,6 +75,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
 import net.minecraft.world.entity.ai.behavior.GateBehavior;
+import net.minecraft.world.entity.ai.behavior.SetWalkTargetAwayFrom;
 import net.minecraft.world.entity.ai.behavior.ShufflingList;
 import net.minecraft.world.entity.ai.behavior.VillagerGoalPackages;
 import net.minecraft.world.entity.ai.gossip.GossipContainer;
@@ -200,6 +201,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     private boolean wasInfected;
     private boolean shakingHead;
     private boolean equipped;
+    private boolean genderLocked;
     private boolean isAttackingWithTrident;
     private final Set<UUID> players = new HashSet<>();
     private ThrownTrident thrownTrident;
@@ -316,6 +318,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             || stack.is(ItemTags.AXES)
             || stack.is(ItemTags.EQUIPPABLE_ENCHANTABLE)
             || stack.is(Items.TRIDENT)
+            || stack.is(Items.MACE)
             || stack.is(Items.SHIELD)
             || stack.is(Items.BOW)
             || stack.is(Items.CROSSBOW);
@@ -393,7 +396,11 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 ImmutableSet.of(Pair.of(MemoryModuleType.MEETING_POINT, MemoryStatus.VALUE_PRESENT)));
         brain.addActivity(Activity.REST, VillagerNPCGoalPackages.getRestPackage());
         brain.addActivity(Activity.IDLE, VillagerNPCGoalPackages.getIdlePackage());
-        brain.addActivity(Activity.PANIC, VillagerGoalPackages.getPanicPackage(holder, VillagerNPC.WALK_SPEED.get()));
+        com.google.common.collect.ImmutableList<com.mojang.datafixers.util.Pair<Integer, ? extends net.minecraft.world.entity.ai.behavior.BehaviorControl<? super Villager>>> vanillaPanic = VillagerGoalPackages.getPanicPackage(holder, VillagerNPC.WALK_SPEED.get());
+        java.util.List<com.mojang.datafixers.util.Pair<Integer, ? extends net.minecraft.world.entity.ai.behavior.BehaviorControl<? super Villager>>> customPanic = new java.util.ArrayList<>(vanillaPanic);
+        customPanic.add(com.mojang.datafixers.util.Pair.of(1, net.minecraft.world.entity.ai.behavior.SetWalkTargetAwayFrom.entity(net.minecraft.world.entity.ai.memory.MemoryModuleType.NEAREST_HOSTILE, VillagerNPC.WALK_SPEED.get() * 1.5F, 24, false)));
+        customPanic.add(com.mojang.datafixers.util.Pair.of(4, net.minecraft.world.entity.ai.behavior.SetWalkTargetAwayFrom.entity(net.minecraft.world.entity.ai.memory.MemoryModuleType.NEAREST_HOSTILE, VillagerNPC.WALK_SPEED.get(), 32, false)));
+        brain.addActivity(net.minecraft.world.entity.schedule.Activity.PANIC, com.google.common.collect.ImmutableList.copyOf(customPanic));
         brain.addActivity(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(holder, VillagerNPC.WALK_SPEED.get()));
         brain.addActivity(Activity.RAID, VillagerNPCGoalPackages.getRaidPackage());
         brain.addActivity(Activity.HIDE, VillagerNPCGoalPackages.getHidePackage());
@@ -481,7 +488,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         OfflineVillagerNPC.getAndSet(offline, OfflineVillagerNPC::getSex, this::setSex, "");
         if (sex.isEmpty()) sex = PluginUtils.getRandomSex();
         if (tracker.shouldRename(villagerName)) {
-            setVillagerName(tracker.getRandomNameBySex(sex));
+            String regionKey = getBukkitEntity().getVillagerType().name().toLowerCase(java.util.Locale.ROOT);
+            setVillagerName(tracker.getRandomNameBySex(sex, regionKey));
         }
         isPartnerVillager = offline != null && offline.isPartnerVillager();
         partner = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getPartner);
@@ -498,6 +506,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         mother = OfflineVillagerNPC.get(offline, OfflineVillagerNPC::getMother);
         wasInfected = offline != null && offline.isWasInfected();
         equipped = offline != null && offline.isEquipped();
+        genderLocked = offline != null && offline.isGenderLocked();
         shoulderEntityLeft = offline != null && offline.validShoulderEntityLeft() ?
                 (CompoundTag) offline.getShoulderEntityLeft() :
                 new CompoundTag();
@@ -641,7 +650,16 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     }
 
     public boolean isHoldingMeleeWeapon() {
-        return isHolding(stack -> stack.is(ItemTags.SWORDS) || stack.is(ItemTags.AXES) || stack.is(Items.TRIDENT));
+        return isHolding(stack -> ItemStackUtils.isMeleeWeapon(CraftItemStack.asBukkitCopy(stack)) || isCustomMeleeWeapon(stack));
+    }
+
+    private static boolean isCustomMeleeWeapon(net.minecraft.world.item.ItemStack stack) {
+        String materialName = CraftItemStack.asBukkitCopy(stack).getType().name();
+        if (materialName.endsWith("_SPEAR") || materialName.equals("SPEAR") || materialName.equals("MACE")) {
+            return true;
+        }
+        return Config.CUSTOM_MELEE_WEAPONS.asStringList().stream()
+                .anyMatch(name -> name.equalsIgnoreCase(materialName));
     }
 
     public boolean isHoldingRangeWeapon() {
@@ -849,7 +867,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (isInsideRaid()) return;
 
         Entity entity = source.getEntity();
-        if (!EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)) return;
+        if (!(entity instanceof LivingEntity killer) || !EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)) return;
 
         Optional<NearestVisibleLivingEntities> optional = getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
         if (optional.isEmpty()) return;
@@ -858,7 +876,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 .findAll(living -> living instanceof VillagerNPC npc && npc.canAttack() && npc.isFamily(getUUID(), true))
                 .forEach(living -> VillagerPanicTrigger.handleFightReaction(
                         ((Villager) living).getBrain(),
-                        (LivingEntity) entity,
+                        killer,
                         TargetReason.DEFEND));
     }
 
@@ -1198,6 +1216,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 bedHome,
                 wasInfected,
                 equipped,
+                genderLocked,
                 foodData.getFoodLevel(),
                 foodData.getTickTimer(),
                 foodData.getSaturationLevel(),
@@ -1274,6 +1293,17 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
                 this::isPartnerVillager,
                 this::setPartner,
                 this::setPartnerVillager);
+    }
+
+    @Override
+    public void setParent(@Nullable IVillagerNPC parent) {
+        if (parent == null) return;
+        if (parent.isMale()) {
+            setFather(parent.getUniqueId(), true);
+        } else {
+            setMother(parent.getOffline());
+        }
+        parent.getChildrens().add(getOffline());
     }
 
     public void setFather(@Nullable UUID father, boolean isFatherVillager) {
@@ -1483,12 +1513,25 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         onItemPickup(entity);
         take(entity, stack.getCount() - fakeRemaining.getCount());
 
-        if (DO_NOT_SAVE.test(stack)) {
+
+        // A cross, a wedding ring, or any other item this plugin itself crafted is never one of
+        // the above, whatever material it happens to be skinned as — cross and ring both default
+        // to a player head, and a head is equippable, so without this check a cross a villager
+        // walks over to pick up for the revive ritual was "picked up" in name only: taken off the
+        // ground, then handed to the equip logic below instead of her own inventory, and equip
+        // logic has nothing sensible to do with a skull that isn't armor. The result was a cross
+        // that visibly vanished and a villager who never actually came to hold one.
+        org.bukkit.inventory.ItemStack bukkitMirror = CraftItemStack.asCraftMirror(stack);
+        boolean isPluginItem = bukkitMirror.hasItemMeta()
+                && bukkitMirror.getItemMeta().getPersistentDataContainer().has(plugin.getItemIdKey(), PersistentDataType.STRING);
+
+        if (DO_NOT_SAVE.test(stack) && !isPluginItem) {
             handleRemaining(stack, fakeRemaining, entity);
             if (!wasFromGift) {
                 ItemStackUtils.setBetterWeaponInMaindHand(getBukkitEntity(), event.getItem().getItemStack(), true, true);
                 ItemStackUtils.setArmorItem(getBukkitEntity(), event.getItem().getItemStack());
             }
+            return;
         }
 
         ItemStack remaining = container.addItem(stack);
@@ -1567,7 +1610,20 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
         if (isExpectingGiftFrom(thrower)) return true;
         if (fished(stack)) return true;
 
-        return thrower == null && plugin.getWantedItem(this, CraftItemStack.asBukkitCopy(stack), true) != null;
+        org.bukkit.inventory.ItemStack bStack = CraftItemStack.asBukkitCopy(stack);
+        if (PluginUtils.isItem(bStack, plugin.getIsCrossKey())
+                && !PluginUtils.hasAnyOf((org.bukkit.inventory.InventoryHolder) getBukkitEntity(), plugin.getIsCrossKey())) {
+            return true;
+        }
+
+        // A weapon or a piece of armour lying nearby is recognised on its own, not through the
+        // gift list below — setBetterWeaponInMaindHand/setArmorItem, in pickUpItem, already know
+        // exactly what to do with one once it is picked up, but had nothing to act on: no server
+        // ships a sword or a helmet on default-wanted-items, the list "wanted" otherwise leans on
+        // entirely, so a villager standing over a dropped sword walked past it forever.
+        if (DO_NOT_SAVE.test(stack)) return true;
+
+        return thrower == null && plugin.getWantedItem(this, bStack, true) != null;
     }
 
     public boolean fished(ItemStack item) {
@@ -1649,8 +1705,8 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
             box = getBoundingBox();
         }
 
-        double xz = getMeleeAttackRangeSqr() / 2.5d;
-        return box.inflate(xz, 0.0, xz);
+        double reach = Math.sqrt(getMeleeAttackRangeSqr()) / 2.0d;
+        return box.inflate(reach, 0.25d, reach);
     }
 
     public int getMeleeAttackRangeSqr() {
@@ -1805,9 +1861,9 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
 
             for (Entity entity : level().getEntities(this, box)) {
                 if (entity.isRemoved() || !(entity instanceof ThrownTrident trident)) continue;
-                if (trident.shakeTime > 0 || (!trident.onGround && !trident.isNoPhysics())) continue;
+                if (shakeTimeOf(trident) > 0 || (!trident.onGround() && !trident.isNoPhysics())) continue;
 
-                ItemStack tridentItem = trident.pickupItemStack;
+                ItemStack tridentItem = pickupItemStackOf(trident);
                 if (!tridentItem.isEmpty()
                         && is(trident.getOwner())
                         && getInventory().canAddItem(tridentItem)) {
@@ -2087,6 +2143,7 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public void stopExpecting() {
         startExpectingFrom(null, null, 0);
         giftDropped = false;
+        getNavigation().stop();
     }
 
     public boolean isStayingInPlace() {
@@ -2274,4 +2331,48 @@ public class VillagerNPC extends Villager implements IVillagerNPC, CrossbowAttac
     public boolean isInteracting() {
         return interactingWith != null && interactType != null;
     }
+
+    /**
+     * Reads {@link AbstractArrow}'s pickup stack.
+     * <p>
+     * Reflective for the same reason as the writes: fields the Spigot mappings expose are
+     * private on some server builds, and a direct access throws {@link IllegalAccessError} at
+     * runtime instead of failing to compile.
+     */
+    private static final MethodHandle PICKUP_ITEM_STACK_GET =
+            Reflection.getFieldGetter(AbstractArrow.class, "pickupItemStack");
+
+    private static @NotNull ItemStack pickupItemStackOf(AbstractArrow arrow) {
+        if (PICKUP_ITEM_STACK_GET == null) return ItemStack.EMPTY;
+
+        try {
+            Object value = PICKUP_ITEM_STACK_GET.invoke(arrow);
+            return value instanceof ItemStack stack ? stack : ItemStack.EMPTY;
+        } catch (Throwable throwable) {
+            return ItemStack.EMPTY;
+        }
+    }
+
+
+    /**
+     * Reads {@link AbstractArrow}'s shake timer.
+     * <p>
+     * Reflective for the same reason as the pickup stack: fields the Spigot mappings expose can
+     * be private on the running server, and this sits in a per-tick path where a direct access
+     * throws {@link IllegalAccessError} over and over.
+     */
+    private static final MethodHandle SHAKE_TIME = Reflection.getFieldGetter(AbstractArrow.class, "shakeTime");
+
+    private static int shakeTimeOf(AbstractArrow arrow) {
+        if (SHAKE_TIME == null) return 0;
+
+        try {
+            Object value = SHAKE_TIME.invoke(arrow);
+            return value instanceof Integer time ? time : 0;
+        } catch (Throwable throwable) {
+            // Treat it as settled; the worst case is picking a trident up a moment early.
+            return 0;
+        }
+    }
+
 }

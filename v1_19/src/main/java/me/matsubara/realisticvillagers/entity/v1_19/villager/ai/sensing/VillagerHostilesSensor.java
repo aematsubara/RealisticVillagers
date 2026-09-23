@@ -44,7 +44,7 @@ public class VillagerHostilesSensor extends NearestVisibleLivingEntitySensor {
 
     private boolean isTarget(LivingEntity entity, LivingEntity closest) {
         if (!(entity instanceof VillagerNPC npc)) return false;
-        return npc.getTargetEntities().contains(closest.getType());
+        return npc.isTarget(closest.getBukkitEntity().getType());
     }
 
     private boolean isDefend(LivingEntity entity, LivingEntity closest, Function<Villager, Optional<Player>> playerGetter, Config config) {

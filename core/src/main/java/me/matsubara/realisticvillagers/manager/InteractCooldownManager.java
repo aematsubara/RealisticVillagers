@@ -44,6 +44,20 @@ public class InteractCooldownManager implements Listener {
         return canInteract(player, villager, type, null);
     }
 
+    /**
+     * Checks whether the player is currently on cooldown for the given type/villager,
+     * WITHOUT adding a new cooldown entry. Use this when you want to gate an action
+     * but only record the cooldown after the action actually succeeds
+     * (e.g. after a gift is processed, not when the gift button is clicked).
+     */
+    public boolean isOnCooldown(@NotNull Player player, @NotNull Villager villager, @NotNull String type) {
+        InteractCooldown cooldown = getCooldown(player.getUniqueId(), villager.getUniqueId(), type);
+        if (cooldown == null) return false;
+        boolean inCooldown = cooldown.inCooldown();
+        if (!inCooldown) cooldowns.remove(cooldown);
+        return inCooldown;
+    }
+
     public boolean canInteract(Player player, String type, Long finishTime) {
         return canInteract(player, null, type, finishTime);
     }

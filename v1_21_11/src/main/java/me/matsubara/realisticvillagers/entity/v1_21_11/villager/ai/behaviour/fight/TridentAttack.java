@@ -2,6 +2,7 @@ package me.matsubara.realisticvillagers.entity.v1_21_11.villager.ai.behaviour.fi
 
 import com.google.common.collect.ImmutableMap;
 import me.matsubara.realisticvillagers.entity.v1_21_11.villager.VillagerNPC;
+import me.matsubara.realisticvillagers.util.Reflection;
 import me.matsubara.realisticvillagers.event.VillagerRiptideEvent;
 import me.matsubara.realisticvillagers.files.Config;
 import net.minecraft.core.Holder;
@@ -32,9 +33,11 @@ import org.bukkit.craftbukkit.v1_21_R7.enchantments.CraftEnchantment;
 import org.bukkit.craftbukkit.v1_21_R7.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
+import java.lang.invoke.MethodHandle;
 public class TridentAttack extends Behavior<Villager> {
 
     private int delay;
@@ -52,7 +55,8 @@ public class TridentAttack extends Behavior<Villager> {
     @Override
     public boolean checkExtraStartConditions(ServerLevel level, Villager villager) {
         LivingEntity target = getAttackTarget(villager);
-        return villager instanceof VillagerNPC npc
+        return target != null
+                && villager instanceof VillagerNPC npc
                 && npc.isHolding(Items.TRIDENT)
                 && canThrow(npc)
                 && BlockAttackWithShield.notUsingShield(npc)
@@ -85,14 +89,16 @@ public class TridentAttack extends Behavior<Villager> {
 
     @Override
     public void tick(ServerLevel level, Villager villager, long time) {
-        removeWalkTargetIfNeeded(villager);
-
         LivingEntity target = getAttackTarget(villager);
+        if (target == null) return;
+
+        removeWalkTargetIfNeeded(villager, target);
+
         lookAtTarget(villager, target);
         tridentAttack((VillagerNPC) villager);
     }
 
-    private void removeWalkTargetIfNeeded(@NotNull Villager villager) {
+    private void removeWalkTargetIfNeeded(@NotNull Villager villager, @NotNull LivingEntity targetEntity) {
         Brain<Villager> brain = villager.getBrain();
 
         Optional<WalkTarget> walkTarget = brain.getMemory(MemoryModuleType.WALK_TARGET);
@@ -101,7 +107,7 @@ public class TridentAttack extends Behavior<Villager> {
         if (!(walkTarget.get().getTarget() instanceof EntityTracker tracker)) return;
 
         Entity target = tracker.getEntity();
-        if (!target.is(getAttackTarget(villager))) return;
+        if (!target.is(targetEntity)) return;
 
         if (villager.distanceTo(target) <= TRIDENT_DISTANCE_ATTACK) {
             brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -157,7 +163,7 @@ public class TridentAttack extends Behavior<Villager> {
 
             weapon.hurtAndBreak(1, npc, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
 
-            trident.pickupItemStack = weapon.copy();
+            setPickupItemStack(trident, weapon.copy());
             npc.level().playSound(null, trident, SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 1.0f, 1.0f);
             npc.setItemInHand(hand, ItemStack.EMPTY);
             npc.setThrownTrident(trident);
@@ -208,10 +214,8 @@ public class TridentAttack extends Behavior<Villager> {
         mob.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
     }
 
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    private @NotNull LivingEntity getAttackTarget(@NotNull Villager villager) {
-        // Can't be null since the value should be present in the constructor.
-        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+    private static @Nullable LivingEntity getAttackTarget(@NotNull Villager villager) {
+        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
     }
 
     enum TridentState {
@@ -220,4 +224,24 @@ public class TridentAttack extends Behavior<Villager> {
         CHARGED,
         READY_TO_ATTACK
     }
+
+    /**
+     * Sets {@link AbstractArrow}'s pickup stack.
+     * <p>
+     * Reflective because the field is private on some server builds even though the Spigot
+     * mappings this compiles against expose it.
+     */
+    private static final MethodHandle PICKUP_ITEM_STACK_SET =
+            Reflection.getFieldSetter(AbstractArrow.class, "pickupItemStack");
+
+    private static void setPickupItemStack(AbstractArrow arrow, ItemStack stack) {
+        if (PICKUP_ITEM_STACK_SET == null) return;
+
+        try {
+            PICKUP_ITEM_STACK_SET.invoke(arrow, stack);
+        } catch (Throwable throwable) {
+            // Only affects what the trident drops when picked up.
+        }
+    }
+
 }

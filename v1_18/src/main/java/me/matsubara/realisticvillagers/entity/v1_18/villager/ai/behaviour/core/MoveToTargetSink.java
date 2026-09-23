@@ -33,16 +33,10 @@ public class MoveToTargetSink extends Behavior<Villager> {
     private static final int MAX_COOLDOWN_BEFORE_RETRYING = 40;
 
     public MoveToTargetSink() {
-        this(150, 250);
-    }
-
-    public MoveToTargetSink(int minDuration, int maxDuration) {
         super(ImmutableMap.of(
                         MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryStatus.REGISTERED,
-                        MemoryModuleType.PATH, MemoryStatus.VALUE_ABSENT,
-                        MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_PRESENT),
-                minDuration,
-                maxDuration);
+                        MemoryModuleType.PATH, MemoryStatus.REGISTERED,
+                        MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_PRESENT));
     }
 
     @Override
@@ -63,7 +57,6 @@ public class MoveToTargetSink extends Behavior<Villager> {
             return true;
         }
 
-        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         if (reached) brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
 
         return false;
@@ -92,7 +85,7 @@ public class MoveToTargetSink extends Behavior<Villager> {
         }
 
         getNavigation(villager).stop();
-        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        // Removed: brain.eraseMemory(MemoryModuleType.WALK_TARGET); 
         brain.eraseMemory(MemoryModuleType.PATH);
         path = null;
     }
@@ -126,7 +119,7 @@ public class MoveToTargetSink extends Behavior<Villager> {
 
     private boolean tryComputePath(Villager villager, @NotNull WalkTarget target, long time) {
         BlockPos pos = target.getTarget().currentBlockPosition();
-        path = getNavigation(villager).createPath(pos, 0);
+        path = getNavigation(villager).createPath(pos, target.getCloseEnoughDist());
         speedModifier = target.getSpeedModifier();
 
         Brain<Villager> brain = villager.getBrain();
@@ -146,7 +139,7 @@ public class MoveToTargetSink extends Behavior<Villager> {
 
         Vec3 random = DefaultRandomPos.getPosTowards(villager, 10, 7, Vec3.atBottomCenterOf(pos), 1.5707963705062866d);
         if (random != null) {
-            path = getNavigation(villager).createPath(random.x, random.y, random.z, 0);
+            path = getNavigation(villager).createPath(random.x, random.y, random.z, target.getCloseEnoughDist());
             return path != null;
         }
 

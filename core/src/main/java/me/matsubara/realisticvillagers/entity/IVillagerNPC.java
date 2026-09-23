@@ -76,6 +76,14 @@ public interface IVillagerNPC {
 
     void setSex(String sex);
 
+    boolean isGenderLocked();
+
+    void setGenderLocked(boolean genderLocked);
+
+    void setParent(@Nullable IVillagerNPC parent);
+
+    void setFather(@Nullable UUID father, boolean isFatherVillager);
+
     int getSkinTextureId();
 
     void setSkinTextureId(int skinTextureId);

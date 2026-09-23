@@ -1,0 +1,542 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║          RealisticVillagers — Hologram System Configuration              ║
+# ║                                                                          ║
+# ║  Reload with:  /rv reload                                                ║
+# ║  Color codes:  use & prefix  (e.g. &a=green, &c=red, &e=yellow,          ║
+# ║                               &d=pink, &b=aqua, &8=dark-gray,            ║
+# ║                               &l=bold, &o=italic, &f=white, &r=reset)    ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+hologram:
+
+  # Set to false to disable ALL holograms (menu, head display, info panel,
+  # speech bubbles). Players interact with the old chest-GUI instead.
+  enabled: true
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # ELECTION COUNTDOWN  (floats above the village bell while voting is open)
+  # ─────────────────────────────────────────────────────────────────────────
+  # Requires the settlement system (village.enabled in config.yml)
+  election:
+    countdown: "&e&lELECTION\n&fTime left: &e%time%"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # VILLAGE RADAR  (the map panel drawn in front of you from the mayor's menu)
+  # ─────────────────────────────────────────────────────────────────────────
+  # The map is drawn from block-display entities, one per SHAPE (the panel, each
+  # building, each marker) rather than one per pixel — so buildings keep their real
+  # size and the whole map is only a few dozen entities.
+  # Buildings are found from what villagers remember: their bed and their
+  # workstation. Nearby ones are merged into a single footprint.
+  # Requires Minecraft 1.19.4+.
+  radar:
+    # How wide and tall the map is, in blocks.
+    panel-size: 2.6
+    # Gap between the villager and the edge of the map, in blocks. The map hangs on
+    # the opposite side from the menu text so the two never overlap.
+    side-offset: 0.9
+    # How high above the villager's head the map floats, in blocks.
+    # Kept well clear of head-height: villager name tags and HP lines are text displays
+    # that render through the map, and at close range they cut across it. Lowering this
+    # brings them back, and lowering it a lot buries the map in the ground.
+    height-offset: 2.4
+
+    # Block used for each part of the map. Must be placeable blocks.
+    # The village bell is drawn as the real bell item, so it has no colour here.
+    # Buildings are drawn as OUTLINES, not filled squares — a filled square reads as
+    # a blob at this scale, an outline still reads as a building.
+    colors:
+      # Frame around the edge of the panel. Kept a different colour from the boundary
+      # below, so the edge of the map is never mistaken for the edge of the village.
+      border: BLUE_CONCRETE
+      # The settlement's actual edge, drawn where it really falls. It is clipped to the
+      # panel, so zooming past the village edge trims it rather than hiding it.
+      boundary: YELLOW_CONCRETE
+      background: BLACK_CONCRETE
+
+      # Buildings are coloured by what they are used for. A building's purpose comes
+      # from what the villagers remember: beds make it residential, workstations make
+      # it a workplace, both make it mixed.
+      residential: WHITE_CONCRETE
+      workplace: ORANGE_CONCRETE
+      mixed: LIGHT_BLUE_CONCRETE
+      # Found by the scanner, but nobody sleeps or works there — an empty house, a church,
+      # a watchtower. Kept visually distinct from a home so you can tell them apart.
+      building: GRAY_CONCRETE
+
+      # Building you are pointing at.
+      building-highlight: YELLOW_CONCRETE
+      # Building you clicked on. Click it again to deselect.
+      building-selected: LIME_CONCRETE
+
+      resident: LIGHT_GRAY_CONCRETE
+      mayor: LIME_CONCRETE
+      # You.
+      viewer: MAGENTA_CONCRETE
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # INTERACTION MENU  (appears to the right of the villager when opened)
+  # ─────────────────────────────────────────────────────────────────────────
+  menu:
+    # Set to false to keep the OTHER holograms above (head display, info
+    # panel, speech bubbles) while making right-click interactions open the
+    # old chest-GUI instead of this hologram menu. Only takes effect if
+    # hologram.enabled is also true — that master switch still overrides
+    # everything below it.
+    enabled: true
+
+    # Horizontal distance (blocks) from the villager centre to the menu panel.
+    side-offset: 1.5
+
+    # Vertical gap (blocks) between consecutive text lines.
+    line-spacing: 0.30
+
+    # The menu closes automatically when the player walks this far away (blocks).
+    auto-close-distance: 7.0
+
+    # How far away (blocks) a player can still see the menu text.
+    view-range: 8.0
+
+    # Whether the menu text is visible through solid blocks.
+    see-through: true
+
+    # Background fill behind each text line (ARGB — each channel 0-255).
+    # alpha: 0 = fully transparent, 255 = fully opaque.
+    background:
+      alpha: 64
+      red:   0
+      green: 0
+      blue:  0
+
+    # Maximum pixel width of one line before it wraps to the next.
+    line-width: 220
+
+    # ⚠ WARNING ──────────────────────────────────────────────────────────────
+    # RAY-CAST — controls hover highlight and click detection math.
+    # Changing these incorrectly breaks clicking entirely.
+    # Leave at defaults unless you fully understand 3D ray-segment geometry.
+    # ─────────────────────────────────────────────────────────────────────────
+    raycast:
+      char-width-blocks: 0.14
+      segment-threshold: 0.25
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # HEAD DISPLAY  (HP / Food shown above the villager's name-tag)
+  # ─────────────────────────────────────────────────────────────────────────
+  head-display:
+    # Set to false to hide the head display entirely.
+    enabled: true
+
+    # Height above the villager's top bounding-box edge (blocks).
+    height-offset: 0.7
+
+    # Vertical gap between multiple head-display lines (blocks).
+    line-spacing: 0.22
+
+    # How far away (blocks) a player can still see the head display.
+    view-range: 8.0
+
+    # ── Head-display lines ────────────────────────────────────────────────
+    # This is a list — you can add, remove, or reorder lines freely.
+    # Each entry is a text template; the plugin replaces the placeholders
+    # before displaying it above the villager.
+    #
+    # Available placeholders:
+    #   %hp%      — current health   (one decimal, e.g. 18.0)
+    #   %max-hp%  — maximum health   (no decimal,  e.g. 20)
+    #   %food%    — food level       (integer 0-20)
+    #
+    # Examples:
+    #   Show HP and food on one line (default):
+    #     - "&cHP: &f%hp%&7/&f%max-hp%  &aFood: &f%food%&7/&f20"
+    #
+    #   Show them on two separate lines:
+    #     - "&cHP: &f%hp% &7/ &f%max-hp%"
+    #     - "&aFood: &f%food% &7/ &f20"
+    #
+    #   Show only HP (remove the food line):
+    #     - "&cHP: &f%hp%&7/&f%max-hp%"
+    #
+    #   Plain numbers only:
+    #     - "%hp% / %max-hp%  |  food: %food%"
+    #
+    # To hide the head display completely use  enabled: false  above.
+    lines:
+      - "&cHP: &f%hp%&7/&f%max-hp%  &aFood: &f%food%&7/&f20"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # INFO PANEL  (appears to the left; toggled with the Informations button)
+  # ─────────────────────────────────────────────────────────────────────────
+  info-panel:
+    children-per-page: 3
+
+    section-headers:
+      basic:  "&e&l— BASIC —"
+      stats:  "&c&l— STATS —"
+      family: "&d&l— FAMILY —"
+
+    navigation:
+      prev:          "&e« &fPrev"
+      next:          "&e» &fNext"
+      prev-children: "&e« &fPrev children"
+      next-children: "&e» &fNext children"
+
+    view-range: 8.0
+    see-through: true
+    background:
+      alpha: 64
+      red:   0
+      green: 0
+      blue:  0
+    line-width: 200
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # SPEECH BUBBLE  (typewriter text above a villager during chat)
+  # ─────────────────────────────────────────────────────────────────────────
+  speech-bubble:
+    # Set to false to disable speech bubbles entirely.
+    enabled: true
+    chars-per-tick: 2
+    linger-ticks: 60
+    line-width: 150
+    height-offset: 0.8
+    view-range: 10.0
+    see-through: true
+
+    # Color of the speech bubble's text (use & color codes, e.g. &0 = black,
+    # &f = white, &e = yellow). Default matches the background above (white),
+    # so it stays readable — change both together if you customize the look.
+    text-color: "&0"
+
+    background:
+      alpha: 255
+      red:   255
+      green: 255
+      blue:  255
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # MENUS
+  #
+  # Each menu is a YAML list.  Every entry is an item with an  id:  that
+  # links it to its in-game action.
+  #
+  #   HOW TO REMOVE AN ITEM
+  #     Add  #  at the very beginning of the line.  One-line items
+  #     (written as  - {id: ..., text: "..."}  ) can be commented out
+  #     with a single  #.  Multi-line items (like  order  in the
+  #     interactions menu) need every sub-line commented out.
+  #
+  #   HOW TO REORDER ITEMS
+  #     Move whole lines up or down.  In-game order matches YAML order.
+  #
+  #   HOW TO RENAME AN ITEM
+  #     Change the  text:  value.  & colour codes are supported, along with
+  #     the placeholders  %player-name%  (the viewer) and  %villager-name%
+  #     (this villager) — usable in any  text:  on this page, including
+  #     custom display lines and sub-menu items below.
+  #     The  id:  value must stay exactly as written — it links the line
+  #     to its Java action.  Changing it makes the line non-functional.
+  #
+  #   HOW TO ADD CUSTOM DISPLAY LINES  (separators, headers, labels)
+  #     Use any id that is NOT in the "valid ids" list below (and does NOT
+  #     match another menu name — see below) and add a  text:  value.  The
+  #     line will appear exactly where you put it in the list but will NOT
+  #     be clickable.  Examples:
+  #
+  #       - {id: sep1,   text: "&8─────────────────"}
+  #       - {id: header, text: "&7&lACTIONS"}
+  #       - {id: spacer, text: " "}
+  #
+  #     You can add as many custom lines as you like, anywhere in the
+  #     list, between real items or at the top/bottom.
+  #
+  #   HOW TO ADD A CUSTOM CLICKABLE SUB-MENU
+  #     Add a new top-level list under  menus:  (a sibling of main/talk/
+  #     interactions) with whatever name you like, then add an item with
+  #     that SAME name as its  id:  anywhere in an existing menu. That item
+  #     becomes clickable and opens your new list as a sub-menu. Add an
+  #     {id: back, text: "..."} item inside it to return to the menu that
+  #     opened it. Example — adds a "Rules" button to the main menu:
+  #
+  #     menus:
+  #       main:
+  #         - {id: rules, text: "&e» &fRules"}
+  #         ...
+  #       rules:
+  #         - {id: sep1, text: "&71. Be nice"}
+  #         - {id: sep2, text: "&72. No griefing"}
+  #         - {id: back, text: "&c« &fBack"}
+  #
+  #   HOW TO ADD PAGES TO A CUSTOM SUB-MENU
+  #     Instead of a flat list, give the menu a "pages:" list. Each page has
+  #     its own optional  header:  and its own  items:  list. Prev/Next
+  #     buttons and a page counter are added automatically whenever there's
+  #     more than one page — no need to add them yourself.
+  #
+  #     menus:
+  #       rules:
+  #         page-format: "&8[&7%current%&8/&7%total%&8]"   # optional, this is the default
+  #         navigation:
+  #           prev: "&e« &fPrev"                             # optional, this is the default
+  #           next: "&e» &fNext"                              # optional, this is the default
+  #         pages:
+  #           - header: "&7&l— Page 1 —"
+  #             items:
+  #               - {id: sep1, text: "&71. Be nice"}
+  #           - header: "&7&l— Page 2 —"
+  #             items:
+  #               - {id: sep2, text: "&72. No griefing"}
+  #               - {id: back, text: "&c« &fBack"}
+  #
+  #   HOW TO START A CUSTOM CHAT/CONVERSATION
+  #     Give an item an id that matches a top-level key in
+  #     configs/messages/default.yml (see that file for the format) instead
+  #     of a menu name, and it starts that conversation — random success
+  #     chance, cooldown and reputation gain/loss, same as the built-in
+  #     Talk options (Chat/Greet/Story/...), but entirely config-defined:
+  #
+  #       - {id: gossip, text: "&e» &dGossip"}
+  #
+  #   HOW TO OPEN A CUSTOM CHEST GUI
+  #     Give an item an id that matches a "gui.custom.<id>" section in
+  #     gui.yml (see that file, "CUSTOM CHEST GUIs") instead of a menu name,
+  #     and it opens that GUI — your own layout, items and click actions
+  #     (give items, run commands, send messages, open other GUIs, or a
+  #     text-input anvil prompt), entirely config-defined:
+  #
+  #       - {id: shop, text: "&e» &6Shop"}
+  #
+  #   HOW TO LOCK AN ITEM BEHIND A REQUIREMENT
+  #     Add a  requires:  block to ANY custom item (a sub-menu button, a
+  #     custom chat, or a plain line) — every check you include must pass.
+  #     By default a failed check greys the line out with a padlock suffix
+  #     (still visible, not clickable); set  locked-display: hide  to make
+  #     it disappear from the hologram entirely instead.
+  #
+  #       - id: gossip
+  #         text: "&e» &dGossip"
+  #         requires:
+  #           permission: "realisticvillagers.gossip"   # optional
+  #           min-reputation: 10                          # optional
+  #         locked-display: suffix   # or: hide  (default: suffix)
+  #         locked-suffix: " &7🔒"    # optional, this is the default
+  #
+  #   HOVER HIGHLIGHT
+  #     When a player aims at a line the plugin highlights it.
+  #     If the text starts with a colour code + » or « the arrow is
+  #     replaced by §e§l▶.  For any other text the whole line is bolded
+  #     in yellow.  Custom display lines are also highlighted on hover.
+  # ─────────────────────────────────────────────────────────────────────────
+  menus:
+
+    # ── Main menu ──────────────────────────────────────────────────────────
+    #
+    # Valid ids (all optional — remove any to hide it):
+    #
+    #   talk          Opens the Talk sub-menu.
+    #   trade         Opens the villager's trade window.
+    #                 Extra key: locked-text — shown when all trades are
+    #                 exhausted (uses counter maxed out).
+    #   interactions  Opens the Interactions sub-menu.
+    #   informations  Toggles the Info panel on the left side.
+    #
+    main:
+      - {id: talk,         text: "&e» &fTalk"}
+      - {id: trade,        text: "&e» &fTrade",    locked-text: "&8» &7Trade"}
+      - {id: interactions, text: "&e» &fInteraction"}
+      - {id: informations, text: "&7» &fInformations"}
+
+    # ── Talk sub-menu ──────────────────────────────────────────────────────
+    #
+    # Valid ids (all optional — remove any to hide it):
+    #
+    #   chat      Starts a random chat line.
+    #   greet     Villager greets the player.
+    #   story     Villager tells a story.
+    #   joke      Villager tells a joke.
+    #   insult    Player insults the villager (decreases reputation).
+    #   flirt     Player flirts with the villager.
+    #             Automatically hidden when: player is family OR villager
+    #             is a child.  Removing it hides it for everyone.
+    #   proud-of  Player praises the villager (for child villagers only).
+    #             Automatically hidden for adult villagers.
+    #             Removing it hides it for everyone.
+    #   back      Returns to the main menu.  Recommended to keep this.
+    #
+    talk:
+      - {id: chat,     text: "&a» &fChat"}
+      - {id: greet,    text: "&a» &fGreet"}
+      - {id: story,    text: "&a» &fStory"}
+      - {id: joke,     text: "&a» &fJoke"}
+      - {id: insult,   text: "&c» &fInsult"}
+      - {id: flirt,    text: "&d» &fFlirt"}
+      - {id: proud-of, text: "&b» &fProud Of"}
+      - {id: back,     text: "&c« &fBack"}
+
+    # ── Interactions sub-menu ──────────────────────────────────────────────
+    interactions:
+
+      # Text appended to any option the player cannot use due to permissions.
+      # Set to "" to show no suffix (the line is still greyed out).
+      locked-suffix: " &7🔒"
+
+      # Valid ids (all optional — remove any to hide it):
+      #
+      #   gift            Player gives an item to the villager.
+      #
+      #   order           Cycles the villager's movement order:
+      #                   Follow → Stay → Wander → Follow …
+      #                   Hidden for players without the order permission.
+      #                   Extra keys instead of  text:
+      #                     prefix:      label before the current state name
+      #                     follow-text: label shown when currently FOLLOWING
+      #                     stay-text:   label shown when currently STAYING
+      #                     wander-text: label shown when currently WANDERING
+      #
+      #   inventory       Opens the villager's equipment/inventory screen.
+      #                   Greyed out when the player lacks the permission.
+      #
+      #   set-home        Sets the villager's home to the current location.
+      #                   Greyed out when the player lacks the permission.
+      #
+      #   combat          Opens the combat settings GUI.
+      #                   Greyed out when the player lacks the permission.
+      #
+      #   procreate       Starts the procreation interaction.
+      #                   Automatically hidden when the player is NOT the
+      #                   villager's partner OR the villager is a child.
+      #                   Removing it hides it for everyone.
+      #
+      #   divorce         Shows a divorce button.
+      #                   Automatically hidden when the player is NOT the
+      #                   villager's partner.  On click switches to the
+      #                   confirmation step below.
+      #
+      #   divorce-confirm Confirm button (replaces divorce when clicked once).
+      #                   Keep this together with divorce.
+      #
+      #   divorce-cancel  Cancel button shown next to divorce-confirm.
+      #                   Keep this together with divorce-confirm.
+      #
+      #   back            Returns to the main menu.  Recommended to keep.
+      #
+      items:
+        - {id: gift,            text: "&e» &fGift"}
+        - id: order             # multi-key item — keep all lines together when commenting out
+          prefix:      "&e» &fOrder: "
+          follow-text: "&aFollow"
+          stay-text:   "&eStay"
+          wander-text: "&7Wander"
+        - {id: inventory,       text: "Inventory"}
+        - {id: set-home,        text: "Set Home"}
+        - {id: combat,          text: "Combat"}
+        - {id: procreate,       text: "Procreate"}
+        - {id: divorce,         text: "&c» &fDivorce"}
+        - {id: divorce-confirm, text: "&c&l» Confirm?"}
+        - {id: divorce-cancel,  text: "&7» &fCancel"}
+        - {id: back,            text: "&c« &fBack"}
+
+    # ── Mayor screen buttons ───────────────────────────────────────────────
+    # Unlike the menus above this is NOT a list: the mayor screen is built by
+    # the plugin, so these are just the labels of its fixed buttons.
+    mayor:
+      radar:      "&e» &fVillage radar"
+      storage:    "&e» &fSettlement stores"
+      commission: "&e» &fCommission a building"
+      # Draws the settlement's edge in the world with particles.
+      borders:    "&e» &fShow borders: "
+      # Opens an anvil with the settlement's current name ready to edit.
+      rename:     "&e» &fRename settlement"
+      back:       "&c« &fBack"
+
+    # ── Radar screen buttons ───────────────────────────────────────────────
+    radar:
+      residents: "&e» &fResidents: "
+      mayor:     "&e» &fMayor: "
+      zoom-in:   "&e» &fZoom in"
+      zoom-out:  "&e» &fZoom out"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # INFO PANEL TEXT PREFIXES  (what appears before each value in the panel)
+  # ─────────────────────────────────────────────────────────────────────────
+  labels:
+    info:
+      # Basic section
+      name-prefix:  "&7Name: &f"
+      sex-prefix:   "&7Sex: &f"
+      age-prefix:   "&7Age: &f"
+      type-prefix:  "&7Type: &f"
+      prof-prefix:  "&7Prof: &f"
+      level-prefix: " &8Lv."
+      # Stats section
+      hp-prefix:    "&cHP: &f"
+      hp-separator: "&7/&f"
+      food-prefix:  "&aFood: &f"
+      food-max:     "&7/&f20"
+      rep-prefix:   "&6Rep: "
+      act-prefix:   "&eAct: &f"
+      # Family section
+      partner-prefix:    "&dPartner: "
+      partner-unmarried: "&7Unmarried"
+      father-prefix:     "&bFather: "
+      mother-prefix:     "&dMother: "
+      children-header:   "&7Children "
+      children-none:     "&7Children: &f"
+      children-bullet:   "&8 • &f"
+      # Page indicator — %current% and %total% are replaced automatically.
+      page-format:       "&8[&7%current%&8/&7%total%&8]"
+    # MAIN MENU labels
+    menu:
+      # Shown above the menu items; colored dynamically by reputation level.
+      rep-prefix: "Rep: "
+
+    # ── MAYOR SCREEN ────────────────────────────────────────────────────────
+    # Shown when right-clicking a village mayor (the villager with the emerald
+    # block above its head). Requires the settlement system: village.enabled
+    # in config.yml.
+    mayor:
+      header: "&6&l— MAYOR —"
+      village: "&7Village: &f"
+      residents: "&7Residents: &f"
+      standing: "Standing: "
+      unavailable: "&cNo settlement here."
+      storage-header: "&6Settlement stores:"
+      storage-empty: "&7The stores are empty."
+      # Anvil that renames the settlement. The generated name opens in the box ready to edit.
+      rename-title: "&8Name this settlement"
+      rename-invalid: "&cThat name won't do."
+      rename-done: "&aThis settlement is now &f%village%&a."
+      commission-allowed: "&aThe mayor will hear your building plans."
+      commission-no-mayor: "&cThis settlement has no mayor."
+      commission-low-reputation: "&cYour standing with the mayor is too low."
+      commission-no-family: "&cYou need a family among this village's residents."
+      borders-on: "&aVillage borders are now visible."
+      borders-off: "&7Village borders hidden."
+
+    # ── VILLAGE RADAR ───────────────────────────────────────────────────────
+    # A top-down character map centred on the village bell. North is up.
+    # If a symbol shows as a missing-glyph box in your font, replace it with a
+    # plain character such as "." "o" "M" or "@".
+    radar:
+      header: "&6&l— RADAR —"
+      scale: "&8Radius: &7"
+      scale-suffix: "&8 blocks"
+      on: "&aon"
+      off: "&7off"
+      buildings: "&8Buildings: &7"
+
+      # Shown in chat when you click a building on the map.
+      building-header: "&8— Building —"
+      building-kind: "&7Type: &f%kind%"
+      # %height% is how tall the building is; %y% is the level its floor sits on.
+      # Replaces the old building-size line, which had no room for a height. That key is
+      # dead and can be deleted — only this one is read.
+      building-box: "&7Size: &f%width%x%depth%x%height% &7blocks at &f%x%, %y%, %z%"
+      building-beds: "&7Sleeps: &f%count%"
+      building-work: "&7Work: &f%trades%"
+      # Clickable line that outlines the building in the world with particles.
+      building-outline: "&b[Show this building in the world]"
+      type-residential: "&aResidential"
+      type-workplace: "&6Workplace"
+      type-mixed: "&bHome & workshop"
+      type-unknown: "&7Unknown"

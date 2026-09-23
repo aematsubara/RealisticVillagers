@@ -1,24 +1,28 @@
 package me.matsubara.realisticvillagers.manager.gift;
 
-import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import java.util.Locale;
 
-import java.util.Set;
+/**
+ * Describes how a villager feels about receiving a particular item as a gift.
+ *
+ * <ul>
+ *   <li>{@link #LOVED}    – the villager is thrilled; gives a large reputation bonus.</li>
+ *   <li>{@link #NEUTRAL}  – the villager accepts it politely; gives a small reputation bonus.</li>
+ *   <li>{@link #DISLIKED} – the villager is offended; causes a reputation loss.</li>
+ * </ul>
+ */
+public enum GiftCategory {
+    LOVED,
+    NEUTRAL,
+    DISLIKED;
 
-public record GiftCategory(String name, int reputation, Set<Gift> gifts) {
-
-    public boolean applies(@NotNull IVillagerNPC npc, @NotNull ItemStack item) {
-        return appliesToVillager(gifts, npc, item, false) != null;
+    /** Lower-case version of the enum name, used for message/config path lookups. */
+    public String lowerName() {
+        return name().toLowerCase(Locale.ROOT);
     }
 
-    public static @Nullable Gift appliesToVillager(@NotNull Set<Gift> gifts, @NotNull IVillagerNPC npc, @NotNull ItemStack item, boolean isItemPickup) {
-        for (Gift gift : gifts) {
-            if (!gift.is(item.getType())) continue;
-            if (isItemPickup && gift.isInventoryLootOnly()) continue;
-            if (!(gift instanceof Gift.GiftWithCondition condition) || condition.test(npc)) return gift;
-        }
-        return null;
+    /** Returns {@code true} for categories that grant positive reputation. */
+    public boolean isPositive() {
+        return this != DISLIKED;
     }
 }

@@ -51,12 +51,60 @@ public final class PlayerListeners implements Listener {
     @EventHandler
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         // Should add support for ItemsAdder?
-        discoverRecipes(event.getPlayer(), plugin.getRing().getKey(), plugin.getWhistle().getKey());
+        discoverRecipes(event.getPlayer(), plugin.getRing().getKey(), plugin.getWhistle().getKey(),
+                plugin.getCross().getKey());
+
+        // Anyone already mid-interaction has a private hologram menu; a fresh join must not see it.
+        if (plugin.getHologramManager() != null) {
+            plugin.getHologramManager().hideAllFrom(event.getPlayer());
+        }
+
+        // When gender selection is disabled, auto-assign the configured default gender.
+        if (!Config.GENDER_SELECTION_ENABLED.asBool()) {
+            Player player = event.getPlayer();
+            String current = player.getPersistentDataContainer()
+                    .get(plugin.getPlayerSexKey(), PersistentDataType.STRING);
+            if (current == null || current.isEmpty()) {
+                String def = Config.GENDER_SELECTION_DEFAULT.asString().toLowerCase(java.util.Locale.ROOT);
+                if (!def.equals("male") && !def.equals("female"))
+                    def = "male";
+                plugin.setPlayerSex(player, def);
+            }
+        }
+    }
+
+    /**
+     * Takes her figure off her when she dies.
+     * <p>
+     * The same reason as quitting and a worse look when it is missed: dying throws off whatever was
+     * riding her, so the display is left standing in the grass at the spot she fell, with nothing
+     * left to carry it and nothing left to take it away. She respawns and the ordinary pass gives
+     * her a new one; the old one would have stayed where it was until the server came down.
+     */
+    @EventHandler
+    public void onPlayerDeath(@NotNull org.bukkit.event.entity.PlayerDeathEvent event) {
+        if (plugin.getPlayerAppearanceManager() != null) {
+            plugin.getPlayerAppearanceManager().remove(event.getEntity());
+        }
     }
 
     @EventHandler
     public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        // Her figure rides her on an entity of its own, and an entity is not cleaned up by its
+        // rider leaving. Taken away here, before there is nobody left to take it from.
+        if (plugin.getPlayerAppearanceManager() != null) {
+            plugin.getPlayerAppearanceManager().remove(player);
+        }
+
         babyGrowCount.removeAll(event.getPlayer().getUniqueId());
+
+        // Who was shown her figure is remembered so it is not re-sent every second;
+        // once she is
+        // gone that memory is about somebody nobody can see.
+        var shapes = plugin.getShapeEquipment();
+        if (shapes != null)
+            shapes.forget(event.getPlayer().getUniqueId());
     }
 
     private void discoverRecipes(Player player, @NotNull NamespacedKey... keys) {
@@ -67,33 +115,87 @@ public final class PlayerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityTargetLivingEntity(@NotNull EntityTargetLivingEntityEvent event) {
-        if (!(event.getEntity() instanceof IronGolem)) return;
-        if (!(event.getTarget() instanceof Player player)) return;
+        if (!(event.getEntity() instanceof IronGolem))
+            return;
+        if (!(event.getTarget() instanceof Player player))
+            return;
 
         Raid raid = plugin.getConverter().getRaidAt(player.getLocation());
-        if (raid == null || !raid.getHeroes().contains(player.getUniqueId())) return;
+        if (raid == null || !raid.getHeroes().contains(player.getUniqueId()))
+            return;
 
         if (!Config.IRON_GOLEM_ATTACK_PLAYER_DURING_RAID.asBool()) {
-            // Prevent iron golem attacking players (they might hit them by accident during a raid).
+            // Prevent iron golem attacking players (they might hit them by accident during
+            // a raid).
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPlayerMoveGender(@NotNull PlayerMoveEvent event) {
+        if (!Config.GENDER_SELECTION_ENABLED.asBool())
+            return;
+        Player player = event.getPlayer();
+        String currentSex = player.getPersistentDataContainer().get(plugin.getPlayerSexKey(),
+                PersistentDataType.STRING);
+        if (currentSex == null || currentSex.isEmpty()) {
+            Location from = event.getFrom();
+            Location to = event.getTo();
+            if (to != null && (from.getBlockX() != to.getBlockX() || from.getBlockY() != to.getBlockY()
+                    || from.getBlockZ() != to.getBlockZ())) {
+                Location newTo = from.clone();
+                newTo.setYaw(to.getYaw());
+                newTo.setPitch(to.getPitch());
+                event.setTo(newTo);
+
+                if (plugin.getCooldownManager().canInteract(player, "gender_reminder", 3000L)) {
+                    plugin.getMessages().send(player, Messages.Message.PLAYER_GENDER_REMINDER);
+                }
+            }
+        }
+    }
+
+    /**
+     * Turns a player's figure after her the moment she turns.
+     * <p>
+     * On the movement event rather than only on a timer, because turning is the one thing a timer
+     * cannot keep up with: a mouse crosses ninety degrees in a fraction of a tick, and a figure
+     * catching up two ticks later is a figure visibly swinging round after its owner has stopped.
+     * <p>
+     * Cheap despite firing constantly. It looks at one number, and everything below the manager's
+     * own threshold costs nothing at all — which is most of these, since the event fires for
+     * standing still as readily as for turning.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerTurn(@NotNull PlayerMoveEvent event) {
+        Location to = event.getTo();
+        if (to == null || to.getYaw() == event.getFrom().getYaw())
+            return;
+
+        var players = plugin.getPlayerAppearanceManager();
+        if (players != null)
+            players.follow(event.getPlayer());
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerMove(@NotNull PlayerMoveEvent event) {
         Location to = event.getTo();
-        if (to == null) return;
+        if (to == null)
+            return;
 
         Location from = event.getFrom();
         if (to.getBlockX() == from.getBlockX()
                 && to.getBlockY() == from.getBlockY()
-                && to.getBlockZ() == from.getBlockZ()) return;
+                && to.getBlockZ() == from.getBlockZ())
+            return;
 
         Player player = event.getPlayer();
-        if (!Config.GREET_MESSAGES_ENABLED.asBool()) return;
+        if (!Config.GREET_MESSAGES_ENABLED.asBool())
+            return;
 
         InteractCooldownManager cooldown = plugin.getCooldownManager();
-        if (!cooldown.canInteract(player, "welcome", Config.GREET_MESSAGES_COOLDOWN.asLong())) return;
+        if (!cooldown.canInteract(player, "welcome", Config.GREET_MESSAGES_COOLDOWN.asLong()))
+            return;
 
         double range = Config.GREET_MESSAGES_RANGE.asDouble();
         int requiredReputation = Config.GREET_MESSAGES_REQUIRED_REPUTATION.asInt();
@@ -102,16 +204,21 @@ public final class PlayerListeners implements Listener {
             if (!(near instanceof Villager villager)
                     || plugin.getTracker().isInvalid(villager, true)
                     || villager.isSleeping()
-                    || !villager.hasLineOfSight(player)) continue;
+                    || !villager.hasLineOfSight(player))
+                continue;
 
             // Ignore non-custom, inside raid, lower reputation, ignored activities.
             Optional<IVillagerNPC> npc = plugin.getConverter().getNPC(villager);
-            if (npc.isEmpty() || npc.get().isInsideRaid()) continue;
-            if (npc.get().getReputation(player.getUniqueId()) < requiredReputation) continue;
-            if (ignoredActivities.contains(npc.get().getActivityName(EMPTY).toLowerCase(Locale.ROOT))) continue;
+            if (npc.isEmpty() || npc.get().isInsideRaid())
+                continue;
+            if (npc.get().getReputation(player.getUniqueId()) < requiredReputation)
+                continue;
+            if (ignoredActivities.contains(npc.get().getActivityName(EMPTY).toLowerCase(Locale.ROOT)))
+                continue;
 
             InteractionTargetType relationship = InteractionTargetType.getInteractionTarget(npc.get(), player);
-            if (!cooldown.canInteract(player, villager, relationship.getName(), Config.GREET_MESSAGES_PER_TYPE_COOLDOWN.asLong())) {
+            if (!cooldown.canInteract(player, villager, relationship.getName(),
+                    Config.GREET_MESSAGES_PER_TYPE_COOLDOWN.asLong())) {
                 continue;
             }
 
@@ -127,30 +234,49 @@ public final class PlayerListeners implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        if (Config.GENDER_SELECTION_ENABLED.asBool()) {
+            String currentSex = player.getPersistentDataContainer().get(plugin.getPlayerSexKey(),
+                    PersistentDataType.STRING);
+            if (currentSex == null || currentSex.isEmpty()) {
+                event.setCancelled(true);
+                if (plugin.getCooldownManager().canInteract(player, "gender_reminder", 3000L)) {
+                    plugin.getMessages().send(player, Messages.Message.PLAYER_GENDER_REMINDER);
+                }
+                return;
+            }
+        }
+
         handleWhistle(event);
         handleBabySpawn(event);
 
-        if (plugin.isDisabledIn(event.getPlayer().getWorld())) return;
+        if (plugin.isDisabledIn(event.getPlayer().getWorld()))
+            return;
 
-        if (!XReflection.supports(19)) return;
-        if (!Config.ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK.asBool()) return;
+        if (!XReflection.supports(19))
+            return;
+        if (!Config.ATTACK_PLAYER_PLAYING_GOAT_HORN_SEEK.asBool())
+            return;
 
         ItemStack item = event.getItem();
-        if (item == null) return;
-
-        Player player = event.getPlayer();
+        if (item == null)
+            return;
 
         Material goatHorn = Material.valueOf("GOAT_HORN");
-        if (item.getType() != goatHorn || player.hasCooldown(goatHorn)) return;
+        if (item.getType() != goatHorn || player.hasCooldown(goatHorn))
+            return;
 
         GameMode gameMode = player.getGameMode();
-        if (gameMode == GameMode.CREATIVE || gameMode == GameMode.SPECTATOR) return;
+        if (gameMode == GameMode.CREATIVE || gameMode == GameMode.SPECTATOR)
+            return;
 
-        if (!plugin.getConverter().isSeekGoatHorn(item)) return;
+        if (!plugin.getConverter().isSeekGoatHorn(item))
+            return;
 
         int range = Config.GOAT_HORN_SEEK_RANGE.asInt();
         for (Entity entity : player.getNearbyEntities(range, range, range)) {
-            if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager, true)) continue;
+            if (!(entity instanceof Villager villager) || plugin.getTracker().isInvalid(villager, true))
+                continue;
             plugin.getConverter().getNPC(villager).ifPresent(npc -> npc.reactToSeekHorn(player));
         }
     }
@@ -159,13 +285,16 @@ public final class PlayerListeners implements Listener {
         Player player = event.getPlayer();
 
         ItemStack item = event.getItem();
-        if (item == null) return;
+        if (item == null)
+            return;
 
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
+        if (meta == null)
+            return;
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
-        if (!container.has(plugin.getIsWhistleKey(), PersistentDataType.INTEGER)) return;
+        if (!container.has(plugin.getIsWhistleKey(), PersistentDataType.INTEGER))
+            return;
 
         plugin.openWhistleGUI(player, null, null);
     }
@@ -174,24 +303,30 @@ public final class PlayerListeners implements Listener {
         Player player = event.getPlayer();
 
         ItemStack item = event.getItem();
-        if (item == null) return;
+        if (item == null)
+            return;
 
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
+        if (meta == null)
+            return;
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
         long procreation = container.getOrDefault(plugin.getProcreationKey(), PersistentDataType.LONG, -1L);
-        if (procreation == -1) return;
+        if (procreation == -1)
+            return;
 
         event.setCancelled(true);
 
         Block clicked = event.getClickedBlock();
-        if (clicked == null) return;
+        if (clicked == null)
+            return;
 
         EquipmentSlot hand = event.getHand();
-        if (hand == null) return;
+        if (hand == null)
+            return;
 
-        if (plugin.isDisabledIn(player.getWorld())) return;
+        if (plugin.isDisabledIn(player.getWorld()))
+            return;
 
         Messages messages = plugin.getMessages();
 
@@ -229,16 +364,19 @@ public final class PlayerListeners implements Listener {
 
         // If player is already in map, but this baby isn't in, add it.
         boolean existsInList = entries.stream().anyMatch(entry -> entry.getKey() == procreation);
-        if (!existsInList) babyGrowCount.put(playerUUID, new AbstractMap.SimpleEntry<>(procreation, 3));
+        if (!existsInList)
+            babyGrowCount.put(playerUUID, new AbstractMap.SimpleEntry<>(procreation, 3));
 
         // Check for counts and send messages.
         Map.Entry<Long, Integer> toRemove = null;
         for (Map.Entry<Long, Integer> entry : entries) {
-            if (entry.getKey() != procreation) continue;
+            if (entry.getKey() != procreation)
+                continue;
 
             int count = entry.getValue();
             if (count > 0) {
-                messages.send(player, Messages.Message.BABY_COUNTDOWN, string -> string.replace("%countdown%", String.valueOf(count)));
+                messages.send(player, Messages.Message.BABY_COUNTDOWN,
+                        string -> string.replace("%countdown%", String.valueOf(count)));
                 entry.setValue(count - 1);
                 return;
             }
@@ -250,7 +388,8 @@ public final class PlayerListeners implements Listener {
             babyGrowCount.remove(playerUUID, toRemove);
         }
 
-        messages.send(player, Messages.Message.BABY_SPAWNED, string -> string.replace("%baby-name%", Objects.requireNonNullElse(childName, "???")));
+        messages.send(player, Messages.Message.BABY_SPAWNED,
+                string -> string.replace("%baby-name%", Objects.requireNonNullElse(childName, "???")));
 
         plugin.getConverter().createBaby(
                 spawnAt.getLocation(),

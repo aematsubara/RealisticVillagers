@@ -12,10 +12,10 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.villager.Villager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Function;
 
-@SuppressWarnings("OptionalGetWithoutIsPresent")
 public class BackUpIfTooClose extends Behavior<Villager> {
 
     private final Function<VillagerNPC, Integer> tooCloseDistance;
@@ -38,7 +38,10 @@ public class BackUpIfTooClose extends Behavior<Villager> {
 
     @Override
     public void start(ServerLevel level, @NotNull Villager villager, long time) {
-        villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(getTarget(villager), true));
+        LivingEntity target = getTarget(villager);
+        if (target == null) return;
+        
+        villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(target, true));
         villager.getMoveControl().strafe(-strafeSpeed, 0.0f);
         villager.setYRot(Mth.rotateIfNecessary(villager.getYRot(), villager.yHeadRot, 0.0f));
 
@@ -49,14 +52,19 @@ public class BackUpIfTooClose extends Behavior<Villager> {
     }
 
     private boolean isTargetVisible(@NotNull Villager villager) {
-        return villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES).get().contains(getTarget(villager));
+        LivingEntity target = getTarget(villager);
+        if (target == null) return false;
+        return villager.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
+                .map(visible -> visible.contains(target))
+                .orElse(false);
     }
 
     private boolean isTargetTooClose(Villager villager) {
-        return getTarget(villager).closerThan(villager, tooCloseDistance.apply((VillagerNPC) villager));
+        LivingEntity target = getTarget(villager);
+        return target != null && target.closerThan(villager, tooCloseDistance.apply((VillagerNPC) villager));
     }
 
-    private @NotNull LivingEntity getTarget(@NotNull Villager villager) {
-        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+    private @Nullable LivingEntity getTarget(@NotNull Villager villager) {
+        return villager.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
     }
 }

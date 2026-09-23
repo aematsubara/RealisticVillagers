@@ -45,7 +45,12 @@ import java.util.function.BiPredicate;
 @SuppressWarnings({"OptionalGetWithoutIsPresent", "ConstantConditions"})
 public class TameOrFeedPet extends Behavior<Villager> implements Exchangeable {
 
-    private @Getter ItemStack previousItem;
+    private ItemStack previousItem;
+    
+    @Override
+    public Object getPreviousItem() {
+        return previousItem;
+    }
     private final int distanceToTame;
     private final int tameChance;
     private final float speedModifier;

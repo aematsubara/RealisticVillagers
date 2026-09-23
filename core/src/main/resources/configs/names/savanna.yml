@@ -1,0 +1,110 @@
+# ===========================================================================
+# RealisticVillagers - Villager Names
+# Region : Savanna  (African / Savanna)
+#
+# HOW THIS FILE WORKS
+# ---------------------------------------------------------------------------
+# This file provides names for villagers whose biome type is SAVANNA.
+# It is used only when regionality-enabled: true is set in config.yml.
+#
+# Fallback chain:
+#   1. This file  (configs/names/savanna.yml)
+#   2. configs/names/default.yml   <-- if this file has no entry for the sex
+#   3. All regional files combined <-- absolute last resort
+#
+# FORMAT
+# ---------------------------------------------------------------------------
+# male:
+#   - <name>
+# female:
+#   - <name>
+#
+# - Add as many names as you like under male: and female:
+# - Duplicates are allowed and increase how often a name is picked.
+# - Names shorter than 3 characters are skipped automatically.
+# - Changes take effect on /rv reload (affects newly spawned villagers).
+# ===========================================================================
+
+male:
+  - Kofi
+  - Kwame
+  - Ama
+  - Yaw
+  - Kojo
+  - Abena
+  - Ekow
+  - Fiifi
+  - Kobby
+  - Nana
+  - Chukwu
+  - Emeka
+  - Nnamdi
+  - Obinna
+  - Chigozie
+  - Segun
+  - Tunde
+  - Bayo
+  - Femi
+  - Ade
+  - Musa
+  - Suleiman
+  - Aminu
+  - Garba
+  - Usman
+  - Liam
+  - Sipho
+  - Thabo
+  - Bongani
+  - Mandla
+  - Siyanda
+  - Themba
+  - Njabulo
+  - Lungelo
+  - Sibusiso
+  - Kamau
+  - Njoroge
+  - Mwangi
+  - Ochieng
+  - Otieno
+
+female:
+  - Ama
+  - Akua
+  - Abena
+  - Efua
+  - Adwoa
+  - Yaa
+  - Nana
+  - Akosua
+  - Ama
+  - Adaeze
+  - Chidinma
+  - Ngozi
+  - Nneka
+  - Amaka
+  - Ifunanya
+  - Funmi
+  - Bimpe
+  - Yetunde
+  - Sade
+  - Kemi
+  - Aisha
+  - Fatuma
+  - Zuri
+  - Amina
+  - Salama
+  - Thandi
+  - Nomsa
+  - Zanele
+  - Buhle
+  - Nonhlanhla
+  - Lindiwe
+  - Naledi
+  - Kefilwe
+  - Mpho
+  - Boipelo
+  - Wanjiku
+  - Akinyi
+  - Zawadi
+  - Neema
+  - Imani

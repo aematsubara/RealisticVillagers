@@ -105,6 +105,18 @@ public final class MainGUI extends InteractGUI {
         player.openInventory(inventory);
     }
 
+    public int getCurrentTrade() {
+        return currentTrade;
+    }
+
+    public void setCurrentTrade(int currentTrade) {
+        this.currentTrade = currentTrade;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
     public void updateRequiredItems() {
         // In this case, info item needs to be updated.
         setItemInSlot("information", name -> createInfoItem(getGUIItem(name)));
@@ -146,11 +158,11 @@ public final class MainGUI extends InteractGUI {
     }
 
     private boolean getBool(String itemName, String setting) {
-        return plugin.getConfig().getBoolean("gui." + name + ".items." + itemName + "." + setting);
+        return plugin.getGuiConfig().getBoolean("gui." + name + ".items." + itemName + "." + setting);
     }
 
     private int getItemSlot(String itemName) {
-        String string = plugin.getConfig().getString("gui." + name + ".items." + itemName + ".slot");
+        String string = plugin.getGuiConfig().getString("gui." + name + ".items." + itemName + ".slot");
         if (string == null || string.isEmpty()) return -1;
 
         String[] data = string.split(",");
@@ -315,14 +327,14 @@ public final class MainGUI extends InteractGUI {
         String age = bukkit.isAdult() ? Config.ADULT.asString() : Config.KID.asString();
 
         String type = bukkit.getVillagerType().name().toLowerCase(Locale.ROOT);
-        type = plugin.getConfig().getString("variable-text.type." + type, type);
+        type = plugin.getVariableTextConfig().getString("variable-text.type." + type, type);
 
         String activity = npc.getActivityName(none);
         if (!activity.equalsIgnoreCase(none)) {
-            activity = plugin.getConfig().getString("variable-text.activity." + activity, activity);
+            activity = plugin.getVariableTextConfig().getString("variable-text.activity." + activity, activity);
         }
 
-        AttributeInstance maxHealthAttribute = bukkit.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance maxHealthAttribute = bukkit.getAttribute(Attribute.MAX_HEALTH);
         int level = bukkit.getVillagerLevel();
 
         return new ItemBuilder(item)
@@ -416,6 +428,14 @@ public final class MainGUI extends InteractGUI {
         Settings(String name, TriFunction<IVillagerNPC, Player, String, Boolean> condition) {
             this.name = name;
             this.condition = condition;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public TriFunction<IVillagerNPC, Player, String, Boolean> getCondition() {
+            return condition;
         }
     }
 }

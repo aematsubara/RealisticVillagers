@@ -3,6 +3,8 @@ package me.matsubara.realisticvillagers.entity.v1_19.villager.ai.behaviour.core;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import me.matsubara.realisticvillagers.data.TargetReason;
+import me.matsubara.realisticvillagers.entity.IVillagerNPC;
+import me.matsubara.realisticvillagers.entity.Pet;
 import me.matsubara.realisticvillagers.entity.v1_19.villager.VillagerNPC;
 import me.matsubara.realisticvillagers.files.Config;
 import me.matsubara.realisticvillagers.nms.v1_19.NMSConverter;
@@ -40,6 +42,8 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             Items.CREEPER_HEAD);
 
     public VillagerPanicTrigger() {
+        // VALUE_ABSENT: this behavior only fires when villager is NOT already fighting.
+        // Armed villagers who ARE fighting stay in FIGHT activity â€” this trigger doesn't run.
         super(ImmutableMap.of(MemoryModuleType.ATTACK_TARGET, MemoryStatus.VALUE_ABSENT));
     }
 
@@ -58,6 +62,8 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
             return;
         }
 
+        if (target instanceof Pet) return;
+
         if (target instanceof ServerPlayer player) {
             if (player.isCreative()) return;
             if (villager instanceof VillagerNPC npc && npc.isPartner(player.getUUID())) return;
@@ -67,7 +73,11 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         }
 
         if (villager instanceof VillagerNPC npc) npc.stopAllInteractions();
-        NMSConverter.leaveVehicle(villager);
+        boolean mountedCombat = villager instanceof VillagerNPC npc2
+                && npc2.isPassenger()
+                && villager.getVehicle() instanceof Pet
+                && npc2.canAttack();
+        if (!mountedCombat) NMSConverter.leaveVehicle(villager);
 
         // Use the same condition as canStillUse(), but the name doesn't mean anything.
         if (canStillUse(level, villager, time)) {
@@ -90,8 +100,18 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         if (hasHostile(villager)) {
             LivingEntity direct = brain.getMemory(MemoryModuleType.NEAREST_HOSTILE).get();
 
-            if (direct instanceof ServerPlayer player && villager instanceof VillagerNPC npc) {
-                if (ignorePlayer(npc, player)) return null;
+            if (!direct.isAlive()) {
+                return null;
+            }
+
+            if (villager instanceof VillagerNPC npc) {
+                if (npc.getTargetEntities().contains(direct.getType())) {
+                    return direct;
+                }
+
+                if (direct instanceof ServerPlayer player && ignorePlayer(npc, player)) {
+                    return null;
+                }
             }
 
             return direct;
@@ -118,7 +138,6 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         if (!brain.isActive(Activity.FIGHT)) stopWhatWasDoing(brain);
         brain.setMemory(MemoryModuleType.ATTACK_TARGET, target);
         brain.setMemory(VillagerNPC.TARGET_REASON, targetReason);
-        brain.setDefaultActivity(Activity.FIGHT);
         brain.setActiveActivityIfPossible(Activity.FIGHT);
     }
 
@@ -128,6 +147,7 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
         brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 
     private boolean shouldPanic(Villager villager) {
@@ -180,11 +200,11 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         if (!(closest instanceof Player player)) return false;
         if (!Config.VILLAGER_DEFEND_FAMILY_MEMBER.asBool()) return false;
 
-        Optional<Player> damager = getPlayerFightningFamily(npc);
+        Optional<Player> damager = getPlayerFightingFamily(npc);
         return damager.isPresent() && damager.get().is(player);
     }
 
-    private static Optional<Player> getPlayerFightningFamily(Villager villager) {
+    private static Optional<Player> getPlayerFightingFamily(Villager villager) {
         Optional<Player> empty = Optional.empty();
         if (!(villager instanceof VillagerNPC npc)) return empty;
 

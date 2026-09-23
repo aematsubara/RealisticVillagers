@@ -19,9 +19,11 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.Location;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTransformEvent;
+import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -64,6 +66,18 @@ public class ReviveManager implements Listener {
         }
     }
 
+    public RealisticVillagers getPlugin() {
+        return plugin;
+    }
+
+    public Map<Block, MonumentAnimation> getRunningTasks() {
+        return runningTasks;
+    }
+
+    public Set<UUID> getIgnoreDead() {
+        return ignoreDead;
+    }
+
     public boolean isDay(@NotNull World world) {
         long time = world.getTime();
         return time < 13000 || time > 23000;
@@ -86,10 +100,8 @@ public class ReviveManager implements Listener {
         Block downBlock = block.getRelative(BlockFace.DOWN);
         if (downBlock.getType() != Material.EMERALD_BLOCK) return false;
 
-        // Sides of monument should be 2 emerald blocks with fire at the top.
+        // Sides of monument should be 2 emerald blocks at each diagonal corner.
         for (BlockFace face : MONUMENT) {
-            Block upBlock = block.getRelative(BlockFace.UP);
-            if (upBlock.getRelative(face, 2).getType() != Material.FIRE) return false;
             if (block.getRelative(face, 2).getType() != Material.EMERALD_BLOCK) return false;
             if (downBlock.getRelative(face, 2).getType() != Material.EMERALD_BLOCK) return false;
         }
@@ -182,34 +194,42 @@ public class ReviveManager implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockIgnite(@NotNull BlockIgniteEvent event) {
-        // We need to cancel block ignite in the last 2 strikes to prevent the villager burning.
+        // Cancel fire created by the last animation strikes to prevent the villager burning.
         Entity source;
         if (event.getCause() == BlockIgniteEvent.IgniteCause.LIGHTNING
                 && (source = event.getIgnitingEntity()) != null
                 && source.hasMetadata("LastStages")) {
             event.setCancelled(true);
         }
-
-        Block block = event.getBlock().getRelative(BlockFace.DOWN);
-        if (block.getType() != Material.EMERALD_BLOCK
-                || (Config.REVIVE_ONLY_AT_NIGHT.asBool()) && isDay(block.getWorld())) return;
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> checkForMonument(event.getPlayer(), block));
     }
 
-    private void checkForMonument(Player player, @NotNull Block block) {
-        if (block.getRelative(BlockFace.UP).getType() != Material.FIRE) return;
+    @EventHandler(ignoreCancelled = true)
+    public void onLightningStrike(@NotNull LightningStrikeEvent event) {
+        LightningStrike lightning = event.getLightning();
+        // Ignore lightning spawned by the monument animation itself.
+        if (lightning.hasMetadata("FromMonument")) return;
 
-        // Look for the center first.
-        for (BlockFace face : MONUMENT) {
-            Block relative = block.getRelative(face, 2);
+        Location loc = lightning.getLocation();
+        if (Config.REVIVE_ONLY_AT_NIGHT.asBool() && isDay(loc.getWorld())) return;
 
-            CustomBlockData data = new CustomBlockData(relative, plugin);
-            if (!data.has(plugin.getNpcValuesKey(), PersistentDataType.STRING)) continue;
+        Player nearestPlayer = loc.getWorld().getPlayers().stream()
+                .filter(p -> p.getLocation().distanceSquared(loc) < 100.0d)
+                .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(loc)))
+                .orElse(null);
 
-            // Found the center (probably).
-            if (handleMonument(player, relative)) break;
-        }
+        Block strikeBlock = loc.getBlock();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        Block candidate = strikeBlock.getRelative(dx, dy, dz);
+                        CustomBlockData data = new CustomBlockData(candidate, plugin);
+                        if (!data.has(plugin.getNpcValuesKey(), PersistentDataType.STRING)) continue;
+                        if (handleMonument(nearestPlayer, candidate)) return;
+                    }
+                }
+            }
+        });
     }
 
 }

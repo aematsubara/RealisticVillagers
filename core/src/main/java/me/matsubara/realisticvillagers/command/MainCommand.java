@@ -23,8 +23,10 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.AbstractVillager;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Villager;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
@@ -56,6 +58,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             "give-divorce-papers",
             "give-cross",
             "force-divorce",
+            "genderset",
             "add-skin",
             "set-skin",
             "skins");
@@ -68,6 +71,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             "&e/rv give-divorce-papers [player] &f- &7Gives divorce papers.",
             "&e/rv give-cross [player] &f- &7Gives a cross.",
             "&e/rv force-divorce [player] &f- &7Forces the divorce of a player.",
+            "&e/rv genderset <player> <male|female> &f- &7Sets the gender of the villager a player is looking at (admin).",
             "&e/rv add-skin <sex> <age-stage> <texture> <signature> &f- &7Add a new skin (from the console).",
             "&e/rv set-skin <sex> <id> &f- &7Gives you an item to change the skin of a villager.",
             "&e/rv skins [sex] [age-stage] [page] &f- &7Manage all skins.",
@@ -88,6 +92,16 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         Messages messages = plugin.getMessages();
         VillagerTracker tracker = plugin.getTracker();
 
+        // Carried by the clickable line in the radar's building info; never typed by hand.
+        //
+        // Handled ahead of the guard below, which caps sub-commands at five arguments — this one
+        // needs six numbers for the two corners of a box. Deliberately absent from COMMAND_ARGS
+        // and the help text, so it stays out of tab-completion and out of the way.
+        if (args.length == 7 && args[0].equalsIgnoreCase("outline")) {
+            handleOutline(sender, args);
+            return true;
+        }
+
         String subCommand;
         boolean noArgs = args.length == 0;
         if (noArgs || args.length > 5 || !COMMAND_ARGS.contains((subCommand = args[0]).toLowerCase(Locale.ROOT))) {
@@ -99,6 +113,31 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (subCommand.equalsIgnoreCase("force-divorce")) {
             if (notAllowed(sender, "realisticvillagers.forcedivorce")) return true;
             handleForceDivorce(sender, args);
+            return true;
+        }
+
+        if (subCommand.equalsIgnoreCase("genderset")) {
+            if (notAllowed(sender, "realisticvillagers.genderset")) return true;
+            if (args.length < 3) {
+                messages.send(sender, Messages.Message.GENDER_INVALID);
+                return true;
+            }
+            String targetName = args[1];
+            String newSex = args[2].toLowerCase(Locale.ROOT);
+            if (!newSex.equals("male") && !newSex.equals("female")) {
+                messages.send(sender, Messages.Message.GENDER_INVALID);
+                return true;
+            }
+            Player target = Bukkit.getPlayerExact(targetName);
+            if (target == null) {
+                messages.send(sender, Messages.Message.UNKNOWN_PLAYER);
+                return true;
+            }
+            plugin.setPlayerSex(target, newSex);
+            messages.send(target, Messages.Message.PLAYER_GENDER_SET,
+                    s -> s.replace("%gender%", newSex));
+            messages.send(sender, Messages.Message.GENDER_CHANGED,
+                    s -> s.replace("%villager-name%", target.getName()).replace("%gender%", newSex));
             return true;
         }
 
@@ -200,6 +239,7 @@ public class MainCommand implements CommandExecutor, TabCompleter {
 
         boolean skinsDisabled = Config.DISABLE_SKINS.asBool();
         boolean nametagsDisabled = Config.DISABLE_NAMETAGS.asBool();
+        boolean nametagsOnLook = Config.NAMETAGS_ONLY_WHEN_LOOKING.asBool(false);
         boolean reviveEnabled = Config.REVIVE_ENABLED.asBool();
         boolean tameHorsesEnabled = Config.TAME_HORSES.asBool();
 
@@ -268,6 +308,17 @@ public class MainCommand implements CommandExecutor, TabCompleter {
                         if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
                     });
 
+            // Same treatment for names shown on look only, and for the same reason: whether the
+            // profile carries a name is decided when the NPC is spawned, so changing the setting
+            // means nothing until each one is spawned again.
+            handleChangedOption(
+                    nametagsOnLook,
+                    Config.NAMETAGS_ONLY_WHEN_LOOKING.asBool(false),
+                    (npc, state) -> {
+                        LivingEntity bukkit = npc.bukkit();
+                        if (!tracker.isInvalid(bukkit)) tracker.refreshNPCSkin(bukkit, false);
+                    });
+
             handleChangedOption(
                     tameHorsesEnabled,
                     Config.TAME_HORSES.asBool(),
@@ -280,6 +331,11 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             // Update nametag from config.
             handleChangedOption(false, true, (npc, state) -> plugin.getTracker().getNPC(npc.bukkit().getEntityId())
                     .ifPresent(temp -> temp.getSeeingPlayers().forEach(temp::refreshNametags)));
+
+            // Refreshing above is what applies a changed nametags.only-when-looking; saying so is
+            // what tells whoever just edited config.yml that the edit has actually landed.
+            var hover = plugin.getHoverNametagTask();
+            if (hover != null) hover.announce();
 
             handleListeners(reviveEnabled, Config.REVIVE_ENABLED.asBool(), reviveManager);
         }));
@@ -412,12 +468,21 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
+            // genderset requires a player name at arg[1].
+            if (args[0].equalsIgnoreCase("genderset")) {
+                return sender.hasPermission("realisticvillagers.genderset") ? null : Collections.emptyList();
+            }
             // These require the sex list.
             if (SEX_USERS.contains(args[0].toLowerCase(Locale.ROOT))) {
                 return StringUtil.copyPartialMatches(args[1], SEX_LIST, new ArrayList<>());
             }
             // give_(item) & force-divorce require a player, so null will give a list with online players; empty list for reload or unknown subcommand.
             return args[0].equalsIgnoreCase("reload") || !COMMAND_ARGS.contains(args[0]) ? Collections.emptyList() : null;
+        }
+
+        // rv genderset <player> <male|female>
+        if (args.length == 3 && args[0].equalsIgnoreCase("genderset")) {
+            return StringUtil.copyPartialMatches(args[2], SEX_LIST, new ArrayList<>());
         }
 
         // rv set-skin <sex> <id>
@@ -465,13 +530,55 @@ public class MainCommand implements CommandExecutor, TabCompleter {
         if (section == null) return -1;
 
         Set<String> keys = section.getKeys(false);
+
+        // If browsing baby skins but no for-babies entries exist, fall back to adult skins.
+        boolean hasBabySkins = !isAdult && keys.stream()
+                .anyMatch(k -> config.getBoolean("none." + k + ".for-babies"));
+        boolean filterAsAdult = isAdult || !hasBabySkins;
+
         keys.removeIf(key -> {
             boolean forBabies = config.getBoolean("none." + key + ".for-babies");
-            return (isAdult && forBabies) || (!isAdult && !forBabies);
+            return (filterAsAdult && forBabies) || (!filterAsAdult && !forBabies);
         });
 
         int pages = (int) (Math.ceil((double) keys.size() / skins));
         return pages == 0 ? 1 : pages;
+    }
+
+    /**
+     * Outlines a building in the world, driven by the clickable line the radar prints.
+     * <p>
+     * Bounds are passed in the click rather than looked up again so the outline shows exactly the
+     * box that was reported — which is the whole point of the check.
+     */
+    private void handleOutline(org.bukkit.command.CommandSender sender, String[] args) {
+        if (!(sender instanceof org.bukkit.entity.Player player)) return;
+
+        int minX;
+        int minZ;
+        int maxX;
+        int maxZ;
+        int minY;
+        int maxY;
+        try {
+            minX = Integer.parseInt(args[1]);
+            minZ = Integer.parseInt(args[2]);
+            maxX = Integer.parseInt(args[3]);
+            maxZ = Integer.parseInt(args[4]);
+            minY = Integer.parseInt(args[5]);
+            maxY = Integer.parseInt(args[6]);
+        } catch (NumberFormatException exception) {
+            return;
+        }
+
+        var borders = plugin.getBorderVisualizer();
+        if (borders == null) return;
+
+        borders.outlineBuilding(
+                player,
+                new me.matsubara.realisticvillagers.village.VillageBuildings.Footprint(
+                        minX, minZ, maxX, maxZ, minY, maxY, 0, 0, java.util.Set.of()),
+                player.getWorld());
     }
 
     private void handleChangedOption(boolean previous, boolean current, BiConsumer<IVillagerNPC, Boolean> consumer) {
@@ -483,4 +590,6 @@ public class MainCommand implements CommandExecutor, TabCompleter {
             }
         }
     }
+
+
 }

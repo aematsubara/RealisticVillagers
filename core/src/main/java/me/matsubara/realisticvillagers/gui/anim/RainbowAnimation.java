@@ -54,11 +54,11 @@ public class RainbowAnimation extends BukkitRunnable {
         this.gui = gui;
 
         RealisticVillagers plugin = gui.getPlugin();
-        this.frameEnabled = plugin.getConfig().getBoolean("gui.main.frame.enabled");
+        this.frameEnabled = plugin.getGuiConfig().getBoolean("gui.main.frame.enabled");
         this.defaultItem = plugin.getItem("gui.main.frame").build();
-        this.guiAnim = plugin.getConfig().getBoolean("gui.rainbow-animation.enabled");
-        this.guiAnimType = plugin.getConfig().getInt("gui.rainbow-animation.type");
-        this.delay = plugin.getConfig().getLong("gui.rainbow-animation.delay", 10L);
+        this.guiAnim = plugin.getGuiConfig().getBoolean("gui.rainbow-animation.enabled");
+        this.guiAnimType = plugin.getGuiConfig().getInt("gui.rainbow-animation.type");
+        this.delay = plugin.getGuiConfig().getLong("gui.rainbow-animation.delay", 10L);
     }
 
     @Override

@@ -12,8 +12,10 @@ import me.matsubara.realisticvillagers.entity.v1_21_11.WanderingTraderNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.PetCat;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.PetParrot;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.PetWolf;
+import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetCamel;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetDonkey;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetHorse;
+import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetLlama;
 import me.matsubara.realisticvillagers.entity.v1_21_11.pet.horse.PetMule;
 import me.matsubara.realisticvillagers.entity.v1_21_11.villager.OfflineVillagerNPC;
 import me.matsubara.realisticvillagers.entity.v1_21_11.villager.VillagerNPC;
@@ -45,8 +47,10 @@ import net.minecraft.world.entity.ai.gossip.GossipType;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
+import net.minecraft.world.entity.animal.camel.Camel;
 import net.minecraft.world.entity.animal.equine.Donkey;
 import net.minecraft.world.entity.animal.equine.Horse;
+import net.minecraft.world.entity.animal.equine.Llama;
 import net.minecraft.world.entity.animal.equine.Mule;
 import net.minecraft.world.entity.animal.feline.Cat;
 import net.minecraft.world.entity.animal.parrot.Parrot;
@@ -61,7 +65,6 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.storage.RegionFile;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
-import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.timeline.Timeline;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -164,8 +167,14 @@ public class NMSConverter implements INMSConverter {
                 field,
                 EntityType.VILLAGER,
                 (EntityType.EntityFactory<Villager>) (type, level) -> {
-                    if (level.getLevelData() instanceof PrimaryLevelData data && plugin.isEnabledIn(data.getLevelName())) {
-                        return new VillagerNPC(EntityType.VILLAGER, level);
+                    try {
+                        if (level instanceof ServerLevel serverLevel) {
+                            org.bukkit.World world = serverLevel.getWorld();
+                            if (world != null && plugin.isEnabledIn(world.getName())) {
+                                return new VillagerNPC(EntityType.VILLAGER, level);
+                            }
+                        }
+                    } catch (Throwable ignored) {
                     }
                     return new Villager(EntityType.VILLAGER, level);
                 });
@@ -173,8 +182,14 @@ public class NMSConverter implements INMSConverter {
                 field,
                 EntityType.WANDERING_TRADER,
                 (EntityType.EntityFactory<WanderingTrader>) (type, level) -> {
-                    if (level.getLevelData() instanceof PrimaryLevelData data && plugin.isEnabledIn(data.getLevelName())) {
-                        return new WanderingTraderNPC(EntityType.WANDERING_TRADER, level);
+                    try {
+                        if (level instanceof ServerLevel serverLevel) {
+                            org.bukkit.World world = serverLevel.getWorld();
+                            if (world != null && plugin.isEnabledIn(world.getName())) {
+                                return new WanderingTraderNPC(EntityType.WANDERING_TRADER, level);
+                            }
+                        }
+                    } catch (Throwable ignored) {
                     }
                     return new WanderingTrader(EntityType.WANDERING_TRADER, level);
                 });
@@ -183,6 +198,8 @@ public class NMSConverter implements INMSConverter {
         Reflection.setFieldUsingUnsafe(field, EntityType.MULE, (EntityType.EntityFactory<Mule>) PetMule::new);
         Reflection.setFieldUsingUnsafe(field, EntityType.CAT, (EntityType.EntityFactory<Cat>) PetCat::new);
         Reflection.setFieldUsingUnsafe(field, EntityType.PARROT, (EntityType.EntityFactory<Parrot>) PetParrot::new);
+        Reflection.setFieldUsingUnsafe(field, EntityType.CAMEL, (EntityType.EntityFactory<Camel>) PetCamel::new);
+        Reflection.setFieldUsingUnsafe(field, EntityType.LLAMA, (EntityType.EntityFactory<Llama>) PetLlama::new);
         Reflection.setFieldUsingUnsafe(field, EntityType.WOLF, (EntityType.EntityFactory<Wolf>) PetWolf::new);
     }
 
@@ -247,21 +264,27 @@ public class NMSConverter implements INMSConverter {
         baby.setYRot(0.0f);
         baby.setXRot(0.0f);
 
-        // Shouldn't be null unless the mother is dead.
-        IVillagerNPC mother = plugin.getTracker().getOffline(motherUUID);
-        if (mother != null) {
-            org.bukkit.entity.LivingEntity bukkitMother = plugin.getUnloadedOffline(mother);
+        // Partner can be the mother (female villager) or the father (male, when ignore-sex is enabled).
+        IVillagerNPC partner = plugin.getTracker().getOffline(motherUUID);
+        if (partner != null) {
+            org.bukkit.entity.LivingEntity bukkitPartner = plugin.getUnloadedOffline(partner);
 
-            VillagerNPC nmsMother = bukkitMother != null ? ((VillagerNPC) ((CraftVillager) bukkitMother).getHandle()) : null;
-            if (nmsMother != null) {
-                nmsMother.setAge(6000);
-                nmsMother.getChildrens().add(baby.getOffline());
-                baby.setMother(nmsMother.getOffline());
+            VillagerNPC nmsPartner = bukkitPartner != null ? ((VillagerNPC) ((CraftVillager) bukkitPartner).getHandle()) : null;
+            if (nmsPartner != null) {
+                nmsPartner.setAge(6000);
+                nmsPartner.getChildrens().add(baby.getOffline());
+                if (nmsPartner.isFemale()) {
+                    baby.setMother(nmsPartner.getOffline());
+                } else {
+                    baby.setFather(nmsPartner.getUniqueId(), true);
+                }
             }
         }
 
         UUID fatherUUID = father.getUniqueId();
-        baby.setFather(fatherUUID, false);
+        if (partner == null || partner.isFemale()) {
+            baby.setFather(fatherUUID, false);
+        }
 
         CustomGossipContainer gossips = baby.getGossips();
         for (GossipType type : GossipType.values()) {
@@ -454,11 +477,45 @@ public class NMSConverter implements INMSConverter {
         ENVIRONMENT_CACHE.put(world.getUID(), builder.build());
     }
 
+    @Override
+    public @Nullable OfflineDataWrapper getNPCFromPDC(org.bukkit.persistence.PersistentDataContainer container, org.bukkit.NamespacedKey key) {
+        try {
+            // Extract raw Tag from the PDC compound using the key string.
+            Tag values = ((CraftPersistentDataContainer) container).toTagCompound().get(key.toString());
+            if (values == null) return null;
+
+            byte[] primitive = REGISTRY.extract(RealisticVillagers.VILLAGER_DATA, values);
+
+            // Try new format first (OfflineDataWrapper stored by 1.21.11+).
+            OfflineDataWrapper wrapper = RealisticVillagers.villagerDataFromPrimitive(primitive, ADAPTER_CONTEXT);
+            if (wrapper != null) return wrapper;
+
+            // Legacy format (saved by 1.21.8): ConfigurationSerializableDataType stores a YAML
+            // serialized map with a "==" key containing the fully-qualified class name.
+            // OfflineVillagerNPC.serialize() and OfflineDataWrapper.serialize() produce identical
+            // map structures — only the class name in "==" differs.
+            // We patch the class name in the raw bytes and re-deserialize as OfflineDataWrapper.
+            String raw = new String(primitive, java.nio.charset.StandardCharsets.UTF_8);
+            // Cover both v1_21_4 (1.21.7/1.21.8) and any other versioned package paths.
+            String patched = raw.replaceAll(
+                    "me\\.matsubara\\.realisticvillagers\\.entity\\.v1_21_[^.]+\\.villager\\.OfflineVillagerNPC",
+                    OfflineDataWrapper.class.getName());
+            if (!patched.equals(raw)) {
+                return RealisticVillagers.villagerDataFromPrimitive(
+                        patched.getBytes(java.nio.charset.StandardCharsets.UTF_8), ADAPTER_CONTEXT);
+            }
+            return null;
+        } catch (Exception ignored) {
+            // Data was stored in a completely different format or is corrupted.
+            return null;
+        }
+    }
+
     private @Nullable Holder<Timeline> createTimeline(@NotNull String name) {
         try {
             EnvironmentAttribute<Activity> schedule = name.equals("baby") ? VillagerNPC.VILLAGER_BABY : VillagerNPC.VILLAGER_DEFAULT;
 
-            ConfigurationSection section = plugin.getConfig().getConfigurationSection("schedules." + name);
+            ConfigurationSection section = plugin.getVariableTextConfig().getConfigurationSection("schedules." + name);
             if (section == null) return null;
 
             KeyframeTrack.Builder<Activity> trackBuilder = new KeyframeTrack.Builder<>();
@@ -467,7 +524,7 @@ public class NMSConverter implements INMSConverter {
                     .map(Integer::valueOf)
                     .sorted()
                     .toList()) {
-                Activity activity = ACTIVITIES.get(plugin.getConfig().getString("schedules." + name + "." + time, "").toLowerCase(Locale.ROOT));
+                Activity activity = ACTIVITIES.get(plugin.getVariableTextConfig().getString("schedules." + name + "." + time, "").toLowerCase(Locale.ROOT));
                 if (activity != null) trackBuilder.addKeyframe(time, activity);
             }
 

@@ -1,39 +1,35 @@
 package me.matsubara.realisticvillagers.manager.gift;
 
 import lombok.Getter;
-import me.matsubara.realisticvillagers.entity.IVillagerNPC;
 import org.bukkit.Material;
 
-import java.util.function.Predicate;
-
+/**
+ * Represents a single giftable item loaded from {@code gifts.items} in config.yml.
+ *
+ * <ul>
+ *   <li>{@link #type}              – the Bukkit material.</li>
+ *   <li>{@link #category}          – LOVED / NEUTRAL / DISLIKED.</li>
+ *   <li>{@link #reputation}        – raw reputation delta (may be negative for DISLIKED items).</li>
+ *   <li>{@link #inventoryLootOnly} – if {@code true}, villagers won't walk towards this item
+ *       on the ground; it is only gained via direct gifting.</li>
+ * </ul>
+ */
 @Getter
 public class Gift {
 
-    private final int amount;
     private final Material type;
+    private final GiftCategory category;
+    private final int reputation;
     private final boolean inventoryLootOnly;
 
-    public Gift(int amount, Material type, boolean inventoryLootOnly) {
-        this.amount = amount;
+    public Gift(Material type, GiftCategory category, int reputation, boolean inventoryLootOnly) {
         this.type = type;
+        this.category = category;
+        this.reputation = reputation;
         this.inventoryLootOnly = inventoryLootOnly;
     }
 
     public boolean is(Material type) {
         return this.type == type;
-    }
-
-    public static class GiftWithCondition extends Gift {
-
-        private final Predicate<IVillagerNPC> predicate;
-
-        public GiftWithCondition(int amount, Material type, boolean inventoryLootOnly, Predicate<IVillagerNPC> predicate) {
-            super(amount, type, inventoryLootOnly);
-            this.predicate = predicate;
-        }
-
-        public boolean test(IVillagerNPC npc) {
-            return predicate.test(npc);
-        }
     }
 }

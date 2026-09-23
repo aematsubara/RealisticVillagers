@@ -11,7 +11,6 @@ import net.minecraft.world.entity.ai.behavior.Behavior;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.schedule.Activity;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,6 +29,7 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         super(ImmutableMap.of(
                 MemoryModuleType.ATTACK_TARGET, MemoryStatus.REGISTERED,
                 MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryStatus.REGISTERED));
+
         this.stopAttackingWhen = predicate;
         this.onTargetErased = consumer;
     }
@@ -44,15 +44,12 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
         Brain<Villager> brain = villager.getBrain();
 
         if (!brain.hasMemoryValue(MemoryModuleType.ATTACK_TARGET)) {
-            Optional<Activity> activity = brain.getActiveNonCoreActivity();
-            if (activity.isPresent()) backToDefault(villager);
             return;
         }
 
         LivingEntity target = getAttackTarget(villager);
-        if (!villager.canAttack(target)
-                || isTiredOfTryingToReachTarget(villager)
-                || isCurrentTargetDeadOrRemoved(villager)
+        if (isCurrentTargetDeadOrRemoved(villager)
+                || target.isInvulnerable()
                 || isCurrentTargetInDifferentLevel(villager)
                 || stopAttackingWhen.test(getAttackTarget(villager))
                 || noWeapon(villager)
@@ -96,23 +93,17 @@ public class StopAttackingIfTargetInvalid extends Behavior<Villager> {
     }
 
     private boolean isCurrentTargetFarAway(@NotNull Villager villager) {
-        return villager.distanceTo(getAttackTarget(villager)) > MAX_DISTANCE_LIMIT;
+        return (double) villager.distanceTo(getAttackTarget(villager)) > MAX_DISTANCE_LIMIT;
     }
 
     private void clearAttackTarget(Villager villager) {
         onTargetErased.accept(villager);
 
-        villager.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-        villager.getBrain().eraseMemory(VillagerNPC.TARGET_REASON);
-        villager.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-
-        backToDefault(villager);
-    }
-
-    private void backToDefault(@NotNull Villager villager) {
-        villager.getBrain().setDefaultActivity(Activity.IDLE);
-        villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
-        villager.getBrain().updateActivityFromSchedule(villager.level.getDayTime(), villager.level.getGameTime());
+        Brain<Villager> brain = villager.getBrain();
+        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        brain.eraseMemory(VillagerNPC.TARGET_REASON);
+        brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 }

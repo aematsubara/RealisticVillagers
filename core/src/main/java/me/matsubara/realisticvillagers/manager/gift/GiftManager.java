@@ -1,180 +1,171 @@
 package me.matsubara.realisticvillagers.manager.gift;
 
 import me.matsubara.realisticvillagers.RealisticVillagers;
-import me.matsubara.realisticvillagers.entity.IVillagerNPC;
-import me.matsubara.realisticvillagers.util.ExtraTags;
 import me.matsubara.realisticvillagers.util.PluginUtils;
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Tag;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Villager;
-import org.bukkit.inventory.ItemStack;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
 import java.util.*;
-import java.util.function.Predicate;
 
+/**
+ * Loads and provides gift data from the {@code gifts} section of config.yml.
+ *
+ * <p>The new item-centric format is:
+ * <pre>
+ * gifts:
+ *   default-cooldown-seconds: 300
+ *   max-gain: 15          # max reputation a player can gain per villager per day via gifts
+ *   max-loss: 10          # max reputation a player can lose per villager per day via gifts
+ *   items:
+ *     GOLDEN_APPLE:
+ *       category: LOVED
+ *       reputation: 12
+ *       inventory-loot-only: false   # optional, default false
+ * </pre>
+ */
 public final class GiftManager {
 
     private final RealisticVillagers plugin;
-    private final List<GiftCategory> data;
 
-    public GiftManager(RealisticVillagers plugin) {
+    /** Material → Gift for O(1) lookups. */
+    private final Map<Material, Gift> gifts = new EnumMap<>(Material.class);
+
+    /**
+     * Daily reputation cap tracking: villagerUUID → (playerUUID → DailyGiftData).
+     * Automatically resets at UTC midnight via {@link DailyGiftData#rolloverIfNeeded()}.
+     */
+    private final Map<UUID, Map<UUID, DailyGiftData>> dailyCaps = new HashMap<>();
+
+    private int defaultCooldownSeconds = 300;
+    private int maxGain = 15;
+    private int maxLoss = 10;
+
+    public GiftManager(@NotNull RealisticVillagers plugin) {
         this.plugin = plugin;
-        this.data = new ArrayList<>();
         loadGiftCategories();
     }
 
+    // ───────────────────────── Loading ─────────────────────────────────────────
+
     public void loadGiftCategories() {
-        data.clear();
+        gifts.clear();
 
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("gift");
-        if (section == null) return;
+        defaultCooldownSeconds = plugin.getGiftsConfig().getInt("default-cooldown-seconds", 300);
+        maxGain = plugin.getGiftsConfig().getInt("max-gain", 9999);
+        maxLoss = plugin.getGiftsConfig().getInt("max-loss", 9999);
 
-        for (String key : section.getKeys(false)) {
-            int reputation = Math.max(2, plugin.getConfig().getInt("gift." + key + ".reputation"));
-            Set<Gift> tags = getGiftsFromCategory("gift." + key + ".items");
-            data.add(new GiftCategory(key, reputation, tags));
-        }
+        ConfigurationSection items = plugin.getGiftsConfig().getConfigurationSection("items");
+        if (items == null) return;
 
-        // Sorted by reputation ascendent.
-        data.sort(Comparator.comparingInt(GiftCategory::reputation));
-    }
-
-    public @NotNull Set<Gift> getGiftsFromCategory(String path) {
-        Set<Gift> tags = new HashSet<>();
-        for (String materialOrTag : plugin.getConfig().getStringList(path)) {
-
-            Predicate<IVillagerNPC> predicate;
-            if (materialOrTag.startsWith("?")) {
-                String[] data = materialOrTag.substring(1).split(":");
-                if (data.length != 2) {
-                    log(path, materialOrTag);
-                    continue;
-                }
-
-                Villager.Profession profession;
-                try {
-                    // Villager.Profession was changed to an interface, we need to use this method instead.
-                    profession = Villager.Profession.valueOf(data[0].toUpperCase(Locale.ROOT));
-                } catch (Exception exception) {
-                    log(path, materialOrTag);
-                    continue;
-                }
-
-                predicate = npc -> !(npc.bukkit() instanceof Villager villager) || villager.getProfession() == profession;
-            } else {
-                predicate = null;
-            }
-
-            boolean inventoryLootOnly = materialOrTag.endsWith("*");
-
-            int amount = 1;
-            String amountString = StringUtils.substringBetween(materialOrTag, "(", ")");
-            if (amountString != null) {
-                materialOrTag = materialOrTag.replace("(" + amountString + ")", "");
-                amount = amountString.equalsIgnoreCase("$RANDOM") ? -1 : PluginUtils.getRangedAmount(amountString);
-            }
-
-            int indexOf = predicate != null ? materialOrTag.indexOf(":") : -1;
-            if (materialOrTag.startsWith("$") || (indexOf != -1 && materialOrTag.substring(indexOf + 1).startsWith("$"))) {
-                String tagName = (indexOf != -1 ? materialOrTag.substring(indexOf + 2) : materialOrTag.substring(1)).replace("*", "");
-
-                Set<Material> extra = ExtraTags.TAGS.get(tagName.toUpperCase(Locale.ROOT));
-                if (extra != null && !extra.isEmpty()) {
-                    for (Material material : extra) {
-                        addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
-                    }
-                } else if (!addMaterialsFromRegistry(
-                        tags,
-                        predicate,
-                        tagName.toLowerCase(Locale.ROOT),
-                        inventoryLootOnly,
-                        amount,
-                        Tag.REGISTRY_ITEMS, Tag.REGISTRY_BLOCKS)) {
-                    log(path, materialOrTag);
-                }
+        for (String key : items.getKeys(false)) {
+            Material material = PluginUtils.getOrNull(Material.class, key.toUpperCase(Locale.ROOT));
+            if (material == null) {
+                plugin.getLogger().warning("Unknown material in gifts.items: " + key);
                 continue;
             }
 
-            String materialName = materialOrTag.substring(indexOf != -1 ? indexOf + 1 : 0).replace("*", "");
-            Material material = PluginUtils.getOrNull(Material.class, materialName.toUpperCase(Locale.ROOT));
-            if (material != null) {
-                addAndOverride(tags, createGift(amount, material, inventoryLootOnly, predicate));
-            } else {
-                log(path, materialOrTag);
+            String categoryName = items.getString(key + ".category", "NEUTRAL").toUpperCase(Locale.ROOT);
+            GiftCategory category = PluginUtils.getOrDefault(GiftCategory.class, categoryName, GiftCategory.NEUTRAL);
+            int reputation = items.getInt(key + ".reputation", 0);
+            boolean inventoryLootOnly = items.getBoolean(key + ".inventory-loot-only", false);
+
+            gifts.put(material, new Gift(material, category, reputation, inventoryLootOnly));
+        }
+    }
+
+    // ───────────────────────── Lookups ─────────────────────────────────────────
+
+    /**
+     * Returns the {@link Gift} registered for the given material, or {@code null} if
+     * that material is not listed under {@code gifts.items}.
+     */
+    public @Nullable Gift getGift(@NotNull Material material) {
+        return gifts.get(material);
+    }
+
+    /**
+     * Returns all registered {@link Gift} objects (read-only view).
+     * Used by {@code RealisticVillagers#reloadWantedItems()}.
+     */
+    public @NotNull Set<Gift> getAllGifts() {
+        return Collections.unmodifiableSet(new HashSet<>(gifts.values()));
+    }
+
+    /**
+     * Backwards-compatible helper: returns all gifts regardless of the path argument.
+     * Called by {@code RealisticVillagers#reloadWantedItems()} with {@code "default-wanted-items"}.
+     */
+    public @NotNull Set<Gift> getGiftsFromCategory(@SuppressWarnings("unused") String ignoredPath) {
+        return getAllGifts();
+    }
+
+    // ───────────────────────── Daily Cap ───────────────────────────────────────
+
+    /**
+     * Applies the daily {@code max-gain} / {@code max-loss} cap to a raw reputation delta.
+     *
+     * <p>Returns the actual delta that should be applied (may be 0 if the cap is exhausted).
+     * Automatically resets each UTC day.
+     *
+     * @param villagerUUID UUID of the villager receiving the gift
+     * @param playerUUID   UUID of the gifting player
+     * @param rawDelta     signed reputation change (positive = gain, negative = loss)
+     * @return clamped delta that is safe to apply
+     */
+    public int applyDailyCap(@NotNull UUID villagerUUID, @NotNull UUID playerUUID, int rawDelta) {
+        if (rawDelta == 0) return 0;
+
+        DailyGiftData data = dailyCaps
+                .computeIfAbsent(villagerUUID, k -> new HashMap<>())
+                .computeIfAbsent(playerUUID, k -> new DailyGiftData());
+        data.rolloverIfNeeded();
+
+        if (rawDelta > 0) {
+            int remaining = maxGain - data.gained;
+            if (remaining <= 0) return 0;
+            int applied = Math.min(rawDelta, remaining);
+            data.gained += applied;
+            return applied;
+        } else {
+            int remaining = maxLoss - data.lost;
+            if (remaining <= 0) return 0;
+            int applied = Math.min(-rawDelta, remaining);
+            data.lost += applied;
+            return -applied;
+        }
+    }
+
+    // ───────────────────────── Accessors ───────────────────────────────────────
+
+    public int getDefaultCooldownSeconds() {
+        return defaultCooldownSeconds;
+    }
+
+    public int getMaxGain() {
+        return maxGain;
+    }
+
+    public int getMaxLoss() {
+        return maxLoss;
+    }
+
+    // ───────────────────────── Inner types ─────────────────────────────────────
+
+    private static final class DailyGiftData {
+        int gained = 0;
+        int lost = 0;
+        LocalDate date = LocalDate.now();
+
+        void rolloverIfNeeded() {
+            LocalDate today = LocalDate.now();
+            if (!today.equals(date)) {
+                gained = 0;
+                lost = 0;
+                date = today;
             }
         }
-        return tags;
-    }
-
-    private void log(@NotNull String path, String materialOrTag) {
-        boolean isWantedItems = path.equals("default-wanted-items");
-        String[] data;
-        String categoryName = isWantedItems ? path : (data = path.split("\\.")).length == 3 ? data[1] : path;
-        plugin.getLogger().info("Invalid material for " + (isWantedItems ? "" : "gift category ") + "{" + categoryName + "}! " + materialOrTag);
-    }
-
-    @Contract("_, _, _, _ -> new")
-    private @NotNull Gift createGift(int amount, Material material, boolean inventoryLootOnly, @Nullable Predicate<IVillagerNPC> predicate) {
-        return predicate != null ?
-                new Gift.GiftWithCondition(amount, material, inventoryLootOnly, predicate) :
-                new Gift(amount, material, inventoryLootOnly);
-    }
-
-    @SuppressWarnings("SameParameterValue")
-    private boolean addMaterialsFromRegistry(Set<Gift> gifts, @Nullable Predicate<IVillagerNPC> predicate, String tagName, boolean inventoryLootOnly, int amount, @NotNull String... registries) {
-        boolean found = false;
-        for (String registry : registries) {
-            Tag<Material> tag = Bukkit.getTag(registry, NamespacedKey.minecraft(tagName.toLowerCase(Locale.ROOT)), Material.class);
-            if (tag == null) continue;
-
-            for (Material material : tag.getValues()) {
-                addAndOverride(gifts, createGift(amount, material, inventoryLootOnly, predicate));
-            }
-            found = true;
-        }
-        return found;
-    }
-
-    public GiftCategory getCategory(IVillagerNPC npc, ItemStack item) {
-        GiftCategory selected = null;
-
-        // The highest the category the highest the priority.
-        for (GiftCategory category : data) {
-            if (category.applies(npc, item)) selected = category;
-        }
-
-        return selected;
-    }
-
-    private void addAndOverride(Set<Gift> gifts, @NotNull Gift newGift) {
-        Material type = newGift.getType();
-        if (getGift(gifts, type, true) != null) return;
-
-        Gift withoutCondition = getGift(gifts, type, false);
-        if (withoutCondition != null) {
-            if (!(newGift instanceof Gift.GiftWithCondition)) return;
-            gifts.remove(withoutCondition);
-        }
-
-        gifts.add(newGift);
-    }
-
-    private @Nullable Gift getGift(@NotNull Set<Gift> gifts, Material type, boolean condition) {
-        for (Gift gift : gifts) {
-            if (gift.is(type) && (!condition || gift instanceof Gift.GiftWithCondition)) return gift;
-        }
-        return null;
-    }
-
-    public @Nullable GiftCategory getRandomCategory() {
-        return data.isEmpty() ? null : data.get(RandomUtils.nextInt(0, data.size()));
     }
 }

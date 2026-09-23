@@ -53,18 +53,19 @@ public class NPC {
     private final SpawnCustomizer spawnCustomizer;
     private final IVillagerNPC npc;
 
-    private static final Set<Villager.Profession> UNEMPLOYED = Set.of(Villager.Profession.NONE, Villager.Profession.NITWIT);
+    private static final Set<Villager.Profession> UNEMPLOYED = Set.of(Villager.Profession.NONE,
+            Villager.Profession.NITWIT);
     private static final int IGNORE = -1;
     private static final int NO_BLOCK = -2;
     private static final boolean ENABLED = XReflection.supports(20, 2);
-    private static final Color NAMETAG_BACKGROUND_COLOR = ENABLED ? Color.fromARGB((int) (0.35 * 255), 0, 0, 0) : null;
 
-    public NPC(RealisticVillagers plugin, UserProfile profile, SpawnCustomizer spawnCustomizer, int entityId, IVillagerNPC npc) {
+    public NPC(RealisticVillagers plugin, UserProfile profile, SpawnCustomizer spawnCustomizer, int entityId,
+            IVillagerNPC npc) {
         this.plugin = plugin;
-        this.entityId = entityId;
-        this.spawnCustomizer = spawnCustomizer;
-        this.npc = npc;
         this.profile = profile;
+        this.spawnCustomizer = spawnCustomizer;
+        this.entityId = entityId;
+        this.npc = npc;
     }
 
     public void refreshNametags(Player player) {
@@ -73,19 +74,37 @@ public class NPC {
     }
 
     public void spawnNametags(Player player, boolean shouldSpawn) {
-        if (!ENABLED) return;
+        if (!ENABLED)
+            return;
+
+        // Names shown on look only: take the one down rather than trying to draw it
+        // quietly.
+        //
+        // Passing shouldSpawn=false was not the same thing as hiding — the entity was
+        // still
+        // created — which is why the name stayed up. Removing it outright is what
+        // disable-nametags does, and that route demonstrably works.
+        var hover = plugin.getHoverNametagTask();
+        if (hover != null && hover.isHidingBy(player, npc)) {
+            hideNametags(player);
+            return;
+        }
 
         int itemId = spawnDisplayEntity(player, false, shouldSpawn);
-        if (itemId == IGNORE) return;
+        if (itemId == IGNORE)
+            return;
 
         ProtocolManager manager = PacketEvents.getAPI().getProtocolManager();
         Object channel = SpigotReflectionUtil.getChannel(player);
 
-        WrapperPlayServerSetPassengers itemPassengers = new WrapperPlayServerSetPassengers(npc.bukkit().getEntityId(), new int[]{itemId});
-        manager.sendPacket(channel, itemPassengers);
+        manager.sendPacket(channel, new WrapperPlayServerSetPassengers(
+                npc.bukkit().getEntityId(), riders(itemId)));
+
+        sendShape(player);
 
         int blockId = spawnDisplayEntity(player, true, shouldSpawn);
-        if (blockId == IGNORE) return;
+        if (blockId == IGNORE)
+            return;
 
         // @show-job-block is set to false, we need to hide it.
         if (blockId == NO_BLOCK) {
@@ -93,46 +112,88 @@ public class NPC {
             return;
         }
 
-        WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId, new int[]{blockId});
+        WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId,
+                new int[] { blockId });
         manager.sendPacket(channel, blockPassengers);
     }
 
     public void sendPassengers(Player player) {
-        if (!ENABLED) return;
+        if (!ENABLED)
+            return;
 
-        if (!(npc instanceof Nameable nameable)) return;
-        if (Config.DISABLE_NAMETAGS.asBool()) return;
+        if (!(npc instanceof Nameable nameable))
+            return;
+        if (Config.DISABLE_NAMETAGS.asBool())
+            return;
 
         int itemId = nameable.getNametagEntity();
-        if (itemId == IGNORE) return;
+        if (itemId == IGNORE)
+            return;
 
         ProtocolManager manager = PacketEvents.getAPI().getProtocolManager();
         Object channel = SpigotReflectionUtil.getChannel(player);
 
-        WrapperPlayServerSetPassengers itemPassengers = new WrapperPlayServerSetPassengers(npc.bukkit().getEntityId(), new int[]{itemId});
-        manager.sendPacket(channel, itemPassengers);
+        manager.sendPacket(channel, new WrapperPlayServerSetPassengers(
+                npc.bukkit().getEntityId(), riders(itemId)));
 
-        if (!Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool()) return;
+        sendShape(player);
+
+        if (!Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool())
+            return;
 
         int blockId = nameable.getNametagItemEntity();
-        if (blockId == IGNORE || blockId == NO_BLOCK) return;
+        if (blockId == IGNORE || blockId == NO_BLOCK)
+            return;
 
-        WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId, new int[]{blockId});
+        WrapperPlayServerSetPassengers blockPassengers = new WrapperPlayServerSetPassengers(itemId,
+                new int[] { blockId });
         manager.sendPacket(channel, blockPassengers);
     }
 
+    /**
+     * Everything riding her, as one list.
+     * <p>
+     * One list because the packet is one list. It replaces whatever the client had, so naming only
+     * the name tag would throw off anything else that rides her — and her figure now does. This is
+     * the same trap that made three earlier attempts flicker, in the one place it still applies.
+     */
+    private int[] riders(int nametagId) {
+        java.util.List<Integer> ids = new java.util.ArrayList<>();
+        ids.add(nametagId);
+
+        LivingEntity bukkit = npc.bukkit();
+        if (bukkit != null) {
+            for (org.bukkit.entity.Entity passenger : bukkit.getPassengers()) {
+                ids.add(passenger.getEntityId());
+            }
+        }
+
+        int[] riders = new int[ids.size()];
+        for (int i = 0; i < riders.length; i++) riders[i] = ids.get(i);
+        return riders;
+    }
+
+    private void sendShape(Player player) {
+        // Nothing to send any more: her figure rides her rather than being worn, so it arrives
+        // with the passenger list above rather than as equipment of its own.
+    }
+
     private void hideBlockItem(Player player) {
-        if (!(npc instanceof Nameable nameable)) return;
+        if (!(npc instanceof Nameable nameable))
+            return;
 
         int nametagItemEntity = nameable.getNametagItemEntity();
-        if (nametagItemEntity == -1) return;
+        if (nametagItemEntity == -1)
+            return;
 
-        sendDestroyPacket(player, new int[]{nametagItemEntity});
+        sendDestroyPacket(player, new int[] { nametagItemEntity });
     }
 
     public void hideNametags(Player player) {
-        if (!ENABLED) return;
-        if (!(npc instanceof Nameable nameable)) return;
+        if (!ENABLED)
+            return;
+        if (!(npc instanceof Nameable nameable))
+            return;
 
         int nametagEntity = nameable.getNametagEntity();
         int nametagItemEntity = nameable.getNametagItemEntity();
@@ -142,7 +203,8 @@ public class NPC {
                 .mapToInt(Integer::intValue)
                 .toArray();
 
-        if (ids.length == 0) return;
+        if (ids.length == 0)
+            return;
 
         sendDestroyPacket(player, ids);
     }
@@ -157,45 +219,69 @@ public class NPC {
 
     public List<String> getLines(@NotNull LivingEntity entity) {
         EntityType type = entity.getType();
-        if (type == EntityType.VILLAGER) return Config.CUSTOM_NAME_VILLAGER_LINES.asStringList();
-        if (type == EntityType.WANDERING_TRADER) return Config.CUSTOM_NAME_TRADER_LINES.asStringList();
+        if (type == EntityType.VILLAGER)
+            return Config.CUSTOM_NAME_VILLAGER_LINES.asStringList();
+        if (type == EntityType.WANDERING_TRADER)
+            return Config.CUSTOM_NAME_TRADER_LINES.asStringList();
         return Collections.emptyList();
     }
 
     private int spawnDisplayEntity(Player player, boolean block, boolean shouldSpawn) {
-        if (!(npc instanceof Nameable nameable)) return IGNORE;
-        if (Config.DISABLE_NAMETAGS.asBool()) return IGNORE;
-        if (block && !Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool()) return NO_BLOCK;
+        if (!(npc instanceof Nameable nameable))
+            return IGNORE;
+        if (Config.DISABLE_NAMETAGS.asBool())
+            return IGNORE;
+
+        // The same door "disable-nametags" goes through, so a name that should be
+        // hidden is
+        // never built in the first place — whichever of the several spawn paths asked
+        // for it.
+        var hoverTask = plugin.getHoverNametagTask();
+        if (hoverTask != null && hoverTask.isHidingBy(player, npc))
+            return IGNORE;
+        if (block && !Config.CUSTOM_NAME_SHOW_JOB_BLOCK.asBool())
+            return NO_BLOCK;
 
         LivingEntity bukkit = npc.bukkit();
-        if (bukkit == null) return IGNORE;
-        if (bukkit.hasPotionEffect(PotionEffectType.INVISIBILITY)) return IGNORE;
+        if (bukkit == null)
+            return IGNORE;
+        if (bukkit.hasPotionEffect(PotionEffectType.INVISIBILITY))
+            return IGNORE;
 
         int temp = block ? nameable.getNametagItemEntity() : nameable.getNametagEntity();
         int id = temp == -1 ? SpigotReflectionUtil.generateEntityId() : temp;
-        if (block) nameable.setNametagItemEntity(id);
-        else nameable.setNametagEntity(id);
+        if (block)
+            nameable.setNametagItemEntity(id);
+        else
+            nameable.setNametagEntity(id);
 
         List<EntityData<?>> data = new ArrayList<>();
         fillGlobalData(data, block);
 
         if (block) {
             BlockData blockData;
-            if (bukkit instanceof Villager villager && !npc.is(Villager.Profession.NONE, Villager.Profession.NITWIT)) {
+            if (bukkit instanceof Villager villager && isMayor(villager)) {
+                // The mayor has no workstation, so it gets a badge of office instead — without
+                // this it would be the only notable villager showing nothing above its head.
+                blockData = getMayorBlockData();
+            } else if (bukkit instanceof Villager villager
+                    && !npc.is(Villager.Profession.NONE, Villager.Profession.NITWIT)) {
                 Material material = SkinGUI.PROFESSION_ICON.get(villager.getProfession().name());
                 blockData = createBlockData(villager, material);
             } else {
                 blockData = Material.AIR.createBlockData();
             }
             WrappedBlockState state = SpigotConversionUtil.fromBukkitBlockData(blockData);
-            data.add(new EntityData<>(23, EntityDataTypes.BLOCK_STATE, state.getGlobalId())); // Displayed block state = WrappedBlockState#getGlobalId()
+            data.add(new EntityData<>(23, EntityDataTypes.BLOCK_STATE, state.getGlobalId())); // Displayed block state =
+                                                                                              // WrappedBlockState#getGlobalId()
         } else {
             data.add(new EntityData<>(23, EntityDataTypes.ADV_COMPONENT, Component.text(getNameTextFor(player)))); // Text
             data.add(new EntityData<>(24, EntityDataTypes.INT, 200)); // Line width
-            // Background color = Color#asARGB() / 1073741824 / same as using the flag: default background.
-            data.add(new EntityData<>(25, EntityDataTypes.INT, NAMETAG_BACKGROUND_COLOR.asARGB()));
+            // Background color as ARGB int (alpha=opacity, then RGB from config).
+            data.add(new EntityData<>(25, EntityDataTypes.INT, getBackgroundARGB()));
             data.add(new EntityData<>(26, EntityDataTypes.BYTE, (byte) getOpacity())); // Text opacity
-            // Flags (Has shadow = 0x01 / See through = 0x02 / Use default background color = 0x04 / Alignment = ?) / 0
+            // Flags (Has shadow = 0x01 / See through = 0x02 / Use default background color
+            // = 0x04 / Alignment = ?) / 0
             data.add(new EntityData<>(27, EntityDataTypes.BYTE, (byte) getFlags()));
         }
 
@@ -220,14 +306,32 @@ public class NPC {
         return id;
     }
 
+    private int getBackgroundARGB() {
+        int opacity = Math.max(0, Math.min(255, Config.CUSTOM_NAME_BACKGROUND_OPACITY.asInt(255)));
+        String hex = Config.CUSTOM_NAME_BACKGROUND_COLOR.asString("#000000");
+        try {
+            if (hex.startsWith("#"))
+                hex = hex.substring(1);
+            int rgb = Integer.parseInt(hex, 16);
+            int r = (rgb >> 16) & 0xFF;
+            int g = (rgb >> 8) & 0xFF;
+            int b = rgb & 0xFF;
+            return (opacity << 24) | (r << 16) | (g << 8) | b;
+        } catch (NumberFormatException e) {
+            return (opacity << 24); // fallback: opaque black
+        }
+    }
+
     private int getOpacity() {
         int opacity = Config.CUSTOM_NAME_TEXT_OPACITY.asInt();
-        if (opacity < -128) return -128;
+        if (opacity < -128)
+            return -128;
         return opacity > 127 ? opacity - 256 : opacity;
     }
 
     private int getFlags() {
-        return (Config.CUSTOM_NAME_SHADOW.asBool() ? 0x01 : 0x0) | (Config.CUSTOM_NAME_SEE_THROUGH.asBool() ? 0x02 : 0x0);
+        return (Config.CUSTOM_NAME_SHADOW.asBool() ? 0x01 : 0x0)
+                | (Config.CUSTOM_NAME_SEE_THROUGH.asBool() ? 0x02 : 0x0);
     }
 
     private @NotNull String getNameTextFor(Player player) {
@@ -248,17 +352,39 @@ public class NPC {
             String colorExtra = color != null ? color.asStringTranslated() : "";
 
             // For some reason, the name is null?
-            String villagerName = Objects.requireNonNullElse(npc.getVillagerName(), Config.UNKNOWN.asStringTranslated());
+            String villagerName = Objects.requireNonNullElse(npc.getVillagerName(),
+                    Config.UNKNOWN.asStringTranslated());
             String line = PluginUtils.translate(lines.get(i).replace("%villager-name%", colorExtra + villagerName));
 
             builder.append(bukkit instanceof Villager villager ? line
                     .replace("%level%", String.valueOf(villager.getVillagerLevel()))
-                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession(), npc.isMale())) : line);
+                    .replace("%profession%", plugin.getProfessionFormatted(villager.getProfession(), npc.isMale()))
+                    : line);
 
-            if (i != lines.size() - 1) builder.append("\n");
+            if (i != lines.size() - 1)
+                builder.append("\n");
         }
 
         return builder.toString();
+    }
+
+    private boolean isMayor(@NotNull Villager villager) {
+        var villages = plugin.getVillageManager();
+        return villages != null && villages.isMayorOfAnyVillage(villager.getUniqueId());
+    }
+
+    /**
+     * The block shown over the mayor's head; configurable, emerald block by
+     * default.
+     */
+    private @NotNull BlockData getMayorBlockData() {
+        String name = Config.VILLAGE_MAYOR_HEAD_BLOCK.asString("EMERALD_BLOCK");
+
+        Material material = name != null ? Material.matchMaterial(name) : null;
+        if (material == null || !material.isBlock())
+            material = Material.EMERALD_BLOCK;
+
+        return material.createBlockData();
     }
 
     private @NotNull BlockData createBlockData(Villager villager, Material material) {
@@ -267,13 +393,16 @@ public class NPC {
     }
 
     private @Nullable BlockData getJobBlockData(@NotNull Villager villager) {
-        if (UNEMPLOYED.contains(villager.getProfession())) return null;
+        if (UNEMPLOYED.contains(villager.getProfession()))
+            return null;
 
         Location pos = getJobSiteLocation(villager);
-        if (pos == null) return null;
+        if (pos == null)
+            return null;
 
         World world = pos.getWorld();
-        if (world == null) return null;
+        if (world == null)
+            return null;
 
         return world.getBlockData(pos);
     }
@@ -303,11 +432,15 @@ public class NPC {
         data.add(new EntityData<>(10, EntityDataTypes.INT, 0)); // Position/Rotation interpolation duration
         data.add(new EntityData<>(11, EntityDataTypes.VECTOR3F, translation)); // Translation / 0.0, 0.0, 0.0
         data.add(new EntityData<>(12, EntityDataTypes.VECTOR3F, scale)); // Scale
-        data.add(new EntityData<>(13, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation left
-        data.add(new EntityData<>(14, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation right
-        // Billboard Constraints (0 = FIXED, 1 = VERTICAL, 2 = HORIZONTAL, 3 = CENTER) / 0
+        data.add(new EntityData<>(13, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation
+                                                                                                              // left
+        data.add(new EntityData<>(14, EntityDataTypes.QUATERNION, new Quaternion4f(0.0f, 0.0f, 0.0f, 1.0f))); // Rotation
+                                                                                                              // right
+        // Billboard Constraints (0 = FIXED, 1 = VERTICAL, 2 = HORIZONTAL, 3 = CENTER) /
+        // 0
         data.add(new EntityData<>(15, EntityDataTypes.BYTE, (byte) (block ? 1 : 3)));
-        data.add(new EntityData<>(16, EntityDataTypes.INT, -1)); // Brightness override (blockLight << 4 | skyLight << 20)
+        data.add(new EntityData<>(16, EntityDataTypes.INT, -1)); // Brightness override (blockLight << 4 | skyLight <<
+                                                                 // 20)
         data.add(new EntityData<>(17, EntityDataTypes.FLOAT, 1.0f)); // View range
         data.add(new EntityData<>(18, EntityDataTypes.FLOAT, 0.0f)); // Shadow radius
         data.add(new EntityData<>(19, EntityDataTypes.FLOAT, 1.0f)); // Shadow strength
@@ -340,7 +473,8 @@ public class NPC {
                 },
                 10L);
 
-        // Keeping the NPC longer in the player list, otherwise the skin might not be shown sometimes.
+        // Keeping the NPC longer in the player list, otherwise the skin might not be
+        // shown sometimes.
         scheduler.runTaskLater(
                 plugin,
                 () -> modifier.queuePlayerListChange(true).send(player),

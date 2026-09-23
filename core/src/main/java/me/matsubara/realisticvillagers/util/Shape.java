@@ -37,6 +37,14 @@ public final class Shape {
         }
     }
 
+    public ItemStack getResult() {
+        return result;
+    }
+
+    public NamespacedKey getKey() {
+        return key;
+    }
+
     public void register(ItemStack item) {
         Recipe recipe = shaped ? new ShapedRecipe(key, item) : new ShapelessRecipe(key, item);
 
